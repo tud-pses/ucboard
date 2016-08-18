@@ -1,0 +1,84 @@
+
+
+Anforderungen an uC-Platine für Modellauto
+==========================================
+
+
+Spannungsversorgung und "-management"
+=====================================
+
+Die Spannungsquelle für den Rechner und die uC-Platine wird über einen Power-Path-Controller zur Verfügung gestellt, der je nach Verfügbarkeit und Ladestand zwischen Akku, Netzteil und "Aus" wählt.
+Zum Anschluss des Power-Path-Controller an die uC-Platine ist ein fünfpoliges Kabel vorgesehen, für welches auf der Platine ein entsprechender Stecker (oder Buchse) vorzusehen ist. Dieses Kabel stellt die Spannungsversorgung dar enthält auch "Statussignale".
+Anschlussbelegung
+	1: GND
+	2: Vout (Versorgungsspannung für uC-Platine, kann über einen weiten Bereich variieren: 8 - 19 V)
+	3: Akku-Spannung (Zur Spannungsmessung. Es sollte kein "Nutzstrom" entnommen werden.)
+	4: NetzOK (Open-Drain-Ausgang (Source auf GND). Gibt an, ob Netzteil angeschlossen ist.)
+	5: Akkuwng (Open-Drain-Ausgang (Source auf GND). Gibt an, ob Akkuspannung unterhalb kritischer Schwelle und warnt damit vor einem möglichen Ausfall der Spannungsversorgung.)
+
+Die uC-Platine muss auch die Spannungsversorgung für den Lenk-Servo zur Verfügung stellen. Diese beträgt 5V und sollte aufgrund der zu erwartenden Störungen über einen eigenen Spannungswandler verfügen.
+
+Die uC-Platine soll darüber hinaus für mögliche Ergänzungen eine 5V-Spannungsversorgung und eine 3,3V-Spannungsversorgung zur Verfügung stellen.
+
+Die Spannung des Rechnerakkus soll gemessen werden.
+
+Zusätzlich verfügt das Fahrzeug über einen Fahrakku, der lediglich die Spannung für den Fahrmotor und dessen Ansteuerungselektronik zur Verfügung stellt. Diese Spannung soll ebenfalls gemessen werden können. Dabei sollte die Spannungsmessung jedoch schaltbar sein: Es ist ein Spannungteiler oder ähnliches notwendig, jedoch soll der Ruhestrom der Spannungsmessung gering sein, damit der Akku sich nicht entläft, auch wenn er über einen langen Zeitraum angeschlossen bleibt.
+
+Zusätzlich soll der Fahrakku geschaltet werden können. Das schaltende Element (Relais, Mosfet: ist festzulegen) wird sich dabei in der Nähe des Motors befinden. Die hohen Ströme müssen nicht über die uC-Platine geroutet werden. Es ist entsprechend ein Stecker/Buchse vorzusehen, an die der Schalter angeschlossen werden kann.
+
+??? Zusätzlich sollte anstelle des Fahrakkus auch der Rechnerakku für den Motor verwendet werden können. D.h. es ist ein zweiter schaltbarer Pfad vorzusehen. (Die Spannungsversorgung wird direkt vom Power-Path-Controller abgenommen. Das Kabel zur Spannungsversorgung der uC-Platine ist nicht für hohe Ströme ausgelegt. Außerdem muss auch dieser hohe Strom nicht unnötigerweise über die uC-Platine geroutet werden.)
+Es ist hardwareseitig, d.h. außerhalb des uC, sicherzustellen, dass maximal eine Spannungsversorgung des Fahrmotors eingeschaltet werden kann, um hohe Umladeströme auch bei falscher Programmierung des uC zu verhindern!
+
+-> Für die Schaltung des Fahr- oder Rechnerakkus zum Motor ist eine weitere, kleine Platine vorzusehen, die in der Nähe des Motors befestigt werden kann.
+
+
+Kommunikation mit x64-Board
+===========================
+Die Kommunikation mit dem x64-Board läuft momentan über eine UART-Schnittstelle. Diese wird dann extern jedoch nach USB umgesetzt, so dass ein USB-Port des x64-Board genutzt wird.
+
+Die Kommunikationsschnittstelle sollte einmal als einfaches Rx/Tx auf dem uC-Spannungsniveau verfügbar sein. Zudem sollte die UART als RS232-Signal zur Verfügung stehen, um ggf. doch direkt die RS232-Schnittstellen des x64-Boards nutzen zu können. Zuletzt sollte auch ein UART/USB-Wandler auf dem Board integriert sein, um die Anzahl der externen Bauteile möglichst gering zu halten.
+
+Stecker:
+	Rx/Tx/Gnd als SIL3-Pinleiste
+	UART als 5x2-Wannenstecker (Anschlussbelegung passend zu entsprechenden Steckern auf x64-Board)
+	USB als (Mini/Micro)-USB-B-Buchse
+
+
+
+Sensorik und Aktorik
+====================
+
+Auf der uC-Platine soll eine IMU (Beschleunigungs- und Drehratensensor, 3-achsig) und ein 3-achsiges Magnetometer integriert werden. Die Abtastfrequenz soll bis zu 1 kHz betragen. (Die Bandbreite ist entsprechend geringer.)
+
+Externe Sensoren und Aktoren sind:
+- Hallsensor HAL 5xy (Micronas) (Analoges Signal)
+- ??? optische Liniensensoren (5x Analoges Signal, 1x PWM (uC-Ausgang))
+	8-poliger Stecker:
+		VCC, PWM, Sensor 0, Sensor 1, Sensor 2, Sensor 3, Sensor 4, GND
+	Spannung VCC ist noch zu klären (3,3 V oder 5 V?)
+	PWM ist optional
+- ??? IR-Module (Analoges Signal, GPIO zur Auswahl Kanal)
+- Ultraschallsensoren SFR08 (I²C-Bus)
+	Sind bisher als Kette an einem I²C-Bus angeschlossen.
+	5-poliger Stecker:
+		5V, SDA, SCL, dnc, GND
+	??? mehrere Busse?
+- Servo Lenkung (PWM)
+	Periodendauer ist 20 ms, die "High"-Zeit liegt dabei zwischen 1 und 2 ms. Um eine ausreichende Auflösung zu erhalten, muss die PWM von einem 32 bit-Timer erzeugt werden.
+	Stecker:
+		5V ("entkoppelt"), PWM, GND
+- Ansteuerung Motor (PWM)
+	!!! Art der PWM muss noch geklärt werden
+	Stecker:
+		PWM, GND
+
+Die Car-ID soll auf der uC-Platine über einen vierpoligen DIP-Schalter einzustellen sein.
+
+Für mögliche Erweiterungen sollten noch weitere Schnittstellen zur Verfügung gestellt werden.
+Mindestens 
+- 1 (besser 2) SPI-Bus mit 4 CS-Leitungen
+- 1 (besser 2) I²C-Bus
+- 2 analoge Eingänge (mit OP-Amp-Stufe, um Spannungsreduktion ohne fliegende Verdrahtung zu ermöglichen.)
+- 2 PWM-Ausgänge
+- 8 Digitale IO-Pins.
+
