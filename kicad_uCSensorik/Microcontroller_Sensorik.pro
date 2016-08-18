@@ -1,4 +1,4 @@
-update=04.08.2016 15:39:14
+update=18.08.2016 15:28:01
 version=1
 last_client=kicad
 [pcbnew]
@@ -25,9 +25,19 @@ version=1
 NetIExt=net
 [general]
 version=1
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=../
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60
 [eeschema]
 version=1
-LibDir=../../KiCad;D:/Users/Andreas/Documents/Uni/Job_IAT/KiCad
+LibDir=../kicadlibs
 [eeschema/libraries]
 LibName1=Microcontroller_Sensorik-rescue
 LibName2=power
@@ -59,15 +69,4 @@ LibName27=opto
 LibName28=atmel
 LibName29=contrib
 LibName30=valves
-LibName31=ft232rl
-LibName32=Custom
-[schematic_editor]
-version=1
-PageLayoutDescrFile=
-PlotDirectoryName=../
-SubpartIdSeparator=0
-SubpartFirstId=65
-NetFmtName=
-SpiceForceRefPrefix=0
-SpiceUseNetNumbers=0
-LabSize=60
+LibName31=Custom
