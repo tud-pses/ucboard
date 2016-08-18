@@ -1,0 +1,12 @@
+/kicadlibs/*.bak
+/kicadlibs/*.bck
+/kicad_uCSensorik/*.bak
+/kicad_uCSensorik/*.bck
+/kicad_uCSensorik/*.kicad_pcb-bak
+/kicad_uCSensorik/*.xml
+/kicad_SchalterFahrakku/*.bak
+/kicad_SchalterFahrakku/*.bck
+/kicad_SchalterFahrakku/*.kicad_pcb-bak
+/kicad_SchalterFahrakku/*.xml
+/kicad_SchalterFahrakku/Schalter_Fahrakku
+/kicad_uCSensorik/Microcontroller_Sensorik
