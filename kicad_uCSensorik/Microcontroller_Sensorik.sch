@@ -896,17 +896,6 @@ Car-ID Einstellung
 Text Notes 11825 5325 0    60   ~ 0
 Zusätzliche GPIO
 $Comp
-L GND #PWR033
-U 1 1 579819A7
-P 7025 2575
-F 0 "#PWR033" H 7025 2325 50  0001 C CNN
-F 1 "GND" H 7025 2425 50  0000 C CNN
-F 2 "" H 7025 2575 50  0000 C CNN
-F 3 "" H 7025 2575 50  0000 C CNN
-	1    7025 2575
-	1    0    0    -1  
-$EndComp
-$Comp
 L GND #PWR034
 U 1 1 57981A63
 P 7825 2575
@@ -1284,22 +1273,6 @@ F 3 "" H 11525 1125 50  0000 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L CP_Small C6
-U 1 1 579BA15E
-P 1075 2800
-F 0 "C6" H 1085 2870 50  0000 L CNN
-F 1 "1u" H 1085 2720 50  0000 L CNN
-F 2 "Capacitors_ThroughHole:C_Radial_D5_L11_P2" H 1075 2800 50  0001 C CNN
-F 3 "" H 1075 2800 50  0000 C CNN
-F 4 "Farnell" H 1075 2800 60  0001 C CNN "Supply"
-F 5 "1871015" H 1075 2800 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/multicomp/mcmhr50v105m4x7/alu-elko-1uf-50v-radial/dp/1871015" H 1075 2800 60  0001 C CNN "URL"
-F 7 "\"0,0572\"" H 1075 2800 60  0001 C CNN "Price"
-F 8 "Elko" H 1075 2800 60  0001 C CNN "Spec"
-	1    1075 2800
-	1    0    0    -1  
-$EndComp
-$Comp
 L C_Small C8
 U 1 1 579BA35B
 P 1275 2800
@@ -1308,22 +1281,6 @@ F 1 "10n" H 1285 2720 50  0000 L CNN
 F 2 "Capacitors_SMD:C_0603_HandSoldering" H 1275 2800 50  0001 C CNN
 F 3 "" H 1275 2800 50  0000 C CNN
 	1    1275 2800
-	1    0    0    -1  
-$EndComp
-$Comp
-L CP_Small C1
-U 1 1 579BBFBF
-P 550 3750
-F 0 "C1" H 560 3820 50  0000 L CNN
-F 1 "4u7" H 560 3670 50  0000 L CNN
-F 2 "Capacitors_ThroughHole:C_Radial_D5_L11_P2" H 550 3750 50  0001 C CNN
-F 3 "" H 550 3750 50  0000 C CNN
-F 4 "Farnell" H 550 3750 60  0001 C CNN "Supply"
-F 5 "1871017" H 550 3750 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/multicomp/mcmhr50v475m5x7/alu-elko-4-7uf-50v-radial/dp/1871017" H 550 3750 60  0001 C CNN "URL"
-F 7 "\"0,062\"" H 550 3750 60  0001 C CNN "Price"
-F 8 "Elko" H 550 3750 60  0001 C CNN "Spec"
-	1    550  3750
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -1368,22 +1325,6 @@ F 1 "100n" H 1410 3670 50  0000 L CNN
 F 2 "Capacitors_SMD:C_0603_HandSoldering" H 1400 3750 50  0001 C CNN
 F 3 "" H 1400 3750 50  0000 C CNN
 	1    1400 3750
-	1    0    0    -1  
-$EndComp
-$Comp
-L CP_Small C2
-U 1 1 579BEA46
-P 575 2775
-F 0 "C2" H 585 2845 50  0000 L CNN
-F 1 "1u" H 585 2695 50  0000 L CNN
-F 2 "Capacitors_ThroughHole:C_Radial_D5_L11_P2" H 575 2775 50  0001 C CNN
-F 3 "" H 575 2775 50  0000 C CNN
-F 4 "Farnell" H 575 2775 60  0001 C CNN "Supply"
-F 5 "1871015" H 575 2775 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/multicomp/mcmhr50v105m4x7/alu-elko-1uf-50v-radial/dp/1871015" H 575 2775 60  0001 C CNN "URL"
-F 7 "\"0,0572\"" H 575 2775 60  0001 C CNN "Price"
-F 8 "Elko" H 575 2775 60  0001 C CNN "Spec"
-	1    575  2775
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -2366,17 +2307,17 @@ $EndComp
 $Comp
 L CONN_02X03 P6
 U 1 1 57B4BAA9
-P 6850 7750
-F 0 "P6" H 6850 7950 50  0000 C CNN
-F 1 "BATT2_REG_OUT" H 6850 7550 50  0000 C CNN
-F 2 "Custom:WAGO_713-1403" H 6850 6550 50  0001 C CNN
-F 3 "http://cdn-reichelt.de/documents/datenblatt/C151/WAGO713-14X.pdf" H 6850 6550 50  0001 C CNN
-F 4 "Reichelt" H 6850 7750 60  0001 C CNN "Supply"
-F 5 "WAGO 713-1403" H 6850 7750 60  0001 C CNN "Part No."
-F 6 "http://www.reichelt.de/WAGO-713-1403/3/index.html?&ACTION=3&LA=446&ARTICLE=100883&artnr=WAGO+713-1403&SEARCH=713-1403" H 6850 7750 60  0001 C CNN "URL"
-F 7 "\"1,20\"" H 6850 7750 60  0001 C CNN "Price"
-F 8 "2x3" H 6850 7750 60  0001 C CNN "Package"
-	1    6850 7750
+P 6975 7650
+F 0 "P6" H 6975 7850 50  0000 C CNN
+F 1 "BATT2_REG_OUT" H 6975 7450 50  0000 C CNN
+F 2 "Custom:WAGO_713-1403" H 6975 6450 50  0001 C CNN
+F 3 "http://cdn-reichelt.de/documents/datenblatt/C151/WAGO713-14X.pdf" H 6975 6450 50  0001 C CNN
+F 4 "Reichelt" H 6975 7650 60  0001 C CNN "Supply"
+F 5 "WAGO 713-1403" H 6975 7650 60  0001 C CNN "Part No."
+F 6 "http://www.reichelt.de/WAGO-713-1403/3/index.html?&ACTION=3&LA=446&ARTICLE=100883&artnr=WAGO+713-1403&SEARCH=713-1403" H 6975 7650 60  0001 C CNN "URL"
+F 7 "\"1,20\"" H 6975 7650 60  0001 C CNN "Price"
+F 8 "2x3" H 6975 7650 60  0001 C CNN "Package"
+	1    6975 7650
 	-1   0    0    -1  
 $EndComp
 Text Notes 14325 2600 0    60   Italic 12
@@ -2461,44 +2402,20 @@ NoConn ~ 5175 7900
 NoConn ~ 4675 7900
 NoConn ~ 4675 7800
 NoConn ~ 4675 7700
-NoConn ~ 6600 7650
-NoConn ~ 6600 7750
-NoConn ~ 6600 7850
-NoConn ~ 7100 7650
+NoConn ~ 6725 7550
+NoConn ~ 7225 7550
 Text Label 5650 7375 2    60   ~ 0
 PPC_-V_PWR
 $Comp
-L R_Small R15
-U 1 1 57AD5A4D
-P 6200 7375
-F 0 "R15" H 6230 7395 50  0000 L CNN
-F 1 "0R" H 6230 7335 50  0000 L CNN
-F 2 "Resistors_SMD:R_0603_HandSoldering" H 6200 7375 50  0001 C CNN
-F 3 "" H 6200 7375 50  0000 C CNN
-	1    6200 7375
-	0    1    1    0   
-$EndComp
-$Comp
 L +12V #PWR094
 U 1 1 57AD9EE6
-P 7300 7850
-F 0 "#PWR094" H 7300 7700 50  0001 C CNN
-F 1 "+12V" H 7300 7990 50  0000 C CNN
-F 2 "" H 7300 7850 50  0000 C CNN
-F 3 "" H 7300 7850 50  0000 C CNN
-	1    7300 7850
-	0    1    1    0   
-$EndComp
-$Comp
-L PWR_FLAG #FLG095
-U 1 1 57ADBF9F
-P 6350 7300
-F 0 "#FLG095" H 6350 7395 50  0001 C CNN
-F 1 "PWR_FLAG" H 6350 7480 50  0000 C CNN
-F 2 "" H 6350 7300 50  0000 C CNN
-F 3 "" H 6350 7300 50  0000 C CNN
-	1    6350 7300
-	1    0    0    -1  
+P 7325 7875
+F 0 "#PWR094" H 7325 7725 50  0001 C CNN
+F 1 "+12V" H 7325 8015 50  0000 C CNN
+F 2 "" H 7325 7875 50  0000 C CNN
+F 3 "" H 7325 7875 50  0000 C CNN
+	1    7325 7875
+	-1   0    0    1   
 $EndComp
 Text Label 4775 6725 2    60   ~ 0
 CTL_12V
@@ -2837,22 +2754,6 @@ F 8 "SOIC 14" H 10075 9825 60  0001 C CNN "Package"
 	1    0    0    -1  
 $EndComp
 $Comp
-L CP_Small C37
-U 1 1 57AE9911
-P 11475 2450
-F 0 "C37" H 11485 2520 50  0000 L CNN
-F 1 "4u7" H 11485 2370 50  0000 L CNN
-F 2 "Capacitors_ThroughHole:C_Radial_D5_L11_P2" H 11475 2450 50  0001 C CNN
-F 3 "" H 11475 2450 50  0000 C CNN
-F 4 "Farnell" H 11475 2450 60  0001 C CNN "Supply"
-F 5 "1871017" H 11475 2450 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/multicomp/mcmhr50v475m5x7/alu-elko-4-7uf-50v-radial/dp/1871017" H 11475 2450 60  0001 C CNN "URL"
-F 7 "\"0,062\"" H 11475 2450 60  0001 C CNN "Price"
-F 8 "Elko 6V3" H 11475 2450 60  0001 C CNN "Spec"
-	1    11475 2450
-	1    0    0    -1  
-$EndComp
-$Comp
 L C_Small C12
 U 1 1 57AF8658
 P 4575 10250
@@ -3113,17 +3014,6 @@ F 8 "SOT-23" H 6775 3825 60  0001 C CNN "Package"
 	-1   0    0    1   
 $EndComp
 NoConn ~ 7250 6625
-$Comp
-L GNDD #PWR0106
-U 1 1 57B4E454
-P 6350 7450
-F 0 "#PWR0106" H 6350 7200 50  0001 C CNN
-F 1 "GNDD" H 6350 7300 50  0000 C CNN
-F 2 "" H 6350 7450 50  0000 C CNN
-F 3 "" H 6350 7450 50  0000 C CNN
-	1    6350 7450
-	1    0    0    -1  
-$EndComp
 $Comp
 L LED D1
 U 1 1 57B676C2
@@ -4412,15 +4302,8 @@ Wire Wire Line
 	7350 6925 7250 6925
 Wire Wire Line
 	7350 7375 7350 6925
-Connection ~ 6350 7375
 Wire Wire Line
-	6350 7300 6350 7450
-Wire Wire Line
-	6300 7375 7350 7375
-Wire Wire Line
-	7300 7850 7100 7850
-Wire Wire Line
-	5650 7375 6100 7375
+	5650 7375 7350 7375
 Wire Wire Line
 	14075 4175 14075 4425
 Wire Wire Line
@@ -5553,17 +5436,6 @@ Wire Wire Line
 Connection ~ 1075 5375
 NoConn ~ 3750 2325
 $Comp
-L GNDD #PWR0156
-U 1 1 57C593F3
-P 7100 7750
-F 0 "#PWR0156" H 7100 7500 50  0001 C CNN
-F 1 "GNDD" H 7100 7600 50  0000 C CNN
-F 2 "" H 7100 7750 50  0000 C CNN
-F 3 "" H 7100 7750 50  0000 C CNN
-	1    7100 7750
-	0    -1   -1   0   
-$EndComp
-$Comp
 L DIP_SW_4x P14
 U 1 1 57C695CF
 P 6425 9125
@@ -5577,6 +5449,144 @@ F 6 "http://www.reichelt.de/Dip-Kodierschalter/NT-04/3/index.html?&ACTION=3&LA=2
 F 7 "\"0,24\"" H 6425 9125 60  0001 C CNN "Price"
 F 8 "2x4 DIP SW" H 6425 9125 60  0001 C CNN "Package"
 	1    6425 9125
+	1    0    0    -1  
+$EndComp
+$Comp
+L GNDPWR #PWR?
+U 1 1 57C7512E
+P 6275 7450
+F 0 "#PWR?" H 6275 7250 50  0001 C CNN
+F 1 "GNDPWR" H 6275 7320 50  0000 C CNN
+F 2 "" H 6275 7400 50  0000 C CNN
+F 3 "" H 6275 7400 50  0000 C CNN
+	1    6275 7450
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6275 7450 6275 7375
+Connection ~ 6275 7375
+$Comp
+L GNDPWR #PWR?
+U 1 1 57C7611B
+P 6625 7650
+F 0 "#PWR?" H 6625 7450 50  0001 C CNN
+F 1 "GNDPWR" H 6625 7520 50  0000 C CNN
+F 2 "" H 6625 7600 50  0000 C CNN
+F 3 "" H 6625 7600 50  0000 C CNN
+	1    6625 7650
+	0    1    1    0   
+$EndComp
+$Comp
+L GNDPWR #PWR?
+U 1 1 57C7688F
+P 7325 7650
+F 0 "#PWR?" H 7325 7450 50  0001 C CNN
+F 1 "GNDPWR" H 7325 7520 50  0000 C CNN
+F 2 "" H 7325 7600 50  0000 C CNN
+F 3 "" H 7325 7600 50  0000 C CNN
+	1    7325 7650
+	0    -1   -1   0   
+$EndComp
+$Comp
+L +12V #PWR?
+U 1 1 57C76A98
+P 6625 7875
+F 0 "#PWR?" H 6625 7725 50  0001 C CNN
+F 1 "+12V" H 6625 8015 50  0000 C CNN
+F 2 "" H 6625 7875 50  0000 C CNN
+F 3 "" H 6625 7875 50  0000 C CNN
+	1    6625 7875
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	7325 7875 7325 7750
+Wire Wire Line
+	7325 7750 7225 7750
+Wire Wire Line
+	6725 7750 6625 7750
+Wire Wire Line
+	6625 7750 6625 7875
+Wire Wire Line
+	6625 7650 6725 7650
+Wire Wire Line
+	7325 7650 7225 7650
+$Comp
+L GNDPWR #PWR?
+U 1 1 57C7DA2F
+P 7025 2575
+F 0 "#PWR?" H 7025 2375 50  0001 C CNN
+F 1 "GNDPWR" H 7025 2445 50  0000 C CNN
+F 2 "" H 7025 2525 50  0000 C CNN
+F 3 "" H 7025 2525 50  0000 C CNN
+	1    7025 2575
+	1    0    0    -1  
+$EndComp
+$Comp
+L C_Small C37
+U 1 1 57C7E788
+P 11475 2450
+F 0 "C37" H 11485 2520 50  0000 L CNN
+F 1 "4u7" H 11485 2370 50  0000 L CNN
+F 2 "Capacitors_SMD:C_1206_HandSoldering" H 11475 2450 50  0001 C CNN
+F 3 "" H 11475 2450 50  0000 C CNN
+F 4 "Farnell" H 11475 2450 60  0001 C CNN "Supply"
+F 5 "1828835" H 11475 2450 60  0001 C CNN "Part No."
+F 6 "http://de.farnell.com/murata/grm31cr71e475ka88l/kondensator-mlcc-x7r-4-7uf-25v/dp/1828835" H 11475 2450 60  0001 C CNN "URL"
+F 7 "\"0,154\"" H 11475 2450 60  0001 C CNN "Price"
+F 8 "1206" H 11475 2450 60  0001 C CNN "Package"
+F 9 "25V" H 11475 2450 60  0001 C CNN "Spec"
+	1    11475 2450
+	1    0    0    -1  
+$EndComp
+$Comp
+L C_Small C1
+U 1 1 57C7FBCE
+P 550 3750
+F 0 "C1" H 560 3820 50  0000 L CNN
+F 1 "4u7" H 560 3670 50  0000 L CNN
+F 2 "Capacitors_SMD:C_1206_HandSoldering" H 550 3750 50  0001 C CNN
+F 3 "" H 550 3750 50  0000 C CNN
+F 4 "Farnell" H 550 3750 60  0001 C CNN "Supply"
+F 5 "1828835" H 550 3750 60  0001 C CNN "Part No."
+F 6 "http://de.farnell.com/murata/grm31cr71e475ka88l/kondensator-mlcc-x7r-4-7uf-25v/dp/1828835" H 550 3750 60  0001 C CNN "URL"
+F 7 "\"0,154\"" H 550 3750 60  0001 C CNN "Price"
+F 8 "1206" H 550 3750 60  0001 C CNN "Package"
+F 9 "25V" H 550 3750 60  0001 C CNN "Spec"
+	1    550  3750
+	1    0    0    -1  
+$EndComp
+$Comp
+L C_Small C2
+U 1 1 57C80521
+P 575 2775
+F 0 "C2" H 585 2845 50  0000 L CNN
+F 1 "1u" H 585 2695 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 575 2775 50  0001 C CNN
+F 3 "" H 575 2775 50  0000 C CNN
+F 4 "Farnell" H 575 2775 60  0001 C CNN "Supply"
+F 5 "2346901" H 575 2775 60  0001 C CNN "Part No."
+F 6 "http://de.farnell.com/tdk/c1608x7r1e105k080ab/kondensator-mlcc-x7r-1uf-25v-0603/dp/2346901" H 575 2775 60  0001 C CNN "URL"
+F 7 "\"0,0858\"" H 575 2775 60  0001 C CNN "Price"
+F 8 "0603" H 575 2775 60  0001 C CNN "Package"
+F 9 "6V3" H 575 2775 60  0001 C CNN "Spec"
+	1    575  2775
+	1    0    0    -1  
+$EndComp
+$Comp
+L C_Small C6
+U 1 1 57C8147E
+P 1075 2800
+F 0 "C6" H 1085 2870 50  0000 L CNN
+F 1 "1u" H 1085 2720 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 1075 2800 50  0001 C CNN
+F 3 "" H 1075 2800 50  0000 C CNN
+F 4 "Farnell" H 1075 2800 60  0001 C CNN "Supply"
+F 5 "2346901" H 1075 2800 60  0001 C CNN "Part No."
+F 6 "http://de.farnell.com/tdk/c1608x7r1e105k080ab/kondensator-mlcc-x7r-1uf-25v-0603/dp/2346901" H 1075 2800 60  0001 C CNN "URL"
+F 7 "\"0,0858\"" H 1075 2800 60  0001 C CNN "Price"
+F 8 "0603" H 1075 2800 60  0001 C CNN "Package"
+F 9 "6V3" H 1075 2800 60  0001 C CNN "Spec"
+	1    1075 2800
 	1    0    0    -1  
 $EndComp
 $EndSCHEMATC
