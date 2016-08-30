@@ -1,5 +1,9 @@
 EESchema-DOCLIB  Version 2.0
 #
+$CMP DIP_SW_4x
+D Connector 02x04
+$ENDCMP
+#
 $CMP FT232RL
 F http://www.farnell.com/datasheets/2007793.pdf
 $ENDCMP
