@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source D:/Users/Andreas/Documents/Uni/Job_IAT/basicboard/kicad_uCSensorik/Microcontroller_Sensorik.sch)
-    (date "01.09.2016 15:02:53")
+    (date "01.09.2016 15:58:45")
     (tool "Eeschema 4.0.2-stable")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -2041,14 +2041,14 @@
         (pin (num 4) (name GND) (type power_in))
         (pin (num 5) (name shield) (type passive)))))
   (libraries
+    (library (logical device)
+      (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\device.lib"))
     (library (logical conn)
       (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\conn.lib"))
     (library (logical memory)
       (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\memory.lib"))
     (library (logical Custom)
-      (uri D:\Users\Andreas\Documents\Uni\Job_IAT\basicboard\kicadlibs\Custom.lib))
-    (library (logical device)
-      (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\device.lib")))
+      (uri D:\Users\Andreas\Documents\Uni\Job_IAT\basicboard\kicadlibs\Custom.lib)))
   (nets
     (net (code 1) (name "Net-(C11-Pad2)")
       (node (ref C11) (pin 2))
