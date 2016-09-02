@@ -344,30 +344,14 @@ F 9 "25V" H 5650 1275 60  0001 C CNN "Spec"
 	1    0    0    -1  
 $EndComp
 $Comp
-L MCP1703A_ U6
-U 1 1 579157FB
-P 8700 2175
-F 0 "U6" H 8700 2425 60  0000 C CNN
-F 1 "MCP1703A_SOT89" H 8700 2225 60  0000 C CNN
-F 2 "TO_SOT_Packages_SMD:SOT89-3_Housing_Handsoldering" H 8700 2225 60  0001 C CNN
-F 3 "http://www.farnell.com/datasheets/1789200.pdf" H 8700 2225 60  0001 C CNN
-F 4 "Farnell" H 8700 2175 60  0001 C CNN "Supply"
-F 5 "2218575" H 8700 2175 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/microchip/mcp1703at-3302e-mb/ldo-regl-2-7-16vin-0-25a-3-3v/dp/2218575" H 8700 2175 60  0001 C CNN "URL"
-F 7 "\"0,661\"" H 8700 2175 60  0001 C CNN "Price"
-F 8 "SOT-89-3" H 8700 2175 60  0001 C CNN "Package"
-	1    8700 2175
-	1    0    0    -1  
-$EndComp
-$Comp
 L C_Small C27
 U 1 1 57915802
-P 9425 2275
-F 0 "C27" H 9435 2345 50  0000 L CNN
-F 1 "100n" H 9435 2195 50  0000 L CNN
-F 2 "Capacitors_SMD:C_0603_HandSoldering" H 9425 2275 50  0001 C CNN
-F 3 "" H 9425 2275 50  0000 C CNN
-	1    9425 2275
+P 9550 2275
+F 0 "C27" H 9560 2345 50  0000 L CNN
+F 1 "100n" H 9560 2195 50  0000 L CNN
+F 2 "Capacitors_SMD:C_0603_HandSoldering" H 9550 2275 50  0001 C CNN
+F 3 "" H 9550 2275 50  0000 C CNN
+	1    9550 2275
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -484,12 +468,12 @@ $EndComp
 $Comp
 L PWR_FLAG #FLG010
 U 1 1 57915896
-P 9350 1950
-F 0 "#FLG010" H 9350 2045 50  0001 C CNN
-F 1 "PWR_FLAG" H 9350 2130 50  0000 C CNN
-F 2 "" H 9350 1950 50  0000 C CNN
-F 3 "" H 9350 1950 50  0000 C CNN
-	1    9350 1950
+P 9475 1950
+F 0 "#FLG010" H 9475 2045 50  0001 C CNN
+F 1 "PWR_FLAG" H 9475 2130 50  0000 C CNN
+F 2 "" H 9475 1950 50  0000 C CNN
+F 3 "" H 9475 1950 50  0000 C CNN
+	1    9475 1950
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -935,12 +919,12 @@ $EndComp
 $Comp
 L GND #PWR036
 U 1 1 579823F7
-P 9425 2575
-F 0 "#PWR036" H 9425 2325 50  0001 C CNN
-F 1 "GND" H 9425 2425 50  0000 C CNN
-F 2 "" H 9425 2575 50  0000 C CNN
-F 3 "" H 9425 2575 50  0000 C CNN
-	1    9425 2575
+P 9550 2575
+F 0 "#PWR036" H 9550 2325 50  0001 C CNN
+F 1 "GND" H 9550 2425 50  0000 C CNN
+F 2 "" H 9550 2575 50  0000 C CNN
+F 3 "" H 9550 2575 50  0000 C CNN
+	1    9550 2575
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -2279,22 +2263,22 @@ PB2
 $Comp
 L CONN_02X03 P4
 U 1 1 57B119B9
-P 4925 7800
-F 0 "P4" H 4925 8000 50  0000 C CNN
-F 1 "BATT2_IN" H 4925 7600 50  0000 C CNN
-F 2 "Custom:WAGO_713-1403" H 4925 6600 50  0001 C CNN
-F 3 "http://cdn-reichelt.de/documents/datenblatt/C151/WAGO713-14X.pdf" H 4925 6600 50  0001 C CNN
-F 4 "Reichelt" H 4925 7800 60  0001 C CNN "Supply"
-F 5 "WAGO 713-1403" H 4925 7800 60  0001 C CNN "Part No."
-F 6 "http://www.reichelt.de/WAGO-713-1403/3/index.html?&ACTION=3&LA=446&ARTICLE=100883&artnr=WAGO+713-1403&SEARCH=713-1403" H 4925 7800 60  0001 C CNN "URL"
-F 7 "\"1,20\"" H 4925 7800 60  0001 C CNN "Price"
-F 8 "2x3" H 4925 7800 60  0001 C CNN "Package"
-	1    4925 7800
+P 5275 7800
+F 0 "P4" H 5275 8000 50  0000 C CNN
+F 1 "BATT2_IN" H 5275 7600 50  0000 C CNN
+F 2 "Custom:WAGO_713-1403" H 5275 6600 50  0001 C CNN
+F 3 "http://cdn-reichelt.de/documents/datenblatt/C151/WAGO713-14X.pdf" H 5275 6600 50  0001 C CNN
+F 4 "Reichelt" H 5275 7800 60  0001 C CNN "Supply"
+F 5 "WAGO 713-1403" H 5275 7800 60  0001 C CNN "Part No."
+F 6 "http://www.reichelt.de/WAGO-713-1403/3/index.html?&ACTION=3&LA=446&ARTICLE=100883&artnr=WAGO+713-1403&SEARCH=713-1403" H 5275 7800 60  0001 C CNN "URL"
+F 7 "\"1,20\"" H 5275 7800 60  0001 C CNN "Price"
+F 8 "2x3" H 5275 7800 60  0001 C CNN "Package"
+	1    5275 7800
 	-1   0    0    -1  
 $EndComp
-Text Label 5175 7700 0    60   ~ 0
+Text Label 5525 7700 0    60   ~ 0
 PPC_+V_PWR
-Text Label 5175 7800 0    60   ~ 0
+Text Label 5525 7800 0    60   ~ 0
 PPC_-V_PWR
 $Comp
 L Q_NMOS_GSD Q6
@@ -2406,10 +2390,8 @@ F 8 "2x7" H 15225 5850 60  0001 C CNN "Package"
 	1    15225 5850
 	1    0    0    -1  
 $EndComp
-NoConn ~ 5175 7900
-NoConn ~ 4675 7900
-NoConn ~ 4675 7800
-NoConn ~ 4675 7700
+NoConn ~ 5525 7900
+NoConn ~ 5025 7900
 NoConn ~ 6725 7550
 NoConn ~ 7225 7550
 Text Label 5650 7375 2    60   ~ 0
@@ -2776,17 +2758,6 @@ F 7 "\"0,227\"" H 4575 10250 60  0001 C CNN "Price"
 F 8 "0805" H 4575 10250 60  0001 C CNN "Package"
 	1    4575 10250
 	-1   0    0    -1  
-$EndComp
-$Comp
-L Hole PD1
-U 1 1 57ADDD53
-P 725 10900
-F 0 "PD1" H 725 10790 60  0000 C CNN
-F 1 "Hole" H 725 11000 60  0000 C CNN
-F 2 "Custom:MountingHole_3.3mm_M3" H 725 10900 60  0001 C CNN
-F 3 "" H 725 10900 60  0000 C CNN
-	1    725  10900
-	1    0    0    -1  
 $EndComp
 $Comp
 L Hole PD2
@@ -4827,7 +4798,7 @@ Wire Wire Line
 Wire Wire Line
 	8425 1575 8425 1375
 Wire Wire Line
-	9425 2575 9425 2375
+	9550 2575 9550 2375
 Wire Wire Line
 	7825 2575 7825 2375
 Wire Wire Line
@@ -5252,11 +5223,11 @@ Wire Wire Line
 	7825 2175 7825 2025
 Connection ~ 7825 2025
 Wire Wire Line
-	9425 2175 9425 2025
-Connection ~ 9425 2025
+	9550 2175 9550 2025
+Connection ~ 9550 2025
 Wire Wire Line
-	9350 1950 9350 2025
-Connection ~ 9350 2025
+	9475 1950 9475 2025
+Connection ~ 9475 2025
 Wire Wire Line
 	5275 1175 5275 1025
 Connection ~ 5275 1025
@@ -5761,4 +5732,29 @@ F 3 "" H 15225 7800 50  0000 C CNN
 	1    15225 7800
 	1    0    0    -1  
 $EndComp
+Text Label 5025 7700 2    60   ~ 0
+PPC_+V_PWR
+Text Label 5025 7800 2    60   ~ 0
+PPC_-V_PWR
+$Comp
+L LD1117_S33TR U6
+U 1 1 57CA41C5
+P 8700 2175
+F 0 "U6" H 8700 2425 60  0000 C CNN
+F 1 "LD1117_S33TR" H 8700 2225 60  0000 C CNN
+F 2 "TO_SOT_Packages_SMD:SOT-223" H 8700 2225 60  0001 C CNN
+F 3 "http://www.farnell.com/datasheets/1776449.pdf" H 8700 2225 60  0001 C CNN
+F 4 "Farnell" H 8700 2175 60  0001 C CNN "Supply"
+F 5 "1202826" H 8700 2175 60  0001 C CNN "Part No."
+F 6 "http://de.farnell.com/stmicroelectronics/ld1117s33tr/ldo-spann-regler-3-3v-smd-1117/dp/1202826" H 8700 2175 60  0001 C CNN "URL"
+F 7 "\"0,297\"" H 8700 2175 60  0001 C CNN "Price"
+F 8 "SOT-223" H 8700 2175 60  0001 C CNN "Package"
+	1    8700 2175
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	9300 2225 9375 2225
+Wire Wire Line
+	9375 2225 9375 2025
+Connection ~ 9375 2025
 $EndSCHEMATC

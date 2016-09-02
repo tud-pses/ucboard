@@ -8,6 +8,14 @@ $CMP FT232RL
 F http://www.farnell.com/datasheets/2007793.pdf
 $ENDCMP
 #
+$CMP LD1117S33TR
+F http://www.farnell.com/datasheets/1789200.pdf
+$ENDCMP
+#
+$CMP LD1117_S33TR
+F http://www.farnell.com/datasheets/1789200.pdf
+$ENDCMP
+#
 $CMP MAX3232
 F http://www.ti.com/lit/ds/symlink/max3232.pdf
 $ENDCMP

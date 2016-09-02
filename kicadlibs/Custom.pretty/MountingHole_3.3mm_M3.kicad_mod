@@ -1,4 +1,4 @@
-(module MountingHole_3.3mm_M3 (layer F.Cu) (tedit 57C07EA2)
+(module MountingHole_3.3mm_M3 (layer F.Cu) (tedit 57C96765)
   (descr "Mounting Hole 3.3mm")
   (tags "mounting hole 3.3mm")
   (fp_text reference REF** (at 0 -3.8) (layer F.SilkS)
@@ -9,5 +9,5 @@
   )
   (fp_circle (center 0 0) (end 2.8 0) (layer Cmts.User) (width 0.15))
   (fp_circle (center 0 0) (end 3.05 0) (layer F.CrtYd) (width 0.05))
-  (pad "" np_thru_hole circle (at 0 0) (size 3.3 3.3) (drill 3.3) (layers *.Cu *.Mask F.SilkS))
+  (pad "" np_thru_hole circle (at 0 0) (size 6 6) (drill 3.3) (layers *.Cu *.Mask F.SilkS))
 )
