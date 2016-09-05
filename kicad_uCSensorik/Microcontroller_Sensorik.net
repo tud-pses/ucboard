@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source D:/Users/Andreas/Documents/Uni/Job_IAT/basicboard/kicad_uCSensorik/Microcontroller_Sensorik.sch)
-    (date "05.09.2016 12:26:50")
+    (date "05.09.2016 15:05:55")
     (tool "Eeschema 4.0.2-stable")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
