@@ -1,0 +1,249 @@
+\documentclass[11pt,oneside,colorback,accentcolor=tud2c,nopartpage,bigchapter,fleqn,ngerman]{tudreport}
+% Für Skripte 11pt-Schrift verwenden (Standard ist 9.5)
+
+
+% Für Entwurf auf Rechnern ohne installierte TUDdesign-Pakete
+% scrreprt kennt keine Schriftgröße 9.5pt
+%\documentclass[10pt,twoside,fleqn,ngerman]{scrreprt}
+
+
+% =================================================================================
+% Falls scrreprt anstelle von tudreport gewählt, muss das über diesen Schalter
+% mitgeteilt werden!
+% =================================================================================
+
+\newif\ifStdClassDraft
+\StdClassDraftfalse	% tudreport
+%\StdClassDrafttrue		% scrreprt
+
+% =================================================================================
+
+
+
+% =================================================================================
+% Definitionen aus tudreport-Vorlage
+% =================================================================================
+\newif\ifTUDmargin
+%\TUDmargintrue		% Sehr breiter rechter Rand
+\TUDmarginfalse		% Schmaler (normaler) rechter Rand
+
+\ifTUDmargin	% ggf. breiten Rand setzen
+  \geometry{marginparsep=4.2mm,marginparwidth=28.64mm}
+\fi
+
+\newlength{\longtablewidth}
+\setlength{\longtablewidth}{0.7\linewidth}
+\addtolength{\longtablewidth}{-\marginparsep}
+\addtolength{\longtablewidth}{-\marginparwidth}
+% =================================================================================
+
+
+
+% =================================================================================
+% Hauptdefintionen sind aus Platzgründen ausgelagert
+% =================================================================================
+
+% Einbinden wichtiger und weniger wichtiger Pakete
+\input{common/includes.tex}
+
+\ifStdClassDraft
+	% Diese Pakete nur extra einbinden, wenn NICHT tudreport als Basis.
+	\usepackage{amssymb}
+	\usepackage{geometry}
+\fi
+
+
+% Einrichten verschiedener Umgebungen, Listing-Formate, etc.
+\input{common/setups.tex}
+
+
+% Nützliche Befehle und Abkürzungen
+\input{common/commonmacros.tex}
+
+% =================================================================================
+
+
+
+% =================================================================================
+% Befehle, die in scrreprt nicht exisiteren werden hier definiert, wenn diese
+% Klasse verwendet wird.
+% Auch die Seitenränder werden angepasst, so dass es grob wie mit tudreport
+% aussieht.
+% =================================================================================
+\ifStdClassDraft
+	\newcommand{\subsubtitle}[1]{}
+	\newcommand{\settitlepicture}[1]{}
+	\newcommand{\printpicturesize}{}
+	\newcommand{\institution}[1]{}
+	
+	\author{}	% scrreprt erwartet Autor
+	
+	\geometry{left=20mm, right=15mm, top=15mm, bottom=20mm}
+\fi
+% =================================================================================
+
+
+
+% =================================================================================
+% Anpassung Absatzformat
+% =================================================================================
+% Wenn nur sehr kurze Absätze mit vielen Formeln im Text vorkommen, dann sieht der 
+% standardmäßig vorhandene Einzug bei Absatzbeginn etwas unruhig aus. Dann kann
+% dieser hier auf Null gesetzt, und dafür der vertikale Abstand zwischen zwei
+% Absätzen etwas vergrößert werden.
+%
+\setlength{\parindent}{0mm}
+\setlength{\parskip}{1ex}
+% =================================================================================
+
+
+
+
+% =================================================================================
+% Texte für den Titel und die Rückseite des Titels vorgeben
+% =================================================================================
+\title{Notizen}
+\subtitle{Eric Lenz}
+
+% \settitlepicture{}	% Bild für Deckblatt
+% \printpicturesize
+\setinstitutionlogo[height]{common/rtm_mit_schrift}	% Logo statt \institution-Text
+\institution{
+	Institut für Automatisierungstechnik und Mechatronik\\
+	FG Regelungstechnik und Mechatronik\\
+    Prof. Dr.-Ing. U. Konigorski}
+
+% Folgende Einträge werden auf der Rückseite der Titelseite gedruckt:
+\uppertitleback{}
+\lowertitleback{}
+\dedication{}
+% =================================================================================
+
+
+% =================================================================================
+% Definition eigener Befehle (Die meisten verwendeten Befehle sind aus
+% common/commommacros.tex
+% =================================================================================
+\newcommand{\eqis}{\mathrel{\widehat{=}}}
+\newcommand{\rs}[1]{\textbf{Rücksprache:} #1}
+% =================================================================================
+
+
+\begin{document}
+%\selectlanguage{english}
+\selectlanguage{ngerman}
+
+%\maketitle
+
+
+%% =================================================================================
+%% Seite für Informationen, die nicht mehr auf die Titelseite passen
+%% =================================================================================
+%\cleardoublepage
+%{
+	%\setlength{\topskip}{5cm}		% Abstand vom oberen Rand
+	%
+	%\noindent{\sffamily \huge Notizen}\\[.5cm]
+	%\noindent{\sffamily \LARGE Eric Lenz}\\[.5cm]
+%
+	%%\noindent 
+	%
+	%\vspace*{\fill}		% Den Rest unten bündig darstellen
+	%\vfill
+	%
+	%\noindent \includegraphics[width=3cm]{./common/IAT_rtm.eps}\\[0.5cm]
+	%Technische Universität Darmstadt\\
+	%Institut für Automatisierungstechnik und Mechatronik\\
+	%Fachgebiet Regelungstechnik und Mechatronik\\
+	%Prof. Dr.-Ing. U. Konigorski\\[1cm]
+	%%
+	%Landgraf-Georg-Straße 4\\
+	%64283 Darmstadt\\
+	%Telefon 06151/16-3014\\
+	%www.rtm.tu-darmstadt.de
+%}
+%% =================================================================================
+
+
+% =================================================================================
+% Zusammenfassung
+% =================================================================================
+%\begin{abstract}
+%\end{abstract}  
+% =================================================================================
+
+
+
+
+
+%% =================================================================================
+%% Inhaltsverzeichnis
+%% =================================================================================
+%\cleardoublepage	% Auf einer leeren rechten Seite beginnen
+%\phantomsection		% Diese und die nächste Zeile dient dazu, für das Inhalts-
+					%% verzeichnis einen Eintrag in das pdf-Inhaltsverzeichnis,
+					%% aber nicht in das normale Verzeichnis zu erzeugen.
+%\pdfbookmark[0]{\contentsname}{pdf:toc}	
+%\tableofcontents	% Inhaltsverzeichnis einfügen
+%\clearpage			% Sonst kommt nichts mehr auf die Seite
+%% =================================================================================
+
+
+
+% =================================================================================
+% Hauptteil
+% =================================================================================
+
+\clearpage
+\input{inc/schaltung.tex}
+\FloatBarrier
+
+
+% =================================================================================
+
+
+
+% =================================================================================
+% Anhang
+% =================================================================================
+%\appendix
+%\part{Anhang}
+
+
+%% =================================================================================
+%% Literaturverzeichnis
+%% =================================================================================
+%\clearpage						% Auf eine leere Seite einfügen
+%\phantomsection					% Für Aufnahme ins Inhaltsverzeichnis
+%\addcontentsline{toc}{chapter}{\bibname}	% In Inhaltsverzeichnis von
+											%% Dokument und pdf aufnehmen
+%\bibliographystyle{gerabbrv}	% Festlegen, wie das Verzeichnis und die Verweise
+								%% im Text aussehen
+%\bibliography{D:/Literatur/literature_complete}
+								%% Literaturverzeichnis einfügen, mit Angabe der 
+								%% Bibtex-Datei
+%% =================================================================================
+
+
+
+% =================================================================================
+% Abbildungsverzeichnis
+% =================================================================================
+%\clearpage
+%\phantomsection					% Für Aufnahme ins Inhaltsverzeichnis
+%\addcontentsline{toc}{chapter}{\listfigurename}	% In Inhaltsverzeichnis von
+%												% Dokument und pdf aufnehmen
+%\listoffigures
+% =================================================================================
+
+% =================================================================================
+% Tabellenverzeichnis
+% =================================================================================
+%\clearpage
+%\phantomsection					% Für Aufnahme ins Inhaltsverzeichnis
+%\addcontentsline{toc}{chapter}{\listtablename}	% In Inhaltsverzeichnis von
+%												% Dokument und pdf aufnehmen
+%\listoftables
+% =================================================================================
+
+\end{document}
