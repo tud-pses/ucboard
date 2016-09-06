@@ -4956,7 +4956,7 @@ Wire Wire Line
 Wire Wire Line
 	13700 7325 13700 7325
 Wire Wire Line
-	13700 7425 13700 7425
+	13700 7425 13750 7425
 Wire Wire Line
 	13700 7525 13700 7525
 Wire Wire Line
@@ -5490,7 +5490,7 @@ Wire Wire Line
 	5325 7000 5325 6925
 Connection ~ 5325 6450
 Wire Wire Line
-	5950 6375 5950 5850
+	5950 5850 5950 6375
 Wire Wire Line
 	5950 5850 5650 5850
 Wire Wire Line
@@ -5737,9 +5737,7 @@ Text Label 3750 9725 0    60   ~ 0
 MPU_INT
 Text Label 12675 7625 0    60   ~ 0
 MPU_INT
-Wire Wire Line
-	12425 7625 12675 7625
-Text Label 13700 7425 0    60   ~ 0
+Text Label 13975 7425 0    60   ~ 0
 MPU_INT
 Wire Wire Line
 	6125 8950 6125 9275
@@ -5771,4 +5769,32 @@ Connection ~ 6175 1025
 Wire Wire Line
 	6050 6000 5950 6000
 Connection ~ 5950 6000
+$Comp
+L R_Small R53
+U 1 1 57CF9BEE
+P 12550 7625
+F 0 "R53" H 12580 7645 50  0000 L CNN
+F 1 "0R" H 12580 7585 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" H 12550 7625 50  0001 C CNN
+F 3 "" H 12550 7625 50  0000 C CNN
+	1    12550 7625
+	0    1    1    0   
+$EndComp
+$Comp
+L R_Small R65
+U 1 1 57CFAF0E
+P 13850 7425
+F 0 "R65" H 13880 7445 50  0000 L CNN
+F 1 "n.B." H 13880 7385 50  0000 L CNN
+F 2 "Resistors_SMD:R_0603_HandSoldering" H 13850 7425 50  0001 C CNN
+F 3 "" H 13850 7425 50  0000 C CNN
+	1    13850 7425
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	12425 7625 12450 7625
+Wire Wire Line
+	12650 7625 12675 7625
+Wire Wire Line
+	13950 7425 13975 7425
 $EndSCHEMATC
