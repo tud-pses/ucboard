@@ -1,0 +1,128 @@
+
+\newif\ifBeamer
+\newif\ifReport
+
+\makeatletter
+\@ifclassloaded{tudbeamer}{\Beamertrue}{\Beamerfalse}
+\@ifclassloaded{beamer}{\Beamertrue}{}
+\makeatother
+
+\ifBeamer
+	\Reportfalse
+\else
+	\Reporttrue
+\fi
+
+
+\usepackage{t1enc}			% evtl. dc-Fonts 
+%\usepackage[T1]{fontenc}	% Für Silbentrennung bei Wörten mit Sonderzeichen (z.B. Umlaute)
+\usepackage[utf8]{inputenc}
+%							% Um Sonderzeichen (ä, ß, é, ...) direkt eingeben zu können
+\usepackage[english,ngerman]{babel}
+							% Für Sprachenspezifisches
+							% ngerman ist schon als globale Option definiert
+
+%\usepackage{helvet}			% Helvetica als Standard-Sans-Schriftart
+\usepackage[stable]{footmisc}
+\usepackage{booktabs}
+
+\newcommand{\mytoprule}{\toprule[\lightrulewidth]}
+\newcommand{\mymidrule}{\midrule}
+\newcommand{\mybottomrule}{\bottomrule[\lightrulewidth]}
+
+
+\usepackage{graphicx}		% zum Einbinden von Postscript
+\usepackage{psfrag}			% Beschriftung der Bilder
+\usepackage{amsmath}		% Mehr mathematischen Formelsatz
+%\usepackage{amssymb}		% Mehr mathematische Symbole
+%\usepackage{amsthm}
+\usepackage{leftidx}
+
+
+%\usepackage{float}			% Für Parameter [H] bei Fließobjekten
+\usepackage{epsfig}			% Um eps-Bilder einzubinden
+
+
+\ifReport
+	\usepackage{scrhack}		% Um Warnung "float@addtolists detected" zu unterdrücken
+	\usepackage{subfig}			% Für Unterabbildungen
+	%\captionsetup[subtable]{position=top}
+
+	\usepackage{ltxtable} 		% Vereinigt TabularX und Longtable
+	\usepackage{lscape} 		% 
+	\usepackage{rotating}		% Zum Drehen von Objekten
+	\usepackage{bibgerm}		% Für deutsche Literaturverwaltung
+	%\usepackage{wrapfig}		% Für kleine Bilder am Rand
+	%\usepackage{floatflt}		% Alternative zu wrapfig
+	%\usepackage[hang]{caption}	% Damit mehrzeilige Bildunterschriften gut aussehen
+	\usepackage[ngerman]{varioref}		% Für vref
+	\usepackage{placeins}		% Für \FloatBarrier
+\fi
+
+\usepackage{upgreek}		% Für nicht-kursive kleine griechischen Buchstaben
+
+\usepackage{multirow}		% Für mehrzeilige Felder in Tabellen
+
+\usepackage{textcomp}		% Für Sonderzeichen im normalen Text
+							% (offensichtlich in tudreport schon eingebunden)
+
+
+\usepackage{color}			% Für farbigen Text
+\usepackage{xspace}
+\usepackage{icomma}			% Damit nach Dezimalkommas kein Abstand eingefügt wird
+							% (in math-Umgebungen)
+
+\usepackage{cancel}			% Zum Wegstreichen von Gleichungstermen
+
+\usepackage{array}			% Für Zellentyp "m{}" in tabular-Umgebungen (Vertikal zentriert)
+
+%\usepackage{framed}			% Für Rahmen um Text
+
+\ifReport
+	\usepackage{enumitem}	% Für \begin{enumerate}[resume] (Weiterführen der Zählung 
+							% über mehrere enumerate-Umgebungen
+\fi
+
+\usepackage{expdlist}		% Für den Befehl \listpart, um "`normalen"' Text innerhalb
+							% von itemize-Umgebungen einzufügen.
+
+\ifReport
+	\usepackage[nohints]{minitoc}	% Für abschnittsweise Inhaltsverzeichnisse
+	\usepackage{bibunits}			% Für abschnittsweise Literaturverzeichnisse
+	%\usepackage[chapterbib]{chapterbib}
+	%\usepackage{multibib}
+\fi
+
+
+\usepackage{listings}		% Um formatierten Quellcode einzubinden
+\usepackage{moreverb}		% Für Umgebung "`verbatimtab"' (Verbatim mit Tabs)
+\renewcommand{\verbatimtabsize}{4\relax}	% Standardtabweite in "`verbatimtab"' 
+											% ist 4 Zeichen
+
+\usepackage{cellspace}		% Für gescheiten Abstand von Formeln zu Tabellen-
+							% rändern
+
+
+\usepackage{etex}
+%
+% Zeichnen von Blockschaltbildern und ähnlichem
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgf}
+% Laden der speziellen Tikz-Pakete:
+
+\usepackage[europeanresistors]{circuitikz}
+
+\usetikzlibrary{matrix,shapes,calc,through,positioning,chains,automata,arrows,decorations.pathmorphing,backgrounds,fit,decorations.pathreplacing,patterns}
+
+%\usepackage{arydshln}
+
+% Das Packet hyperref immer als letztes einbinden!
+%\usepackage[ps2pdf, colorlinks=false, pdfborder={0 0 0}]{hyperref}
+\ifReport
+	\usepackage{hyperref}	% Für Verlinkungen im erzeugten pdf
+\else					
+	%\usepackage[pagelabels=true]{hyperref}	% Für Verlinkungen im erzeugten pdf
+	\providecommand\thispdfpagelabel[1]{}
+\fi
+							

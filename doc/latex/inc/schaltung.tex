@@ -1,0 +1,41 @@
+
+\chapter{Schaltung}
+
+
+
+
+\section{Auslegung}
+
+
+
+\subsubsection{Spannungsteiler mit RC-Glied}
+
+\begin{figure}[htb]%
+	\centering
+	\begin{tikzpicture}
+		\ctikzset {label/align = straight}
+		\draw[color=black, thick]
+			(0,0) to [short,o-] (1,0)
+				to [R,-*,l^=$R_1$] (3,0)
+				to [R,-*,l^=$R_3$] (5,0)
+				to [short,-o] (7,0)
+			(3,0) to [R,-*,l^=$R_2$] (3,-2)
+			(5,0) to [C,-*,l^=$C$] (5,-2)
+			(0,-2) to [short,o-o] (7,-2);
+			
+		\draw[->, thick] (0,-0.2) -- node [auto,swap] {$U_\mrm{in}$} (0,-1.8);
+		\draw[->, thick] (7,-0.2) -- node [auto] {$U_\mrm{out}$} (7,-1.8);
+	\end{tikzpicture}
+	\caption{Spannungsteiler mit RC-Glied}%
+	\label{fig:VDivRC}%
+\end{figure}		
+
+Die Schaltung aus \figref{fig:VDivRC} (ideale Spannungsquelle am Eingang, offene Klemmen am Ausgang) stellt ein PT$_1$-Glied mit der stationären Verstärkung
+\begin{align*}
+	\frac{R_2}{R_1 + R_2}
+\end{align*}
+und der Zeitkonstante
+\begin{align*}
+	T = C \cdot \left( \frac{R_1 R_2}{R_1 + R_2} + R_3 \right)
+\end{align*}
+dar.
