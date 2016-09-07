@@ -1,7 +1,7 @@
 (export (version D)
   (design
     (source D:/Users/Andreas/Documents/Uni/Job_IAT/basicboard/kicad_uCSensorik/Microcontroller_Sensorik.sch)
-    (date "07.09.2016 14:19:03")
+    (date "07.09.2016 18:15:35")
     (tool "Eeschema 4.0.2-stable")
     (sheet (number 1) (name /) (tstamps /)
       (title_block
@@ -250,7 +250,7 @@
       (tstamp 57935BB2))
     (comp (ref U7)
       (value MPU-9250)
-      (footprint Housings_DFN_QFN:QFN-24-1EP_3x3mm_Pitch0.4mm)
+      (footprint Custom:MPU-9250)
       (datasheet https://store.invensense.com/datasheets/invensense/MPU9250REV1.0.pdf)
       (fields
         (field (name Supply) Digikey)
@@ -2072,10 +2072,10 @@
         (pin (num 4) (name GND) (type power_in))
         (pin (num 5) (name shield) (type passive)))))
   (libraries
-    (library (logical device)
-      (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\device.lib"))
     (library (logical conn)
       (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\conn.lib"))
+    (library (logical device)
+      (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\device.lib"))
     (library (logical memory)
       (uri "C:\\Program Files\\KiCad\\share\\kicad\\library\\memory.lib"))
     (library (logical Custom)
