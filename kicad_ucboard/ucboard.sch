@@ -1,5 +1,5 @@
 EESchema Schematic File Version 2
-LIBS:Microcontroller_Sensorik-rescue
+LIBS:ucboard-rescue
 LIBS:power
 LIBS:device
 LIBS:transistors
@@ -30,13 +30,13 @@ LIBS:atmel
 LIBS:contrib
 LIBS:valves
 LIBS:Custom
-LIBS:Microcontroller_Sensorik-cache
+LIBS:ucboard-cache
 EELAYER 25 0
 EELAYER END
 $Descr A3 16535 11693
 encoding utf-8
 Sheet 1 1
-Title "µC Sensorik"
+Title "ucboard (PS Echtzeitsysteme): µC-Platine"
 Date "2016-07-17"
 Rev ""
 Comp ""

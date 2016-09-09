@@ -1,11 +1,11 @@
 EESchema-LIBRARY Version 2.3
 #encoding utf-8
 #
-# MPU-9250-RESCUE-Microcontroller_Sensorik
+# MPU-9250-RESCUE-ucboard
 #
-DEF MPU-9250-RESCUE-Microcontroller_Sensorik U 0 40 Y Y 1 F N
+DEF MPU-9250-RESCUE-ucboard U 0 40 Y Y 1 F N
 F0 "U" 0 500 60 H V C CNN
-F1 "MPU-9250-RESCUE-Microcontroller_Sensorik" 0 -500 60 H V C CNN
+F1 "MPU-9250-RESCUE-ucboard" 0 -500 60 H V C CNN
 F2 "" 0 0 60 H V C CNN
 F3 "" 0 0 60 H V C CNN
 $FPLIST

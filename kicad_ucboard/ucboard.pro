@@ -39,7 +39,7 @@ LabSize=60
 version=1
 LibDir=../kicadlibs
 [eeschema/libraries]
-LibName1=Microcontroller_Sensorik-rescue
+LibName1=ucboard-rescue
 LibName2=power
 LibName3=device
 LibName4=transistors

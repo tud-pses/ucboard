@@ -4,7 +4,7 @@
 /kicad_ucboard/*.bck
 /kicad_ucboard/*.kicad_pcb-bak
 /kicad_ucboard/*.xml
-/kicad_ucboard/kicad_ucboard
+/kicad_ucboard/ucboard
 /kicad_drvbatswitch/*.bak
 /kicad_drvbatswitch/*.bck
 /kicad_drvbatswitch/*.kicad_pcb-bak
