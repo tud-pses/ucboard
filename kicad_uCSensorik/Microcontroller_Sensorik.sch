@@ -167,11 +167,12 @@ F 0 "U8" H 12125 4775 60  0000 C CNN
 F 1 "MAX3232" H 12125 3875 60  0000 C CNN
 F 2 "Housings_SOIC:SOIC-16_3.9x9.9mm_Pitch1.27mm" H 12125 4325 60  0001 C CNN
 F 3 "http://www.farnell.com/datasheets/2020372.pdf" H 12125 4325 60  0001 C CNN
-F 4 "Farnell" H 12125 4325 60  0001 C CNN "Supply"
-F 5 "1564957 " H 12125 4325 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/texas-instruments/max3232cdr/driver-receiver-rs232-3-5-5v/dp/1564957" H 12125 4325 60  0001 C CNN "URL"
-F 7 "\"1,33\"" H 12125 4325 60  0001 C CNN "Price"
-F 8 "SOIC16" H 12125 4325 60  0001 C CNN "Package"
+F 4 "MAX3232CDR" H 12125 4325 60  0001 C CNN "Spec"
+F 5 "Farnell" H 12125 4325 60  0001 C CNN "Supply"
+F 6 "1564957 " H 12125 4325 60  0001 C CNN "Part No."
+F 7 "http://de.farnell.com/texas-instruments/max3232cdr/driver-receiver-rs232-3-5-5v/dp/1564957" H 12125 4325 60  0001 C CNN "URL"
+F 8 "\"1,33\"" H 12125 4325 60  0001 C CNN "Price"
+F 9 "SOIC16" H 12125 4325 60  0001 C CNN "Package"
 	1    12125 4325
 	1    0    0    -1  
 $EndComp
@@ -2213,7 +2214,7 @@ F 1 "BATT2_IN" H 5275 7600 50  0000 C CNN
 F 2 "Custom:WAGO_713-1423" H 5275 6600 50  0001 C CNN
 F 3 "http://cdn-reichelt.de/documents/datenblatt/C151/WAGO713-14X.pdf" H 5275 6600 50  0001 C CNN
 F 4 "Reichelt" H 5275 7800 60  0001 C CNN "Supply"
-F 5 "WAGO 713-1403" H 5275 7800 60  0001 C CNN "Part No."
+F 5 "WAGO 713-1423" H 5275 7800 60  0001 C CNN "Part No."
 F 6 "http://www.reichelt.de/WAGO-713-1403/3/index.html?&ACTION=3&LA=446&ARTICLE=100883&artnr=WAGO+713-1403&SEARCH=713-1403" H 5275 7800 60  0001 C CNN "URL"
 F 7 "\"1,20\"" H 5275 7800 60  0001 C CNN "Price"
 F 8 "2x3" H 5275 7800 60  0001 C CNN "Package"
@@ -2455,11 +2456,12 @@ F 0 "U3" H 8875 5025 50  0000 C CNN
 F 1 "MCP6054" H 8975 4625 50  0000 C CNN
 F 2 "Housings_SOIC:SOIC-14_3.9x8.7mm_Pitch1.27mm" H 8775 4925 50  0001 C CNN
 F 3 "http://www.farnell.com/datasheets/1062686.pdf" H 8875 5025 50  0001 C CNN
-F 4 "Farnell" H 8825 4825 60  0001 C CNN "Supply"
-F 5 "1715855 " H 8825 4825 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/microchip/mcp6054-e-sl/op-amp-quad-1-8v-300khz-14soic/dp/1715855" H 8825 4825 60  0001 C CNN "URL"
-F 7 "\"1,74\"" H 8825 4825 60  0001 C CNN "Price"
-F 8 "SOIC 14" H 8825 4825 60  0001 C CNN "Package"
+F 4 "MCP6054-E/SL" H 8825 4825 60  0001 C CNN "Spec"
+F 5 "Farnell" H 8825 4825 60  0001 C CNN "Supply"
+F 6 "1715855 " H 8825 4825 60  0001 C CNN "Part No."
+F 7 "http://de.farnell.com/microchip/mcp6054-e-sl/op-amp-quad-1-8v-300khz-14soic/dp/1715855" H 8825 4825 60  0001 C CNN "URL"
+F 8 "\"1,74\"" H 8825 4825 60  0001 C CNN "Price"
+F 9 "SOIC 14" H 8825 4825 60  0001 C CNN "Package"
 	2    8825 4825
 	1    0    0    -1  
 $EndComp
@@ -2639,11 +2641,12 @@ F 0 "U3" H 8975 8025 50  0000 C CNN
 F 1 "MCP6054" H 9075 7625 50  0000 C CNN
 F 2 "Housings_SOIC:SOIC-14_3.9x8.7mm_Pitch1.27mm" H 8875 7925 50  0001 C CNN
 F 3 "http://www.farnell.com/datasheets/1062686.pdf" H 8975 8025 50  0001 C CNN
-F 4 "Farnell" H 8925 7825 60  0001 C CNN "Supply"
-F 5 "1715855 " H 8925 7825 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/microchip/mcp6054-e-sl/op-amp-quad-1-8v-300khz-14soic/dp/1715855" H 8925 7825 60  0001 C CNN "URL"
-F 7 "\"1,74\"" H 8925 7825 60  0001 C CNN "Price"
-F 8 "SOIC14" H 8925 7825 60  0001 C CNN "Package"
+F 4 "MCP6054-E/SL" H 8925 7825 60  0001 C CNN "Spec"
+F 5 "Farnell" H 8925 7825 60  0001 C CNN "Supply"
+F 6 "1715855 " H 8925 7825 60  0001 C CNN "Part No."
+F 7 "http://de.farnell.com/microchip/mcp6054-e-sl/op-amp-quad-1-8v-300khz-14soic/dp/1715855" H 8925 7825 60  0001 C CNN "URL"
+F 8 "\"1,74\"" H 8925 7825 60  0001 C CNN "Price"
+F 9 "SOIC14" H 8925 7825 60  0001 C CNN "Package"
 	4    8925 7825
 	1    0    0    -1  
 $EndComp
@@ -2655,11 +2658,12 @@ F 0 "U3" H 10125 10025 50  0000 C CNN
 F 1 "MCP6054" H 10225 9625 50  0000 C CNN
 F 2 "Housings_SOIC:SOIC-14_3.9x8.7mm_Pitch1.27mm" H 10025 9925 50  0001 C CNN
 F 3 "http://www.farnell.com/datasheets/1062686.pdf" H 10125 10025 50  0001 C CNN
-F 4 "Farnell" H 10075 9825 60  0001 C CNN "Supply"
-F 5 "1715855 " H 10075 9825 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/microchip/mcp6054-e-sl/op-amp-quad-1-8v-300khz-14soic/dp/1715855" H 10075 9825 60  0001 C CNN "URL"
-F 7 "1.74" H 10075 9825 60  0001 C CNN "Price"
-F 8 "SOIC 14" H 10075 9825 60  0001 C CNN "Package"
+F 4 "MCP6054-E/SL" H 10075 9825 60  0001 C CNN "Spec"
+F 5 "Farnell" H 10075 9825 60  0001 C CNN "Supply"
+F 6 "1715855 " H 10075 9825 60  0001 C CNN "Part No."
+F 7 "http://de.farnell.com/microchip/mcp6054-e-sl/op-amp-quad-1-8v-300khz-14soic/dp/1715855" H 10075 9825 60  0001 C CNN "URL"
+F 8 "1.74" H 10075 9825 60  0001 C CNN "Price"
+F 9 "SOIC 14" H 10075 9825 60  0001 C CNN "Package"
 	3    10075 9825
 	1    0    0    -1  
 $EndComp
@@ -3038,11 +3042,12 @@ F 0 "U3" H 8125 10025 50  0000 C CNN
 F 1 "MCP6054" H 8225 9625 50  0000 C CNN
 F 2 "Housings_SOIC:SOIC-14_3.9x8.7mm_Pitch1.27mm" H 8025 9925 50  0001 C CNN
 F 3 "http://www.farnell.com/datasheets/1062686.pdf" H 8125 10025 50  0001 C CNN
-F 4 "Farnell" H 8075 9825 60  0001 C CNN "Supply"
-F 5 "1715855 " H 8075 9825 60  0001 C CNN "Part No."
-F 6 "http://de.farnell.com/microchip/mcp6054-e-sl/op-amp-quad-1-8v-300khz-14soic/dp/1715855" H 8075 9825 60  0001 C CNN "URL"
-F 7 "1.74" H 8075 9825 60  0001 C CNN "Price"
-F 8 "SOIC 14" H 8075 9825 60  0001 C CNN "Package"
+F 4 "MCP6054-E/SL" H 8075 9825 60  0001 C CNN "Spec"
+F 5 "Farnell" H 8075 9825 60  0001 C CNN "Supply"
+F 6 "1715855 " H 8075 9825 60  0001 C CNN "Part No."
+F 7 "http://de.farnell.com/microchip/mcp6054-e-sl/op-amp-quad-1-8v-300khz-14soic/dp/1715855" H 8075 9825 60  0001 C CNN "URL"
+F 8 "1.74" H 8075 9825 60  0001 C CNN "Price"
+F 9 "SOIC 14" H 8075 9825 60  0001 C CNN "Package"
 	1    8075 9825
 	1    0    0    -1  
 $EndComp
