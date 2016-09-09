@@ -13775,7 +13775,7 @@
   )
 
   (gr_text "RTM/AJ 16\nBOTTOM" (at 146 154) (layer B.Cu) (tstamp 57D04913)
-    (effects (font (size 1 1) (thickness 0.15)))
+    (effects (font (size 1 1) (thickness 0.15)) (justify mirror))
   )
   (gr_text "RTM/AJ 16\nTOP" (at 146 154) (layer F.Cu)
     (effects (font (size 1 1) (thickness 0.15)))
