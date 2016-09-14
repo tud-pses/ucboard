@@ -1,5 +1,4 @@
 EESchema Schematic File Version 2
-LIBS:ucboard-rescue
 LIBS:power
 LIBS:device
 LIBS:transistors
@@ -3015,7 +3014,7 @@ L R R22
 U 1 1 5790E6B3
 P 6675 4350
 F 0 "R22" V 6755 4350 50  0000 C CNN
-F 1 "16k" V 6675 4350 50  0000 C CNN
+F 1 "14k" V 6675 4350 50  0000 C CNN
 F 2 "Resistors_SMD:R_0603_HandSoldering" V 6605 4350 50  0001 C CNN
 F 3 "" H 6675 4350 50  0000 C CNN
 F 4 "\"0,1%\"" H 6675 4350 60  0001 C CNN "Spec"
