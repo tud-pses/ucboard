@@ -1,0 +1,336 @@
+
+\chapter{Kommunikation}
+
+
+\section{Prinzip}
+
+
+\begin{itemize}
+	\item Die Kommunikation des ucboard soll so aufgebaut sein, dass eine Bedienung über ein einfaches Terminalprogramm möglich ist, um ein einfaches Debuggen zu ermöglichen.
+	\item Es soll eine einfache Interaktion möglich sein. (\ZB zum Kalibrieren der Sensoren.)
+	\item Ein einfaches Parsen der vom ucboard gesendeten Daten soll aber ebenso möglich sein.
+\end{itemize}
+
+
+\begin{itemize}
+	\item Textbasiert
+		\begin{itemize}
+			\item Um bei den Messdaten etwas platzeffizienter zu sein, können diese optional als base64 versendet werden.
+		\end{itemize}
+	\item Keine \bzw nur bei manchen Befehlen optionale Prüfsummen.
+	\item Messdaten und Textnachrichten können vom ucboard ohne Aufforderung versendet werden.
+	\item Ansonsten reagiert das ucboard auf Befehle.
+\end{itemize}
+
+\begin{itemize}
+	\item Die Nachrichten zum ucboard sollen sich möglichst einfach Parsen lassen. Die Nachrichten bestehen aus einem oder mehreren, durch Leerzeichen getrennte Wörter. Der Typ eines Wortes ergibt sich aus dem ersten Zeichen:
+		\begin{itemize}
+			\item \texttt{A} - \texttt{Z} und \texttt{\_}: String
+			\item \verb+~+: Optionsname
+			\item \texttt{0} - \texttt{9} und \texttt{-}: Zahl
+		\end{itemize}
+\end{itemize}
+
+
+
+\section{Prinzpielles}
+
+\begin{itemize}
+	\item Alle besonderen Startzeichen dürfen auch innerhalb der Nachrichten verwendet werden. Dort haben sie keine besondere Bedeutung.
+	\item Besteht eine Nachricht aus mehreren Wörtern, so spielt die Anzahl der Leerzeichen zwischen den Wörtern keine Rolle. (Mindestens eines!)
+	\item Nach dem Startzeichen kann, muss aber kein Leerzeichen folgen.
+\end{itemize}
+
+
+\subsubsection{Zu ucboard}
+\begin{itemize}
+	\item Befehle beginnen mit \texttt{!}
+	\item Abfragen beginnen mit \texttt{?}
+	\item Antworten auf Fragen des ucboard (im interaktiven Modus) besitzen keinen speziellen Beginn. (Sie dürfen aber auch mit \texttt{!} oder \texttt{?} beginnen.
+	\item Das Ende einer Nachricht wird ausschließlich durch \texttt{\textbackslash n} (newline) markiert
+	\item Optionen beginnen mit \verb+~+. Wenn der Option ein Wert zugeordnet wird, dann wird dieser nach einem \texttt{=} angeschlossen. Dabei dürfen um das Gleichheitszeichen herum keine Leerzeichen stehen!
+\end{itemize}
+
+
+\subsubsection{Von ucboard}
+\begin{itemize}
+	\item Direkte Antworten beginnen mit \texttt{:}
+	\item Auch jeder Schreibbefehl sollte eine kurze Antwort zur Quittierung senden, \zB \verb+:ok\n+. Es wäre empfehlenswert, den gesetzten Wert zu wiederholen
+	\item Fehler bei der Abarbeitung von Befehlen beginnen mit \texttt{:ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{:ERR(code):Beschreibung} 
+	\item Textausgaben (Display-Funktion) beginnen mit \texttt{'}
+	\item Fehlermeldungen sind Textausgaben. Diese beginnen mit \texttt{'ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{'ERR(code):Beschreibung} 
+	\item Ohne Auf"|forderung versendete Messdaten beginnen mit \texttt{\#} (base64-codiert) \bzw \texttt{\#\#} (lesbarer Text).
+	\item Wenn eine Nutzerinteraktion notwendig ist, dann sollte das letzte Zeichen vor dem Nachrichtendezeichen ein \texttt{?} sein.
+	\item Alle Nachrichten vom ucboard haben EOT (0x??) als Endzeichen. (Dadurch ist es möglich, eine mehrzeilige Ausgabe auf dem Terminalprogramm zu erzeugen.)
+\end{itemize}
+
+
+\section{Befehle}
+
+\subsubsection{ID}
+
+Car-ID
+
+Abfrage 
+
+\begin{verbatim}
+	?ID
+	:4
+\end{verbatim}
+
+
+\subsubsection{SID}
+
+Session-ID
+
+\begin{verbatim}
+	?SID
+	:0
+\end{verbatim}
+
+
+\begin{verbatim}
+	!SID 25363
+	:25363
+\end{verbatim}
+
+\begin{verbatim}
+	?SID
+	:25363
+\end{verbatim}
+
+
+\subsubsection{STEER}
+
+\begin{verbatim}
+	!STEER -200
+	:-200
+\end{verbatim}
+
+Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren
+
+\begin{verbatim}
+	!STEER -200 -200
+	:-200
+\end{verbatim}
+
+\begin{verbatim}
+	!STEER -200 -201
+	:ERR(1001):Msg corrupted
+\end{verbatim}
+
+\begin{verbatim}
+	?STEER
+	:-200
+\end{verbatim}
+
+
+\subsubsection{DRV}
+
+\begin{verbatim}
+	!DRV 300
+	:300
+\end{verbatim}
+
+
+Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren
+
+
+\begin{verbatim}
+	!DRV 300 300
+	:300
+\end{verbatim}
+
+\begin{verbatim}
+	?DRV
+	:300
+\end{verbatim}
+
+
+DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeitzählung der Totmannschaltung (\bzw Tot-PC-Schaltung) neu zu starten.
+\begin{verbatim}
+	!DRV
+	:ok
+\end{verbatim}
+
+
+\paragraph{DMS}
+
+"`Totmannschaltung"' (Dead-man switch)
+
+Dieser Parameter gibt die Zeit in Millisekunden an, innerhalb derer eine neue DRV-Nachricht erhalten sein muss. Wird diese Zeit ohne DRV-Nachricht überschritten, so wird der Motor gestoppt. (Bei der nächsten DRV-Nachricht wird der Motor dann wieder angesteuert.)
+
+\begin{verbatim}
+	!DRV ~DMS=1000
+	:1000
+\end{verbatim}
+
+$-1$ bedeutet deaktiviert ("`unendlich"').
+
+
+\subsubsection{DAQ}
+
+
+Signale:\\
+\begin{tabular}{lllll}
+	\mytoprule
+	Signal & Beschreibung & Einheit & Datentyp & Länge \\
+	\mymidrule
+	\verb|AX| & Beschleunigung $x$-Richtung &  & \verb|int16_t| & 2 \\
+	\verb|AY| & Beschleunigung $y$-Richtung &  & \verb|int16_t| & 2 \\
+	\verb|AZ| & Beschleunigung $z$-Richtung &  & \verb|int16_t| & 2 \\
+	\verb|GX| & Drehrate um $x$-Achse & & \verb|int16_t| & 2 \\
+	\verb|GY| & Drehrate um $y$-Achse & & \verb|int16_t| & 2 \\
+	\verb|GZ| & Drehrate um $z$-Achse & & \verb|int16_t| & 2 \\
+	\verb|USF| & Abstand vorne & mm & \verb|uint16_t| & \\
+	\verb|USL| & Abstand links & mm & \verb|uint16_t| & \\
+	\verb|USR| & Abstand rechts & mm & \verb|uint16_t| & \\
+	\verb|VSBAT| & Spannung Systemakku & mV & \verb|uint16_t| & 2\\
+	\verb|VDBAT| & Spannung Fahrakku & mV & \verb|uint16_t| & 2\\
+	\mybottomrule
+\end{tabular}
+
+Allgemein gilt:
+
+\begin{tabular}{lll}
+	\mytoprule
+	Datentyp & \verb|uint16_t| & \verb|int16_t| \\
+	\mymidrule
+	Keine Daten vorhanden & \verb|0xFFFF| & \verb|0x7FFF| \\
+	Messfehler & \verb|0xFFFE| & \verb|0x7FFE| \\
+	Sensorfehler & \verb|0xFFFD| & \verb|0x7FFD| \\
+	Wert zu groß  & \verb|0xFFFC| & \verb|0x7FFC| \\
+	Wert zu klein & & \verb|0x8000| \\
+	\mybottomrule
+\end{tabular}
+
+\begin{tabular}{lll}
+	\mytoprule
+	Datentyp & \verb|uint16_t| & \verb|int16_t| \\
+	\mymidrule
+	Keine Daten vorhanden & \verb|[]| & \verb|[]| \\
+	Messfehler & \verb|undef| & \verb|undef| \\
+	Sensorfehler & \verb|fault| & \verb|fault| \\
+	Wert zu groß  & \verb|over| & \verb|over| \\
+	Wert zu klein & & \verb|under| \\
+	\mybottomrule
+\end{tabular}
+
+
+Einzelabfrage von Werten:
+\begin{verbatim}
+	!DAQ GET USF
+	:453 20
+\end{verbatim}
+
+
+\begin{verbatim}
+	!DAQ GET ~AGE USF
+	:453 20
+\end{verbatim}
+
+Erster Rückgabewert ist Wert (Einheit siehe Tabelle), zweiter Wert ist Alter in Tics
+
+\begin{verbatim}
+	!DAQ GET ~AGE USF USL USR
+	:453 20 1004 30 323 15
+\end{verbatim}
+
+
+
+\begin{verbatim}
+	!DAQ GET ~TICS USF
+	:453 14533
+\end{verbatim}
+
+
+\paragraph{Automatische Messgruppen}
+
+Es stehen zehn automatisierbare Messgruppen zur Verfügung. In diesen können verschiedene Sensorwerte zusammengefasst werden.
+
+Paket 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{100}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
+\begin{verbatim}
+	!DAQ MKPKG 1 ~ALL=100 ~B64 ~CRC16 _TIC USF USL USR 
+\end{verbatim}
+
+Paket 2 enthält die Spannungen der beiden Akkus, wobei immer eine Nachricht verschickt wird, sobald eine neue Spannung gemessen ist.
+\begin{verbatim}
+	!DAQ MKPKG 2 ~ANY VSBAT VDBAT 
+\end{verbatim}
+
+Paket 3 enthält die Beschleunigungswerte in der Ebene mit der Gierrate. Die Daten werden alle \valunit{10}{ms} verschickt. Dabei werden alle innerhalb der \valunit{10}{ms} erfassten Daten gemittelt.
+\begin{verbatim}
+	!DAQ MKPKG 3 ~TS=10 ~AVG ~B64 ~CRC16 AX AY GZ 
+\end{verbatim}
+
+
+Optionen:
+\begin{itemize}
+	\item \verb+~ALL+: Sendet, wenn alle Daten vorhanden sind
+	\item \verb+~ANY+: Sendet, wenn ein Datum vorhanden ist
+	\item \verb+~B64+: Nachricht wird base64-codiert (ohne Padding) 
+	\item \verb+~CRC16+: CRC16-Prüfsumme
+	\item \verb+~TS+: Abtastzeit
+	\item \verb+~AVG+: Mittelung, wenn TS größer als Sensorabtastzeit ist. (TS muss ein ganzes Vielfaches der Sensorabtastzeit sein.)
+\end{itemize}
+
+
+
+\begin{tabular}{lllll}
+	\mytoprule
+	Signal & Beschreibung & & Datentyp & Länge \\
+	\mymidrule
+	\verb|_TIC| & ucboard-Zeit (tics) der Erfassung des ersten Datums & tics & \verb|uint32_t| & 4 \\
+	\verb|_STIC| & die niederwertigen \valunit{16}{bits} von \verb|_TIC| & tics & \verb|uint16_t| & 2 \\
+	\verb|_SSTIC| & die niederwertigen \valunit{8}{bits} von \verb|_TIC| & tics & \verb|uint8_t| & 1 \\
+	\verb|_DTICS| & Delta der ucboard-Zeit zwischen ersten und letztem Datum & & \verb|int16_t| & 2 \\
+	\mybottomrule
+\end{tabular}
+
+
+
+\begin{verbatim}
+	!DAQ SHOWPKGS
+	:[...]
+\end{verbatim}
+
+\begin{verbatim}
+	!DAQ SHOWPKG 1
+	:[...]
+\end{verbatim}
+
+\begin{verbatim}
+	!DAQ RMPKG 2
+	:ok
+\end{verbatim}
+
+
+\begin{verbatim}
+	!DAQ ACTPKG 1
+	:ok
+\end{verbatim}
+
+\begin{verbatim}
+	!DAQ DEACTPKG 1
+	:ok
+\end{verbatim}
+
+\begin{verbatim}
+	!DAQ START
+	:ok
+\end{verbatim}
+
+\begin{verbatim}
+	!DAQ STOP
+	:ok
+\end{verbatim}
+
+
+
+\subsubsection{IMU CAL}
+
+
+
+
+
+
