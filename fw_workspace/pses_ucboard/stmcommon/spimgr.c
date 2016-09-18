@@ -5,6 +5,7 @@
 #include "stm32f3xx_hal_gpio.h"
 
 #include "spimgr.h"
+#include "stdtypes.h"
 
 #include "stm32_llm.h"
 
