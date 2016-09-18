@@ -24,7 +24,7 @@
 #include <stdio.h>
 
 
-#define UNUSEDARG(x) UNUSED_ ## x __attribute__((unused))
+#define UNUSED_(x) UNUSED_ ## x __attribute__((unused))
 
 
 
