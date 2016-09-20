@@ -10,12 +10,6 @@
 #include "stdtypes.h"
 
 
-typedef enum EnStrCmpRes_
-{
-	STRCMPRES_LEFTBIGGER = -1,
-	STRCMPRES_EQUAL = 0,
-	STRCMPRES_RIGHTBIGGER = 1,
-} EnStrCmpRes_t;
 
 
 #define UPPER(c) ((c >= 'a') && (c <= 'z')) ? (c + 'A' - 'a') : c
@@ -170,4 +164,42 @@ void strsplit(SplittedStr_t* sstr,
 }
 
 
+char* strcpy_returnend(char* target, char* const targetend,
+											const char* source)
+{
+	while ( (*source != '\0') && (target < targetend) )
+	{
+		*target++ = *source++;
+	}
 
+	*target = '\0';
+
+	return target;
+}
+
+
+char* strcat_returnend(char* target, char* const targetend, ...)
+{
+	va_list valist;
+	char* str;
+
+	*target = '\0';
+
+	va_start(valist, targetend);
+
+	while (1)
+	{
+		str = va_arg(valist, char*);
+
+		if (str == 0)
+		{
+			break;
+		}
+
+		target = strcpy_returnend(target, targetend, str);
+	}
+
+	va_end(valist);
+
+	return target;
+}

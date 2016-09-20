@@ -7,6 +7,7 @@
 
 
 #include "stdtypes.h"
+#include "comm_public.h"
 
 #include "stm32f3xx.h"
 
@@ -29,9 +30,12 @@ uint8_t getCarID()
 	return (uint8_t) id;
 }
 
-bool cmd_carid(uint8_t* acData, uint8_t nLen,
-								uint8_t* acRespData, uint8_t* pnRespLen)
+bool cmd_carid(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
+					char* acRespData, uint16_t* pnRespLen,
+					void* pDirectCallback)
 {
+	*(CommDirectFctPtr*)pDirectCallback = 0;
+
 
 	return true;
 }
