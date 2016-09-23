@@ -15,6 +15,19 @@
 #define UPPER(c) ((c >= 'a') && (c <= 'z')) ? (c + 'A' - 'a') : c
 
 
+uint16_t strlen_(const char* s)
+{
+	uint16_t cnt = 0;
+
+	while(*s++ != '\0')
+	{
+		cnt++;
+	}
+
+	return cnt;
+}
+
+
 void toupper_(char* str)
 {
 	while(str != '\0')

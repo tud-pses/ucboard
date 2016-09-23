@@ -32,6 +32,8 @@ typedef enum EnStrCmpRes_
 } EnStrCmpRes_t;
 
 
+uint16_t strlen_(const char* s);
+
 void toupper_(char* str);
 
 EnStrCmpRes_t strcmps(const char* l, const char* r);

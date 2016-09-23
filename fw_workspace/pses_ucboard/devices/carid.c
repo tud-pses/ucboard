@@ -9,7 +9,11 @@
 #include "stdtypes.h"
 #include "comm_public.h"
 
+#include "common_fcts.h"
+
 #include "stm32f3xx.h"
+
+
 
 // Die Car-ID wird über DIP-Schalter an den Pins PF2, PF6, PF9, PF10
 // eingestellt.
@@ -34,8 +38,41 @@ bool cmd_carid(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
 					void* pDirectCallback)
 {
+	SplittedStr_t sstr;
+
 	*(CommDirectFctPtr*)pDirectCallback = 0;
 
+	strsplit(&sstr, acData, ' ', '"', 10);
+
+	if (eSpec == CMDSPEC_SET)
+	{
+		char* strend = createErrStr_returnend(
+				acRespData,
+				acRespData + RXMAXMSGLEN - 1,
+				SOT_RXRESP, ERRCODE_COMM_READONLY,
+				"ID is a read-only parameter!");
+
+		*pnRespLen = strend - acRespData;
+	}
+	else
+	{
+		if (sstr.cnt != 0)
+		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN - 1,
+					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+					"Usage: ?ID");
+
+			*pnRespLen = strend - acRespData;
+		}
+		else
+		{
+			utoa(getCarID(), acRespData + 1, 10);
+			acRespData[0] = SOT_RXRESP;
+			*pnRespLen = strlen_(acRespData);
+		}
+	}
 
 	return true;
 }

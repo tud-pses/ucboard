@@ -8,6 +8,7 @@
 
 #include "stdtypes.h"
 #include "comm_public.h"
+#include "common_fcts.h"
 
 
 static uint32_t f_sid = 0;
@@ -28,29 +29,38 @@ bool cmd_sessionid(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 	{
 		if (sstr.cnt != 1)
 		{
-//			f_bufTxSec.head = createErrStr_returnend(
-//					acRespData,
-//					acRespData + 254,
-//					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-//					"");
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN - 1,
+					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+					"Usage: !SID [number]");
 
+			*pnRespLen = strend - acRespData;
 		}
 		else
 		{
+			uint32_t sid = (uint32_t)atoi(sstr.strs[0]);
 
+			f_sid = sid;
 		}
 	}
 	else
 	{
-		char idbuf[10];
-
 		if (sstr.cnt != 0)
 		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN,
+					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+					"Usage: ?SID");
 
+			*pnRespLen = strend - acRespData;
 		}
 		else
 		{
-
+			utoa(f_sid, acRespData + 1, 10);
+			acRespData[0] = SOT_RXRESP;
+			*pnRespLen = strlen_(acRespData);
 		}
 	}
 

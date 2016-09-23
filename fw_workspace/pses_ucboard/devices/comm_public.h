@@ -13,6 +13,20 @@
 #include "errcodes.h"
 
 
+#define EOT_RX	'\n'
+#define EOT_TX 9
+
+#define SOT_SETCMD	'!'
+#define SOT_GETCMD	'?'
+
+#define SOT_RXRESP	':'
+#define SOT_RXDAQ	'#'
+#define SOT_RXOUT	'\''
+
+
+#define RXMAXMSGLEN	256
+#define TXMAXMSGLEN	256
+
 typedef enum EnCmdSpec_
 {
 	CMDSPEC_GET,

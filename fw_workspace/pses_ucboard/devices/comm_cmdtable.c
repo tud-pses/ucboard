@@ -17,7 +17,7 @@ CommCmdTableEntry_t g_commCmdFctTable[] =
 {
 		{"ID",  &cmd_carid},
 		{"SID",  &cmd_sessionid},
-		{"",  0}	// Eintrag "" muss am Ende stehen, als Abbruchbedingung
+		{0,  0}	// last entry have to be {0, 0} (exit condition when iterating over table)
 };
 
 
