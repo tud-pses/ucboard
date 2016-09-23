@@ -95,3 +95,20 @@ char* utoa(uint32_t value, char * const result, int base) {
 
 	return result;
 }
+
+
+int atoi(const char* p)
+{
+	int k = 0;
+	int s;
+
+	s = (*p == '-') ? -1 : 1;
+
+	while (*p)
+	{
+		k = (k << 3) + (k << 1) + (*p) - '0';
+		p++;
+	}
+
+	return k * s;
+}

@@ -10,13 +10,11 @@
 
 
 #include "stdtypes.h"
-#include "stopwatch.h"
-
-#define wait_ms(t) Stopwatch_wait_ms(t)
-#define wait_us(t) Stopwatch_wait_us(t)
 
 extern char* itoa(int value, char* const result, int base);
 extern char* utoa(uint32_t value, char* const result, int base);
+
+extern int atoi(const char* p);
 
 inline uint32_t copystring(char* szTarget, char* szSource, uint32_t uMaxLen);
 
