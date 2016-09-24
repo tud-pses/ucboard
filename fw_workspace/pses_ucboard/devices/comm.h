@@ -9,5 +9,6 @@
 #define COMM_H_
 
 void comm_init();
+void comm_do();
 
 #endif /* COMM_H_ */

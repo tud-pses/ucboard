@@ -38,8 +38,14 @@ typedef bool (*CommCmdFctPtr) (EnCmdSpec_t, char*, uint16_t, char*, uint16_t*, v
 
 typedef bool (*CommDirectFctPtr) (char*, uint16_t, char*, uint16_t*, void*);
 
+typedef bool (*CommStreamFctPtr) (char*, uint16_t*, bool*, uint16_t);
+
 
 char* createErrStr_returnend(char* buf, char* const bufend, char sotchar, EnErrCode_t eErr, const char* msg);
+
+bool comm_addStream(CommStreamFctPtr fct);
+bool comm_removeStream(CommStreamFctPtr fct);
+
 
 
 #endif /* COMM_PUBLIC_H_ */

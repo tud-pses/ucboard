@@ -47,13 +47,14 @@ typedef enum EnCommTxState_
 } EnCommTxState_t;
 
 
-static EnCommTxState_t f_eTxRespState = COMMTXSTATE_IDLE;
-static EnCommTxState_t f_eTxOutstreamState = COMMTXSTATE_IDLE;
-//static EnCommTxState_t f_eTxStdoutState = COMMTXSTATE_IDLE;
+//static EnCommTxState_t f_eTxRespState = COMMTXSTATE_IDLE;
+
+static EnCommTxState_t f_eTxPrimaryState = COMMTXSTATE_IDLE;
 static EnCommTxState_t f_eTxSecState = COMMTXSTATE_IDLE;
 
 static EnCommTxState_t* f_pUART2TxState = 0;
 static EnCommTxState_t* f_pUART3TxState = 0;
+
 
 typedef enum EnCommError_
 {
@@ -101,13 +102,6 @@ static Buffer_t f_bufTxOutstream = {f_acTxOutstreamBuf,
 									f_acTxOutstreamBuf};
 
 
-//static uint8_t f_acTxStdoutBuf[TXMAXMSGLEN];
-//static Buffer_t f_bufTxStdout = {f_acTxStdoutBuf,
-//									f_acTxStdoutBuf + TXMAXMSGLEN - 1,
-//									f_acTxStdoutBuf,
-//									f_acTxStdoutBuf};
-
-
 static uint8_t f_acTxSecondaryBuf[TXMAXMSGLEN];
 static Buffer_t f_bufTxSec = {f_acTxSecondaryBuf,
 									f_acTxSecondaryBuf + TXMAXMSGLEN - 1,
@@ -120,6 +114,11 @@ static Buffer_t f_bufRx = {f_acRxBuf,
 									f_acRxBuf + RXMAXMSGLEN - 1,
 									f_acRxBuf,
 									f_acRxBuf};
+
+
+#define MAXSTREAMS 10
+static CommStreamFctPtr f_streams[MAXSTREAMS] = {NULL};
+static CommStreamFctPtr f_priorityStream = NULL;
 
 
 typedef enum EnUART_
@@ -210,8 +209,13 @@ void comm_init()
 }
 
 
+// comm_do has to be called on a lower interrupt level as the UART-interrupts!
 void comm_do()
 {
+	static bool s_bIncompleteStreamMsg = false;
+	static uint8_t s_uCurStreamID = 0;
+	static bool s_bIncompletePriorityStreamMsg = false;
+
 	if (f_ePrimaryUART == UART_NONE)
 	{
 		return;
@@ -223,19 +227,207 @@ void comm_do()
 
 		if (f_ePrimaryUART == UART_2)
 		{
-			__xUSART_ENABLE_IT(USART3, USART_ISR_TXE);
+			f_pUART3TxState = &f_eTxSecState;
 			f_pbufUART3Tx = &f_bufTxSec;
+
+			__xUSART_ENABLE_IT(USART3, USART_ISR_TXE);
 			USART3->TDR = BUFFER_POP(*f_pbufUART3Tx);
 		}
 		else
 		{
-			__xUSART_ENABLE_IT(USART2, USART_ISR_TXE);
+			f_pUART2TxState = &f_eTxSecState;
 			f_pbufUART2Tx = &f_bufTxSec;
+
+			__xUSART_ENABLE_IT(USART2, USART_ISR_TXE);
 			USART2->TDR = BUFFER_POP(*f_pbufUART2Tx);
 		}
 	}
 
+
+	if (f_eTxPrimaryState == COMMTXSTATE_IDLE)
+	{
+		Buffer_t* pbufPrimary = NULL;
+
+		if (s_bIncompletePriorityStreamMsg || s_bIncompleteStreamMsg)
+		{
+			uint16_t nCnt;
+			bool bMsgComplete;
+
+			if (s_bIncompletePriorityStreamMsg)
+			{
+				f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				s_bIncompletePriorityStreamMsg = !bMsgComplete;
+			}
+			else
+			{
+				f_streams[s_uCurStreamID]((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				s_bIncompleteStreamMsg = !bMsgComplete;
+			}
+
+			f_bufTxOutstream.tail = f_bufTxOutstream.start;
+			f_bufTxOutstream.head = f_bufTxOutstream.start + nCnt;
+
+			if (bMsgComplete)
+			{
+				BUFFER_PUSH(f_bufTxOutstream, EOT_TX);
+			}
+
+			pbufPrimary = &f_bufTxOutstream;
+		}
+		else
+		{
+			bool res;
+			uint16_t nCnt;
+			bool bMsgComplete;
+
+			if (!BUFFER_ISEMPTY(f_bufTxResp))
+			{
+				pbufPrimary = &f_bufTxResp;
+			}
+			else
+			{
+				res = f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+
+				if (res)
+				{
+					s_bIncompletePriorityStreamMsg = !bMsgComplete;
+				}
+				else
+				{
+					uint8_t i = s_uCurStreamID;
+
+					while (1)
+					{
+						i++;
+
+						if ( (i == MAXSTREAMS) || (f_streams[i] == NULL) )
+						{
+							i = 0;
+						}
+
+						res = f_streams[i]((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+
+						if (res == true)
+						{
+							s_bIncompleteStreamMsg = !bMsgComplete;
+							s_uCurStreamID = i;
+
+							break;
+						}
+
+						if (i == s_uCurStreamID)
+						{
+							break;
+						}
+					}
+				}
+
+
+				if (res == true)
+				{
+					f_bufTxOutstream.tail = f_bufTxOutstream.start;
+					f_bufTxOutstream.head = f_bufTxOutstream.start + nCnt;
+
+					if (bMsgComplete)
+					{
+						BUFFER_PUSH(f_bufTxOutstream, EOT_TX);
+					}
+
+					pbufPrimary = &f_bufTxOutstream;
+				}
+			}
+		}
+
+
+		if (pbufPrimary != NULL)
+		{
+			f_eTxPrimaryState = COMMTXSTATE_INPROGRESS;
+
+			if (f_ePrimaryUART == UART_2)
+			{
+				f_pUART2TxState = &f_eTxPrimaryState;
+				f_pbufUART2Tx = pbufPrimary;
+
+				__xUSART_ENABLE_IT(USART2, USART_ISR_TXE);
+				USART2->TDR = BUFFER_POP(*f_pbufUART2Tx);
+			}
+			else
+			{
+				f_pUART3TxState = &f_eTxPrimaryState;
+				f_pbufUART3Tx = pbufPrimary;
+
+				__xUSART_ENABLE_IT(USART3, USART_ISR_TXE);
+				USART3->TDR = BUFFER_POP(*f_pbufUART3Tx);
+			}
+		}
+	}
+
+
 	return;
+}
+
+
+bool comm_setPriorityStream(CommStreamFctPtr fct)
+{
+	if (f_priorityStream != NULL)
+	{
+		return false;
+	}
+
+	f_priorityStream = fct;
+
+	return true;
+}
+
+
+bool comm_unsetPriorityStream(CommStreamFctPtr fct)
+{
+	if (f_priorityStream != fct)
+	{
+		return false;
+	}
+
+	f_priorityStream = NULL;
+
+	return true;
+}
+
+
+bool comm_addStream(CommStreamFctPtr fct)
+{
+	int i;
+
+	for (i = 0; i < MAXSTREAMS; ++i)
+	{
+		if (f_streams[i] == NULL)
+		{
+			f_streams[i] = fct;
+		}
+	}
+
+	return (i < MAXSTREAMS);
+}
+
+
+bool comm_removeStream(CommStreamFctPtr fct)
+{
+	int i;
+	bool bCloseGap = false;
+
+	for (i = 0; i < MAXSTREAMS; ++i)
+	{
+		if (f_streams[i] == fct)
+		{
+			bCloseGap = true;
+		}
+
+		if ( (bCloseGap) && (i < (MAXSTREAMS - 1)) )
+		{
+			f_streams[i] = f_streams[i+1];
+		}
+	}
+
+	return bCloseGap;
 }
 
 
@@ -314,7 +506,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 	if (eUART != f_ePrimaryUART)
 	{
 		// ToDo: Ensure:
-		// f_ePrimaryUART has to read anew for the last comparison to sure
+		// f_ePrimaryUART has to be read anew for the last comparison to sure
 		// that even in the worst case both UARTs assume to be the primary
 		// (active) UART.
 		// (For this application this is avoidable situation.)
@@ -344,7 +536,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 	switch (s_eRxState)
 	{
 		case COMMRXSTATE_IDLE:
-			if (f_eTxRespState != COMMTXSTATE_IDLE)
+			if (!BUFFER_ISEMPTY(f_bufTxResp))
 			{
 				s_eCommError = COMMERROR_OVERRUN;
 				s_eRxState = COMMRXSTATE_ERROR;
@@ -410,7 +602,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					*f_bufTxResp.head = '\n';		// overwrite \0 with \n
 					*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
 
-					f_bufTxResp.tail = f_bufTxSec.start;
+					f_bufTxResp.tail = f_bufTxResp.start;
 
 					bErr = true;
 				}
@@ -435,7 +627,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 						*f_bufTxResp.head = '\n';		// overwrite \0 with \n
 						*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
 
-						f_bufTxResp.tail = f_bufTxSec.start;
+						f_bufTxResp.tail = f_bufTxResp.start;
 					}
 					else
 					{
@@ -445,8 +637,8 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 								(char*)f_bufTxResp.start, &nRespLen, &s_pDirectCallback);
 
 						f_bufTxResp.start[nRespLen] = EOT_TX;
-						f_bufTxResp.head = f_bufTxSec.start + nRespLen + 1;
-						f_bufTxResp.tail = f_bufTxSec.start;
+						f_bufTxResp.head = f_bufTxResp.start + nRespLen + 1;
+						f_bufTxResp.tail = f_bufTxResp.start;
 					}
 				}
 
@@ -485,8 +677,8 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 						(char*)f_bufTxResp.start, &nRespLen, &s_pDirectCallback);
 
 				f_bufTxResp.start[nRespLen] = EOT_TX;
-				f_bufTxResp.head = f_bufTxSec.start + nRespLen + 1;
-				f_bufTxResp.tail = f_bufTxSec.start;
+				f_bufTxResp.head = f_bufTxResp.start + nRespLen + 1;
+				f_bufTxResp.tail = f_bufTxResp.start;
 
 
 				if (s_pDirectCallback == NULL)
@@ -506,7 +698,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 			{
 				// Fehler ausgeben
 
-				if (f_eTxRespState == COMMTXSTATE_IDLE)
+				if (BUFFER_ISEMPTY(f_bufTxResp))
 				{
 					if (s_eCommError == COMMERROR_WRONGSOT)
 					{
@@ -530,7 +722,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 								(char*)f_bufTxResp.start,
 								(char*)f_bufTxResp.end - 1,
 								SOT_RXRESP, ERRCODE_COMM_OVERRUN,
-								"New message sent before response fully transmitted!");
+								"New message sent before last response fully transmitted!");
 					}
 					else
 					{
@@ -545,10 +737,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
 
 					f_bufTxResp.tail = f_bufTxSec.start;
-
-					f_eTxRespState = COMMTXSTATE_PENDING;
 				}
-
 
 				// reset state
 				s_eCommError = COMMERROR_NONE;
