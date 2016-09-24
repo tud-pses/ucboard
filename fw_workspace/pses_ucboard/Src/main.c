@@ -139,6 +139,11 @@ int main(void)
 
 
   display_println("ucboard");
+
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
+
+  display_println("systick started");
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -209,7 +214,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
+  //HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
   HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
