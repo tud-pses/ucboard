@@ -34,6 +34,8 @@
 #include "stm32f3xx_hal.h"
 
 /* USER CODE BEGIN Includes */
+#include "display.h"
+#include "comm.h"
 
 /* USER CODE END Includes */
 
@@ -132,7 +134,11 @@ int main(void)
   MX_USART3_UART_Init();
 
   /* USER CODE BEGIN 2 */
+  comm_init();
+  display_init();
 
+
+  display_println("ucboard");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -140,7 +146,7 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
-
+	  comm_do();
   /* USER CODE BEGIN 3 */
 
   }
