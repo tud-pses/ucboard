@@ -29,7 +29,11 @@
 #define LED_B_PORT			GPIOC
 #define LED_B_PIN			GPIO_PIN_5
 
+#define VEXT_PORT		GPIOE
+#define VEXT_PIN		GPIO_PIN_11
 
+#define DRVBAT_PORT		GPIOC
+#define DRVBAT_PIN		GPIO_PIN_9
 
 
 #endif /* UCBOARD_HWDEFS_H_ */

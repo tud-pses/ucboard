@@ -33,5 +33,12 @@
 #define LED_B_OFF()			(LED_B_PORT->BRR = LED_B_PIN)
 #define LED_B_TOGGLE()		if (LED_B_PORT->ODR & LED_B_PIN) LED_B_OFF(); else LED_B_ON()
 
+#define DRVBAT_ON()			(DRVBAT_PORT->BSRR = DRVBAT_PIN)
+#define DRVBAT_OFF()		(DRVBAT_PORT->BRR = DRVBAT_PIN)
+
+#define VEXT_ON()			(VEXT_PORT->BSRR = VEXT_PIN)
+#define VEXT_OFF()			(VEXT_PORT->BRR = VEXT_PIN)
+
+
 
 #endif /* UCBOARD_HWFCTS_H_ */

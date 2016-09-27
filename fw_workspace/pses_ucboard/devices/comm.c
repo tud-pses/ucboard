@@ -205,6 +205,10 @@ void comm_init()
 
 	// DISPLAY_OUT_UINT("Nb cmds: ", nCmdCount);
 
+
+	__xUSART_ENABLE_IT(USART2, USART_ISR_RXNE | USART_ISR_ORE);
+	__xUSART_ENABLE_IT(USART3, USART_ISR_RXNE | USART_ISR_ORE);
+
 	return;
 }
 
