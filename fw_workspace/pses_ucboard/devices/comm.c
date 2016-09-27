@@ -23,6 +23,8 @@
 
 #include "errcodes.h"
 
+#include "ucboard_hwfcts.h"
+
 
 
 
@@ -129,7 +131,8 @@ typedef enum EnUART_
 } EnUART_t;
 
 
-static volatile EnUART_t f_ePrimaryUART = UART_NONE;
+static volatile EnUART_t f_ePrimaryUART = UART_2;
+//static volatile EnUART_t f_ePrimaryUART = UART_NONE;
 
 
 char* createErrStr_returnend(char* buf, char* const bufend, char sotchar, EnErrCode_t eErr, const char* msg)
@@ -206,8 +209,10 @@ void comm_init()
 	// DISPLAY_OUT_UINT("Nb cmds: ", nCmdCount);
 
 
-	__xUSART_ENABLE_IT(USART2, USART_ISR_RXNE | USART_ISR_ORE);
-	__xUSART_ENABLE_IT(USART3, USART_ISR_RXNE | USART_ISR_ORE);
+	__USART_ENABLE_IT_RXNE(USART2);
+	__USART_ENABLE_IT_ER(USART2);
+	__USART_ENABLE_IT_RXNE(USART3);
+	__USART_ENABLE_IT_ER(USART3);
 
 	return;
 }
@@ -225,6 +230,7 @@ void comm_do()
 		return;
 	}
 
+
 	if ((f_eTxSecState == COMMTXSTATE_PENDING))
 	{
 		f_eTxSecState = COMMTXSTATE_INPROGRESS;
@@ -234,16 +240,16 @@ void comm_do()
 			f_pUART3TxState = &f_eTxSecState;
 			f_pbufUART3Tx = &f_bufTxSec;
 
-			__xUSART_ENABLE_IT(USART3, USART_ISR_TXE);
 			USART3->TDR = BUFFER_POP(*f_pbufUART3Tx);
+			__USART_ENABLE_IT_TXE(USART3);
 		}
 		else
 		{
 			f_pUART2TxState = &f_eTxSecState;
 			f_pbufUART2Tx = &f_bufTxSec;
 
-			__xUSART_ENABLE_IT(USART2, USART_ISR_TXE);
 			USART2->TDR = BUFFER_POP(*f_pbufUART2Tx);
+			__USART_ENABLE_IT_TXE(USART2);
 		}
 	}
 
@@ -290,7 +296,14 @@ void comm_do()
 			}
 			else
 			{
-				res = f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				if (f_priorityStream != NULL)
+				{
+					res = f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				}
+				else
+				{
+					res = false;
+				}
 
 				if (res)
 				{
@@ -352,16 +365,17 @@ void comm_do()
 				f_pUART2TxState = &f_eTxPrimaryState;
 				f_pbufUART2Tx = pbufPrimary;
 
-				__xUSART_ENABLE_IT(USART2, USART_ISR_TXE);
 				USART2->TDR = BUFFER_POP(*f_pbufUART2Tx);
+				__USART_ENABLE_IT_TXE(USART2);
+
 			}
 			else
 			{
 				f_pUART3TxState = &f_eTxPrimaryState;
 				f_pbufUART3Tx = pbufPrimary;
 
-				__xUSART_ENABLE_IT(USART3, USART_ISR_TXE);
 				USART3->TDR = BUFFER_POP(*f_pbufUART3Tx);
+				__USART_ENABLE_IT_TXE(USART3);
 			}
 		}
 	}
@@ -449,7 +463,7 @@ static bool findCommandFct(CommCmdFctPtr* pCallback, uint16_t* pnStartArgs,
 	msgstart = rxdata;
 
 	// skip leading spaces
-	while ( (rxdata <= rxdataend) && (*rxdata != ' ') )
+	while ( (rxdata <= rxdataend) && (*rxdata == ' ') )
 	{
 		rxdata++;
 	}
@@ -468,7 +482,14 @@ static bool findCommandFct(CommCmdFctPtr* pCallback, uint16_t* pnStartArgs,
 	// comparison with strcmp
 	*rxdata = '\0';
 
-	argstart = rxdata + 1;
+	if (rxdata > rxdataend)
+	{
+		argstart = rxdata;
+	}
+	else
+	{
+		argstart = rxdata + 1;
+	}
 
 
 	while (g_commCmdFctTable[i].cmd != NULL)
@@ -481,7 +502,7 @@ static bool findCommandFct(CommCmdFctPtr* pCallback, uint16_t* pnStartArgs,
 			*pnStartArgs = argstart - msgstart;
 			return true;
 		}
-		else if (eRes == STRCMPRES_RIGHTBIGGER)
+		else if (eRes == STRCMPRES_LEFTBIGGER)
 		{
 			*pCallback = NULL;
 			return false;
@@ -509,7 +530,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 	if (eUART != f_ePrimaryUART)
 	{
-		// ToDo: Ensure:
+		// _ToDo: Ensure:
 		// f_ePrimaryUART has to be read anew for the last comparison to sure
 		// that even in the worst case both UARTs assume to be the primary
 		// (active) UART.
@@ -579,10 +600,12 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 				EnCmdSpec_t eCmdSpec;
 				bool bErr = false;
 
+				BUFFER_PUSH(f_bufRx, '\0');
+
 				// skip leading spaces
 				byte = BUFFER_POP(f_bufRx);
 
-				while (byte != ' ')
+				while (byte == ' ')
 				{
 					byte = BUFFER_POP(f_bufRx);
 				}
@@ -617,7 +640,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					CommCmdFctPtr callback;
 					uint16_t nStartArgs = 0;
 
-					findCommandFct((CommCmdFctPtr*)&s_pDirectCallback, &nStartArgs, (char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx));
+					findCommandFct((CommCmdFctPtr*)&callback, &nStartArgs, (char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx));
 					f_bufRx.tail += nStartArgs;
 
 					if (callback == NULL)
@@ -676,6 +699,8 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 			{
 				// process data
 				uint16_t nRespLen = 0;
+
+				BUFFER_PUSH(f_bufRx, '\0');
 
 				((CommDirectFctPtr)s_pDirectCallback)((char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx),
 						(char*)f_bufTxResp.start, &nRespLen, &s_pDirectCallback);
@@ -740,7 +765,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					*f_bufTxResp.head = '\n';		// overwrite \0 with \n
 					*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
 
-					f_bufTxResp.tail = f_bufTxSec.start;
+					f_bufTxResp.tail = f_bufTxResp.start;
 				}
 
 				// reset state
@@ -759,15 +784,12 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 void USART2_IRQHandler(void)
 {
 	uint8_t rxdata;
-	//volatile uint16_t itdata;
 
 	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_ORE) != RESET )
 	{
-		// To reset USART_IT_ORE the register SR and DR (DataReceive)
-		// of the UART have to be read in this order.
-
-		//itdata = (uint16_t) (USART2->SR & 0x3F);
-		rxdata = USART2->RDR;
+		// reset USART_IT_ORE
+		//rxdata = USART2->RDR;
+		USART2->ICR = USART_ICR_ORECF;
 
 		f_nORECount++;
 		//Display_printUIntvalField(f_nORECount, 2, 1);
@@ -786,12 +808,12 @@ void USART2_IRQHandler(void)
 	{
 		if ( BUFFER_ISEMPTY(*f_pbufUART2Tx) )
 		{
-			__xUSART_DISABLE_IT(USART2, USART_ISR_TXE);
+			__USART_DISABLE_IT_TXE(USART2);
 			*f_pUART2TxState = COMMTXSTATE_IDLE;
 		}
 		else
 		{
-			USART3->TDR = BUFFER_POP(*f_pbufUART2Tx);
+			USART2->TDR = BUFFER_POP(*f_pbufUART2Tx);
 		}
 	}
 
@@ -802,22 +824,19 @@ void USART2_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
 	uint8_t rxdata;
-	//volatile uint16_t itdata;
 
 	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_ORE) != RESET )
 	{
-		// To reset USART_IT_ORE the register SR and DR (DataReceive)
-		// of the UART have to be read in this order.
-
-		//itdata = (uint16_t) (USART3->SR & 0x3F);
-		rxdata = USART3->RDR;
+		// reset USART_IT_ORE
+		//rxdata = USART3->RDR;
+		USART3->ICR = USART_ICR_ORECF;
 
 		f_nORECount++;
 		//Display_printUIntvalField(f_nORECount, 2, 1);
 	}
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
-	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_RXNE) != RESET )
+	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_RXNE) != RESET )
 	{
 		// read byte from receive register (which also resets USART_IT_RXNE)
 		rxdata = USART3->RDR;
@@ -829,7 +848,7 @@ void USART3_IRQHandler(void)
 	{
 		if ( BUFFER_ISEMPTY(*f_pbufUART3Tx) )
 		{
-			__xUSART_DISABLE_IT(USART3, USART_ISR_TXE);
+			__USART_DISABLE_IT_TXE(USART3);
 			*f_pUART3TxState = COMMTXSTATE_IDLE;
 		}
 		else

@@ -153,10 +153,13 @@ void strsplit(SplittedStr_t* sstr,
 		{
 			++cnt;
 
+			bInStr = true;
+
 			if (cnt > maxsplits)
 			{
 				*pLastSplitPoint = splitchar;
 				sstr->completelySplitted = false;
+				sstr->cnt = maxsplits;
 				return;
 			}
 

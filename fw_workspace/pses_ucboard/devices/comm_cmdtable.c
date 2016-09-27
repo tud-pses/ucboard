@@ -17,7 +17,7 @@ CommCmdTableEntry_t g_commCmdFctTable[] =
 {
 		{"ID",  &cmd_carid},
 		{"SID",  &cmd_sessionid},
-		{0,  0}	// last entry have to be {0, 0} (exit condition when iterating over table)
+		{0,  0}	// last entry must be {0, 0} (exit condition when iterating over table)
 };
 
 

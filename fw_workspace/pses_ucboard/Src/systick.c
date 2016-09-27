@@ -19,15 +19,15 @@ void HAL_SYSTICK_Callback(void)
 
 	if (BUTTON_A_ISPRESSED() || BUTTON_B_ISPRESSED() || BUTTON_C_ISPRESSED())
 	{
-		LED_DRVBAT_ON();
-		LED_A_ON();
-		LED_B_ON();
+		//LED_DRVBAT_ON();
+		//LED_A_ON();
+		//LED_B_ON();
 	}
 	else
 	{
-		LED_DRVBAT_OFF();
-		LED_A_OFF();
-		LED_B_OFF();
+		//LED_DRVBAT_OFF();
+		//LED_A_OFF();
+		//LED_B_OFF();
 	}
 
 

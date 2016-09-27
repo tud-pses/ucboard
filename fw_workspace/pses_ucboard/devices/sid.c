@@ -10,9 +10,7 @@
 #include "comm_public.h"
 #include "common_fcts.h"
 
-
 static uint32_t f_sid = 0;
-
 
 bool cmd_sessionid(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
@@ -21,7 +19,6 @@ bool cmd_sessionid(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 	SplittedStr_t sstr;
 
 	*(CommDirectFctPtr*)pDirectCallback = 0;
-
 
 	strsplit(&sstr, acData, ' ', '"', 10);
 
@@ -42,6 +39,10 @@ bool cmd_sessionid(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			uint32_t sid = (uint32_t)atoi(sstr.strs[0]);
 
 			f_sid = sid;
+
+			utoa(f_sid, acRespData + 1, 10);
+			acRespData[0] = SOT_RXRESP;
+			*pnRespLen = strlen_(acRespData);
 		}
 	}
 	else

@@ -137,6 +137,14 @@ int main(void)
   MX_TIM6_Init();
 
   /* USER CODE BEGIN 2 */
+//  GPIO_InitTypeDef GPIO_InitStructure;
+//  GPIO_InitStructure.Pin = GPIO_PIN_2;
+//  GPIO_InitStructure.Speed = 0;
+//  GPIO_InitStructure.Mode
+//  GPIO_InitStructure.Alternate
+//  GPIO_InitStructure.Pull
+
+
   comm_init();
   display_init();
 
@@ -766,8 +774,8 @@ static void MX_USART2_UART_Init(void)
 {
 
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 38400;
-  huart2.Init.WordLength = UART_WORDLENGTH_7B;
+  huart2.Init.BaudRate = 57600;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
   huart2.Init.Mode = UART_MODE_TX_RX;
@@ -787,8 +795,8 @@ static void MX_USART3_UART_Init(void)
 {
 
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 38400;
-  huart3.Init.WordLength = UART_WORDLENGTH_7B;
+  huart3.Init.BaudRate = 57600;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
   huart3.Init.Mode = UART_MODE_TX_RX;
