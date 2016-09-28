@@ -4,6 +4,10 @@
 
 #include "ucboard_hwfcts.h"
 
+#include "comm_public.h"
+
+#include "common_fcts.h"
+
 static uint32_t f_uTic = 0;
 
 
@@ -44,3 +48,46 @@ void HAL_SYSTICK_Callback(void)
 	return;
 }
 
+
+bool cmd_tics(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
+					char* acRespData, uint16_t* pnRespLen,
+					void* pDirectCallback)
+{
+	SplittedStr_t sstr;
+
+	*(CommDirectFctPtr*)pDirectCallback = 0;
+
+	strsplit(&sstr, acData, ' ', '"', 10);
+
+	if (eSpec == CMDSPEC_SET)
+	{
+		char* strend = createErrStr_returnend(
+				acRespData,
+				acRespData + RXMAXMSGLEN - 1,
+				SOT_RXRESP, ERRCODE_COMM_READONLY,
+				"TICS is a read-only value!");
+
+		*pnRespLen = strend - acRespData;
+	}
+	else
+	{
+		if (sstr.cnt != 0)
+		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN - 1,
+					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+					"Usage: ?TICS");
+
+			*pnRespLen = strend - acRespData;
+		}
+		else
+		{
+			utoa(f_uTic, acRespData + 1, 10);
+			acRespData[0] = SOT_RXRESP;
+			*pnRespLen = strlen_(acRespData);
+		}
+	}
+
+	return true;
+}
