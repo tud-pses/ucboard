@@ -115,6 +115,23 @@ void display_println_hex(const char* s, uint32_t val)
 }
 
 
+void display_printerror(EnErrCode_t errcode, const char* errdesc)
+{
+	char tmp[RXMAXMSGLEN];
+
+	createErrStr_returnend(
+					tmp,
+					tmp + RXMAXMSGLEN - 1,
+					SOT_RXOUT, errcode,
+					errdesc);
+
+	// the SOT-byte will be added by PRINTSTR also, therefore "tmp + 1"
+	printstrs(tmp + 1, NULL, true);
+
+	return;
+}
+
+
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
 {
 	static uint16_t s_nBytesLeft = 0;
@@ -185,3 +202,4 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 
 	return true;
 }
+
