@@ -37,7 +37,13 @@
 #include "display.h"
 #include "comm.h"
 
+#include "stopwatch.h"
+
 #include "carbasicfcts.h"
+#include "hal503.h"
+#include "imu_mpu9250.h"
+
+#include "spimgr.h"
 
 /* USER CODE END Includes */
 
@@ -140,12 +146,19 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
+  stopwatch_init();
+
   display_init();
   display_println("ucboard");
 
   comm_init();
 
+  spimgr_init();
+
+  imu_init();
+
   car_init();
+  hal503_init();
 
 
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);

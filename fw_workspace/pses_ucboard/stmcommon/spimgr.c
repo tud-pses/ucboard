@@ -30,11 +30,11 @@ typedef struct SPIMGR_SPI_Pins
 	uint16_t pinMOSI;
 } SPIMGR_SPI_Pins_t;
 
-static const SPIMGR_SPI_Pins_t f_aSPIPINS[SPIMGR_NSPI] = {
-					{GPIOA, GPIO_PIN_5, GPIOA, GPIO_PIN_6, GPIOA, GPIO_PIN_7},
-					{GPIOB, GPIO_PIN_13, GPIOB, GPIO_PIN_14, GPIOB, GPIO_PIN_15},
-					{NULL, 0, NULL, 0, NULL, 0}, 
-					{GPIOE, GPIO_PIN_12, GPIOE, GPIO_PIN_5, GPIOE, GPIO_PIN_6} };
+//static const SPIMGR_SPI_Pins_t f_aSPIPINS[SPIMGR_NSPI] = {
+//					{GPIOA, GPIO_PIN_5, GPIOA, GPIO_PIN_6, GPIOA, GPIO_PIN_7},
+//					{GPIOB, GPIO_PIN_13, GPIOB, GPIO_PIN_14, GPIOB, GPIO_PIN_15},
+//					{NULL, 0, NULL, 0, NULL, 0},
+//					{GPIOE, GPIO_PIN_12, GPIOE, GPIO_PIN_5, GPIOE, GPIO_PIN_6} };
 
 
 typedef struct SPIMGR_Device
@@ -64,7 +64,7 @@ static void changeConfig(EnSPI_PORT_t eSPIPort, uint8_t uConfigID);
 // Konfiguration der SPIs
 void spimgr_init()
 {
-	GPIO_InitTypeDef GPIO_InitStructure;
+	//GPIO_InitTypeDef GPIO_InitStructure;
 	SPI_InitTypeDef  SPI_InitStructure;
 	uint8_t u;
 	uint8_t uConfigID;
@@ -79,7 +79,7 @@ void spimgr_init()
 	// Prescaler von  16 -> Taktlänge 0,8µs (2,4 MHz)
 	// Prescaler von  8 -> Taktlänge 0,8µs (4,8 MHz)
 	// Prescaler von  4 -> Taktlänge 0,8µs (9,6 MHz)
-  	SPI_InitStructure.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+  	SPI_InitStructure.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
 	SPI_InitStructure.CLKPhase = SPI_PHASE_2EDGE;
 	SPI_InitStructure.CLKPolarity = SPI_POLARITY_HIGH;
 	SPI_InitStructure.DataSize = SPI_DATASIZE_16BIT;
@@ -87,7 +87,7 @@ void spimgr_init()
 	SPI_InitStructure.FirstBit = SPI_FIRSTBIT_MSB;
 	SPI_InitStructure.Mode = SPI_MODE_MASTER;
 	SPI_InitStructure.NSS = SPI_NSS_SOFT;
-	SPI_InitStructure.NSSPMode = SPI_NSS_PULSE_ENABLE;
+	SPI_InitStructure.NSSPMode = SPI_NSS_PULSE_DISABLE;
 	SPI_InitStructure.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
 	SPI_InitStructure.CRCPolynomial = 7;
 	SPI_InitStructure.CRCLength = SPI_CRC_LENGTH_DATASIZE;
@@ -107,24 +107,24 @@ void spimgr_init()
 			continue;
 		}
 
-		// PINS
-		// SCK
-		GPIO_InitStructure.Pin = f_aSPIPINS[u].pinSCK;
-		GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
-		GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
-		HAL_GPIO_Init( f_aSPIPINS[u].portSCK, &GPIO_InitStructure );
-
-		// MISO
-		GPIO_InitStructure.Pin = f_aSPIPINS[u].pinMISO;
-		GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
-		GPIO_InitStructure.Mode = GPIO_MODE_INPUT;
-		HAL_GPIO_Init( f_aSPIPINS[u].portMISO, &GPIO_InitStructure );
-
-		// MOSI
-		GPIO_InitStructure.Pin = f_aSPIPINS[u].pinMOSI;
-		GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
-		GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
-		HAL_GPIO_Init( f_aSPIPINS[u].portMOSI, &GPIO_InitStructure );
+//		// PINS
+//		// SCK
+//		GPIO_InitStructure.Pin = f_aSPIPINS[u].pinSCK;
+//		GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
+//		GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
+//		HAL_GPIO_Init( f_aSPIPINS[u].portSCK, &GPIO_InitStructure );
+//
+//		// MISO
+//		GPIO_InitStructure.Pin = f_aSPIPINS[u].pinMISO;
+//		GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
+//		GPIO_InitStructure.Mode = GPIO_MODE_INPUT;
+//		HAL_GPIO_Init( f_aSPIPINS[u].portMISO, &GPIO_InitStructure );
+//
+//		// MOSI
+//		GPIO_InitStructure.Pin = f_aSPIPINS[u].pinMOSI;
+//		GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
+//		GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
+//		HAL_GPIO_Init( f_aSPIPINS[u].portMOSI, &GPIO_InitStructure );
 
 
 		__SPI_Init( f_aSPI[u].pSPI, &f_aSPIConfigs[uConfigID] );
@@ -321,7 +321,7 @@ EnSPIMgrRes_t spimgr_send16(uint8_t device, uint16_t txdata, uint16_t* pRxdata)
 	// auf Daten warten
 	while ( __SPI_GET_FLAG(pSPI, SPI_FLAG_RXNE) == RESET )
 	{
-		/* do nothing */
+		// * do nothing *
 	}
 
 	if (pRxdata)
@@ -334,8 +334,6 @@ EnSPIMgrRes_t spimgr_send16(uint8_t device, uint16_t txdata, uint16_t* pRxdata)
 		__SPI_RECEIVE_DATA( pSPI );
 	}
 
-
-
 	if (pDevice->eIdlePol == SPICSIDLEPOL_HIGH)
 	{
 		__GPIO_SET_BITS(pDevice->pCSPort, pDevice->uCSPin);
@@ -344,7 +342,6 @@ EnSPIMgrRes_t spimgr_send16(uint8_t device, uint16_t txdata, uint16_t* pRxdata)
 	{
 		__GPIO_RESET_BITS(pDevice->pCSPort, pDevice->uCSPin);
 	}
-
 
 	return SPIMGRRES_OK;
 }
@@ -420,8 +417,9 @@ EnSPIMgrRes_t spimgr_send16Mult(uint8_t uDeviceID,
 
 static void changeConfig(EnSPI_PORT_t eSPIPort, uint8_t uConfigID)
 {
+	__SPI_DISABLE( f_aSPI[eSPIPort].pSPI );
 	__SPI_Init( f_aSPI[eSPIPort].pSPI, &f_aSPIConfigs[uConfigID] );
-	//__SPI_ENABLE( f_aSPI[eSPIPort].pSPI );
+	__SPI_ENABLE( f_aSPI[eSPIPort].pSPI );
 
 	f_aSPI[eSPIPort].uCurConfig = uConfigID;
 

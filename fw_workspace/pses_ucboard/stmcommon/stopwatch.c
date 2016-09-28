@@ -55,7 +55,7 @@ void stopwatch_init( void )
 	*/
 
 	// Timer 20 ist Slave von Timer 15
-	// CR2[6:4] = 010 -> Update-Mode (Timer 15 ist Prescaler für Timer 16)
+	// CR2[6:4] = 010 -> Update-Mode (Timer 15 ist Prescaler für Timer 20)
 	// Bit 4-6 löschen
 	TIM15->CR2 &= ~(uint16_t)(0x7 << 4);
 	// Folge 010 in Bits 4-6 schreiben

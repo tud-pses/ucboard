@@ -145,6 +145,17 @@ void car_do_systick()
 	}
 
 
+	if (f_bDrvOff)
+	{
+		LED_DRVBAT_OFF();
+	}
+	else
+	{
+		LED_DRVBAT_ON();
+	}
+
+
+
 	return;
 }
 
@@ -318,99 +329,99 @@ bool cmd_vout12v(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 }
 
 
-bool cmd_drvbat(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
-					char* acRespData, uint16_t* pnRespLen,
-					void* pDirectCallback)
-{
-	SplittedStr_t sstr;
-
-	*(CommDirectFctPtr*)pDirectCallback = 0;
-
-	strsplit(&sstr, acData, ' ', '"', 10);
-
-	if (eSpec == CMDSPEC_SET)
-	{
-		bool bWrongUsage;
-		bool bReqStateOn = false;
-
-		bWrongUsage = (sstr.cnt != 1);
-
-		if (!bWrongUsage)
-		{
-			if ( (strcmpi(sstr.strs[0], "ON") == STRCMPRES_EQUAL)
-					|| (strcmpi(sstr.strs[0], "1") == STRCMPRES_EQUAL) )
-			{
-				bReqStateOn = true;
-			}
-			else if ( (strcmpi(sstr.strs[0], "OFF") == STRCMPRES_EQUAL)
-					|| (strcmpi(sstr.strs[0], "0") == STRCMPRES_EQUAL) )
-			{
-				bReqStateOn = false;
-			}
-			else
-			{
-				bWrongUsage = true;
-			}
-		}
-
-		if (bWrongUsage)
-		{
-			char* strend = createErrStr_returnend(
-					acRespData,
-					acRespData + RXMAXMSGLEN - 1,
-					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: !DRVBAT ON|OFF");
-
-			*pnRespLen = strend - acRespData;
-		}
-		else
-		{
-			const char* state;
-
-			if (bReqStateOn)
-			{
-				DRVBAT_PORT->BSRR = DRVBAT_PIN;
-			}
-			else
-			{
-				DRVBAT_PORT->BRR = DRVBAT_PIN;
-			}
-
-			state = (DRVBAT_PORT->ODR & DRVBAT_PIN) ? "ON" : "OFF";
-
-			strcpy(acRespData + 1, state);
-
-			acRespData[0] = SOT_RXRESP;
-			*pnRespLen = strlen(acRespData);
-		}
-	}
-	else
-	{
-		if (sstr.cnt != 0)
-		{
-			char* strend = createErrStr_returnend(
-					acRespData,
-					acRespData + RXMAXMSGLEN,
-					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: ?DRVBAT");
-
-			*pnRespLen = strend - acRespData;
-		}
-		else
-		{
-			const char* state;
-
-			state = (DRVBAT_PORT->ODR & DRVBAT_PIN) ? "ON" : "OFF";
-
-			strcpy(acRespData + 1, state);
-
-			acRespData[0] = SOT_RXRESP;
-			*pnRespLen = strlen(acRespData);
-		}
-	}
-
-	return true;
-}
+//bool cmd_drvbat(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
+//					char* acRespData, uint16_t* pnRespLen,
+//					void* pDirectCallback)
+//{
+//	SplittedStr_t sstr;
+//
+//	*(CommDirectFctPtr*)pDirectCallback = 0;
+//
+//	strsplit(&sstr, acData, ' ', '"', 10);
+//
+//	if (eSpec == CMDSPEC_SET)
+//	{
+//		bool bWrongUsage;
+//		bool bReqStateOn = false;
+//
+//		bWrongUsage = (sstr.cnt != 1);
+//
+//		if (!bWrongUsage)
+//		{
+//			if ( (strcmpi(sstr.strs[0], "ON") == STRCMPRES_EQUAL)
+//					|| (strcmpi(sstr.strs[0], "1") == STRCMPRES_EQUAL) )
+//			{
+//				bReqStateOn = true;
+//			}
+//			else if ( (strcmpi(sstr.strs[0], "OFF") == STRCMPRES_EQUAL)
+//					|| (strcmpi(sstr.strs[0], "0") == STRCMPRES_EQUAL) )
+//			{
+//				bReqStateOn = false;
+//			}
+//			else
+//			{
+//				bWrongUsage = true;
+//			}
+//		}
+//
+//		if (bWrongUsage)
+//		{
+//			char* strend = createErrStr_returnend(
+//					acRespData,
+//					acRespData + RXMAXMSGLEN - 1,
+//					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+//					"Usage: !DRVBAT ON|OFF");
+//
+//			*pnRespLen = strend - acRespData;
+//		}
+//		else
+//		{
+//			const char* state;
+//
+//			if (bReqStateOn)
+//			{
+//				DRVBAT_PORT->BSRR = DRVBAT_PIN;
+//			}
+//			else
+//			{
+//				DRVBAT_PORT->BRR = DRVBAT_PIN;
+//			}
+//
+//			state = (DRVBAT_PORT->ODR & DRVBAT_PIN) ? "ON" : "OFF";
+//
+//			strcpy(acRespData + 1, state);
+//
+//			acRespData[0] = SOT_RXRESP;
+//			*pnRespLen = strlen(acRespData);
+//		}
+//	}
+//	else
+//	{
+//		if (sstr.cnt != 0)
+//		{
+//			char* strend = createErrStr_returnend(
+//					acRespData,
+//					acRespData + RXMAXMSGLEN,
+//					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+//					"Usage: ?DRVBAT");
+//
+//			*pnRespLen = strend - acRespData;
+//		}
+//		else
+//		{
+//			const char* state;
+//
+//			state = (DRVBAT_PORT->ODR & DRVBAT_PIN) ? "ON" : "OFF";
+//
+//			strcpy(acRespData + 1, state);
+//
+//			acRespData[0] = SOT_RXRESP;
+//			*pnRespLen = strlen(acRespData);
+//		}
+//	}
+//
+//	return true;
+//}
 
 
 bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
@@ -438,6 +449,8 @@ bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			{
 				f_bDrvOff = true;
 				TIM2->CCR2 = 0;
+
+				DRVBAT_OFF();
 			}
 			else
 			{
@@ -454,6 +467,11 @@ bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					f_bDrvOff = false;
 					f_iCurDrvVal = val;
 					TIM2->CCR2 = GETPWMVAL(val);
+
+					if ((DRVBAT_PORT->ODR & DRVBAT_PIN) == 0)
+					{
+						DRVBAT_ON();
+					}
 				}
 			}
 		}

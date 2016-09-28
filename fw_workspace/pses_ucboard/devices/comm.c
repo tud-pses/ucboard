@@ -204,9 +204,6 @@ void comm_init()
 		display_printerror(ERRCODE_COMM_INVALIDCMDTABLE, "Command table is sorted incorrectly!");
 	}
 
-	display_println_uint("comm: Nb of cmds: ", nCmdCount);
-
-
 	__USART_DISABLE_IT_TXE(USART2);
 	__USART_DISABLE_IT_TXE(USART3);
 

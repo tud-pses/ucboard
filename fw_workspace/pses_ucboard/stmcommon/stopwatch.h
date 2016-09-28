@@ -29,10 +29,10 @@ static inline uint32_t stopwatch_getTic( void )
 {
 	uint32_t uLoHalfWordBefore, uHiHalfWord, uLoHalfWordAfter;
 	volatile uint32_t* pTim15Cnt = &TIM15->CNT;
-	volatile uint32_t* pTim16Cnt = &TIM16->CNT;
+	volatile uint32_t* pTim20Cnt = &TIM20->CNT;
 
 	uLoHalfWordBefore = *pTim15Cnt;
-	uHiHalfWord = *pTim16Cnt;
+	uHiHalfWord = *pTim20Cnt;
 	uLoHalfWordAfter = *pTim15Cnt;
 
 	if (uLoHalfWordBefore <= uLoHalfWordAfter)
@@ -41,7 +41,7 @@ static inline uint32_t stopwatch_getTic( void )
 	}
 	else
 	{
-		uHiHalfWord = *pTim16Cnt;
+		uHiHalfWord = *pTim20Cnt;
 		return ((uint32_t)(uHiHalfWord) << 16) | uLoHalfWordAfter;
 	}
 }

@@ -8,6 +8,8 @@
 #ifndef HAL503_H_
 #define HAL503_H_
 
+void hal503_init();
+void hal503_do_systick();
 
 
 #endif /* HAL503_H_ */
