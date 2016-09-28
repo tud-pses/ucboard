@@ -7,6 +7,9 @@
 #include "comm_public.h"
 
 #include "common_fcts.h"
+#include "display.h"
+
+#include "carbasicfcts.h"
 
 static uint32_t f_uTic = 0;
 
@@ -21,6 +24,23 @@ void HAL_SYSTICK_Callback(void)
 {
 	++f_uTic;
 
+	if (BUTTON_A_ISPRESSED())
+	{
+		car_setSteering(500);
+	}
+
+	if (BUTTON_B_ISPRESSED())
+	{
+		car_setSteering(-500);
+	}
+
+	if (BUTTON_C_ISPRESSED())
+	{
+		car_setSteering(0);
+	}
+
+
+
 	if (BUTTON_A_ISPRESSED() || BUTTON_B_ISPRESSED() || BUTTON_C_ISPRESSED())
 	{
 		//LED_DRVBAT_ON();
@@ -34,10 +54,12 @@ void HAL_SYSTICK_Callback(void)
 		//LED_B_OFF();
 	}
 
+	car_do_systick();
 
-	if (f_uTic == 1000)
+	if ( (f_uTic % 1000) == 0)
 	{
 		//DRVBAT_ON();
+		//display_println_uint("pwm: ", TIM2->CCR1);
 	}
 
 	if ( (f_uTic % 500) == 0 )

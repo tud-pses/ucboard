@@ -37,6 +37,8 @@
 #include "display.h"
 #include "comm.h"
 
+#include "carbasicfcts.h"
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -142,6 +144,8 @@ int main(void)
   display_println("ucboard");
 
   comm_init();
+
+  car_init();
 
 
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
@@ -583,7 +587,7 @@ static void MX_TIM2_Init(void)
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 0;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
   if (HAL_TIM_OC_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
