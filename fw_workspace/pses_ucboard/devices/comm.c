@@ -25,7 +25,7 @@
 
 #include "ucboard_hwfcts.h"
 
-
+#include "display.h"
 
 
 static uint32_t f_nORECount = 0;
@@ -49,13 +49,11 @@ typedef enum EnCommTxState_
 } EnCommTxState_t;
 
 
-//static EnCommTxState_t f_eTxRespState = COMMTXSTATE_IDLE;
-
 static EnCommTxState_t f_eTxPrimaryState = COMMTXSTATE_IDLE;
 static EnCommTxState_t f_eTxSecState = COMMTXSTATE_IDLE;
 
-static EnCommTxState_t* f_pUART2TxState = 0;
-static EnCommTxState_t* f_pUART3TxState = 0;
+static EnCommTxState_t* f_pUART2TxState = NULL;
+static EnCommTxState_t* f_pUART3TxState = NULL;
 
 
 typedef enum EnCommError_
@@ -203,11 +201,14 @@ void comm_init()
 
 	if (!checkCommandFctsTable(&nCmdCount))
 	{
-		//DISPLAY_OUT("Command table is sorted incorrectly!");
+		display_printerror(ERRCODE_COMM_INVALIDCMDTABLE, "Command table is sorted incorrectly!");
 	}
 
-	// DISPLAY_OUT_UINT("Nb cmds: ", nCmdCount);
+	display_println_uint("comm: Nb of cmds: ", nCmdCount);
 
+
+	__USART_DISABLE_IT_TXE(USART2);
+	__USART_DISABLE_IT_TXE(USART3);
 
 	__USART_ENABLE_IT_RXNE(USART2);
 	__USART_ENABLE_IT_ER(USART2);
@@ -229,7 +230,6 @@ void comm_do()
 	{
 		return;
 	}
-
 
 	if ((f_eTxSecState == COMMTXSTATE_PENDING))
 	{
@@ -309,7 +309,7 @@ void comm_do()
 				{
 					s_bIncompletePriorityStreamMsg = !bMsgComplete;
 				}
-				else
+				else if (f_streams[0] != NULL)
 				{
 					uint8_t i = s_uCurStreamID;
 
@@ -557,7 +557,6 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 	nRx++;
 
-
 	switch (s_eRxState)
 	{
 		case COMMRXSTATE_IDLE:
@@ -788,11 +787,9 @@ void USART2_IRQHandler(void)
 	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_ORE) != RESET )
 	{
 		// reset USART_IT_ORE
-		//rxdata = USART2->RDR;
 		USART2->ICR = USART_ICR_ORECF;
 
 		f_nORECount++;
-		//Display_printUIntvalField(f_nORECount, 2, 1);
 	}
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
@@ -806,10 +803,14 @@ void USART2_IRQHandler(void)
 	// USART_IT_TXE:  Transmit Data Register empty interrupt
 	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_TXE) != RESET )
 	{
-		if ( BUFFER_ISEMPTY(*f_pbufUART2Tx) )
+		if ( (f_pbufUART2Tx == 0) || BUFFER_ISEMPTY(*f_pbufUART2Tx) )
 		{
 			__USART_DISABLE_IT_TXE(USART2);
-			*f_pUART2TxState = COMMTXSTATE_IDLE;
+
+			if (f_pUART2TxState != NULL)
+			{
+				*f_pUART2TxState = COMMTXSTATE_IDLE;
+			}
 		}
 		else
 		{
@@ -828,11 +829,9 @@ void USART3_IRQHandler(void)
 	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_ORE) != RESET )
 	{
 		// reset USART_IT_ORE
-		//rxdata = USART3->RDR;
 		USART3->ICR = USART_ICR_ORECF;
 
 		f_nORECount++;
-		//Display_printUIntvalField(f_nORECount, 2, 1);
 	}
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
@@ -846,10 +845,14 @@ void USART3_IRQHandler(void)
 	// USART_IT_TXE:  Transmit Data Register empty interrupt
 	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_TXE) != RESET )
 	{
-		if ( BUFFER_ISEMPTY(*f_pbufUART3Tx) )
+		if ( (f_pbufUART3Tx == 0) || BUFFER_ISEMPTY(*f_pbufUART3Tx) )
 		{
 			__USART_DISABLE_IT_TXE(USART3);
-			*f_pUART3TxState = COMMTXSTATE_IDLE;
+
+			if (f_pUART3TxState != NULL)
+			{
+				*f_pUART3TxState = COMMTXSTATE_IDLE;
+			}
 		}
 		else
 		{
