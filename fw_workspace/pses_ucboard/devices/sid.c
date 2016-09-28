@@ -30,7 +30,7 @@ bool cmd_sessionid(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					acRespData,
 					acRespData + RXMAXMSGLEN - 1,
 					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: !SID [number]");
+					"Usage: !SID new_sid");
 
 			*pnRespLen = strend - acRespData;
 		}

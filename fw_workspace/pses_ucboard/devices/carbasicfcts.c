@@ -56,7 +56,7 @@ bool cmd_vout12v(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					acRespData,
 					acRespData + RXMAXMSGLEN - 1,
 					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: !VOUT [ON|OFF]");
+					"Usage: !VOUT ON|OFF");
 
 			*pnRespLen = strend - acRespData;
 		}

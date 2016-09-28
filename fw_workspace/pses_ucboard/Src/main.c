@@ -137,23 +137,14 @@ int main(void)
   MX_TIM6_Init();
 
   /* USER CODE BEGIN 2 */
-//  GPIO_InitTypeDef GPIO_InitStructure;
-//  GPIO_InitStructure.Pin = GPIO_PIN_2;
-//  GPIO_InitStructure.Speed = 0;
-//  GPIO_InitStructure.Mode
-//  GPIO_InitStructure.Alternate
-//  GPIO_InitStructure.Pull
 
-
-  comm_init();
   display_init();
-
-
   display_println("ucboard");
 
-  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
+  comm_init();
 
-  display_println("systick started");
+
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
   /* USER CODE END 2 */
 
