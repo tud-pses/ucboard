@@ -1,10 +1,10 @@
 
 #include "stm32f3xx.h"
-//#include "stm32f3xx_hal_conf.h"
+
+#include "stm32f3xx_hal_tim.h"
 
 #include "stopwatch.h"
-#include "stm32f3xx_hal_tim.h"
-//#include <stdint.h>
+
 
 extern void Error_Handler(void);
 
@@ -16,9 +16,8 @@ void stopwatch_init( void )
 	__HAL_RCC_TIM15_CLK_ENABLE();
 	__HAL_RCC_TIM20_CLK_ENABLE();
 
-	//TIM_MasterConfigTypeDef sMasterConfig;
-	//TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
-	//TIM_OC_InitTypeDef sConfigOC;
+//    HAL_NVIC_SetPriority(TIM1_BRK_TIM15_IRQn, 3, 0);
+//    HAL_NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
 
 	// Timer läuft mit 1MHz (72 MHz Prozessor, 72er Prescaler)
 	htim15.Instance = TIM15;
@@ -43,16 +42,9 @@ void stopwatch_init( void )
 		Error_Handler();
 	}
 
-	//TIM15->DIER = 0;
 	__HAL_TIM_CLEAR_FLAG( &htim15, TIM_FLAG_UPDATE );
 	__HAL_TIM_CLEAR_FLAG( &htim20, TIM_FLAG_UPDATE );
 
-
-
-	/*
-
-	TIM_ITConfig( TIM4, TIM_IT_Update, ENABLE );
-	*/
 
 	// Timer 20 ist Slave von Timer 15
 	// CR2[6:4] = 010 -> Update-Mode (Timer 15 ist Prescaler für Timer 20)
@@ -63,7 +55,7 @@ void stopwatch_init( void )
 
 
 	// Timer 20 ist Slave
-	// SMCR[6:4] = 011 -> Master ist TIM20
+	// SMCR[6:4] = 011 -> Master ist TIM15
 	// SMCR[2:0] = 111 -> External Clock Mode
 
 	// Bit 4-6 löschen
@@ -77,7 +69,7 @@ void stopwatch_init( void )
 	TIM15->CNT = 0;
 	TIM20->CNT = 0;
 
-	__HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+	//__HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
 
 	HAL_TIM_Base_Start(&htim20);
 	HAL_TIM_Base_Start(&htim15);
@@ -86,10 +78,10 @@ void stopwatch_init( void )
 }
 
 
-void TIM15_IRQHandler( void )
-{
-	__HAL_TIM_CLEAR_FLAG( &htim15, TIM_FLAG_UPDATE );
-
-	return;
-}
+//void TIM1_BRK_TIM15_IRQHandler( void )
+//{
+//	__HAL_TIM_CLEAR_FLAG( &htim15, TIM_FLAG_UPDATE );
+//
+//	return;
+//}
 

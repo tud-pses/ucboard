@@ -13,6 +13,11 @@
 
 #include "common_fcts.h"
 #include "ARingbuffer.h"
+#include "atomicsection.h"
+
+
+static AtomicSection_t f_asWrite;
+
 
 #define DISPLAYBUFFERLEN 1000
 
@@ -28,6 +33,8 @@ static uint16_t f_nErrMsgLen = 0;
 
 bool display_init()
 {
+	AtomicSection_init(&f_asWrite);
+
 	char* strend = createErrStr_returnend(
 			f_acErrMsg,
 			f_acErrMsg + MAXERRMSGLEN,
@@ -49,26 +56,31 @@ static void printstrs(const char* s1, const char* s2, bool bNewLine)
 	char sot = SOT_RXOUT;
 	char newline = '\n';
 
-	ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
-
-	ARingbuffer_atomicputX(&f_buffer, (uint8_t*)&sot, 1);
-
-	if (s1 != NULL)
+	if (AtomicSection_enter(&f_asWrite))
 	{
-		ARingbuffer_atomicput_putS(&f_buffer, (char*)s1, false);
-	}
+		ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
 
-	if (s2 != NULL)
-	{
-		ARingbuffer_atomicput_putS(&f_buffer, (char*)s2, false);
-	}
+		ARingbuffer_atomicputX(&f_buffer, (uint8_t*)&sot, 1);
 
-	if (bNewLine)
-	{
-		ARingbuffer_atomicputX(&f_buffer, (uint8_t*)&newline, 1);
-	}
+		if (s1 != NULL)
+		{
+			ARingbuffer_atomicput_putS(&f_buffer, (char*)s1, false);
+		}
 
-	ARingbuffer_atomicput_end(&f_buffer);
+		if (s2 != NULL)
+		{
+			ARingbuffer_atomicput_putS(&f_buffer, (char*)s2, false);
+		}
+
+		if (bNewLine)
+		{
+			ARingbuffer_atomicputX(&f_buffer, (uint8_t*)&newline, 1);
+		}
+
+		ARingbuffer_atomicput_end(&f_buffer);
+
+		AtomicSection_leave(&f_asWrite);
+	}
 
 	return;
 }
@@ -109,6 +121,17 @@ void display_println_hex(const char* s, uint32_t val)
 	char szTmp[10];
 
 	utoa(val, szTmp, 16);
+	printstrs(s, szTmp, true);
+
+	return;
+}
+
+
+void display_println_bits(const char* s, uint32_t val)
+{
+	char szTmp[37];
+
+	utoa_bits(val, szTmp);
 	printstrs(s, szTmp, true);
 
 	return;

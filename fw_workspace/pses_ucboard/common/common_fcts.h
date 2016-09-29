@@ -13,6 +13,7 @@
 
 extern char* itoa(int value, char* const result, int base);
 extern char* utoa(uint32_t value, char* const result, int base);
+extern char* utoa_bits(uint32_t value, char* const result);
 
 extern int atoi(const char* p);
 

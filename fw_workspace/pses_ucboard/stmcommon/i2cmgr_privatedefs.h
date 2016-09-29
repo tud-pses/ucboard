@@ -4,6 +4,7 @@
 #include "i2cmgr.h"
 #include "stm32f3xx.h"
 #include "stm32f3xx_hal_i2c.h"
+#include "stdtypes.h"
 
 // ISR register flags
 //#define I2C_ISR_BUSY			((uint16_t)0x8000)

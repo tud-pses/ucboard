@@ -8,9 +8,13 @@
 
 #include "common_fcts.h"
 #include "display.h"
+#include "stopwatch.h"
 
 #include "carbasicfcts.h"
 #include "hal503.h"
+#include "imu_mpu9250.h"
+#include "us.h"
+
 
 static uint32_t f_uTic = 0;
 
@@ -21,8 +25,16 @@ uint32_t systick_getTics()
 }
 
 
+extern bool g_main_bInit;
+
+
 void HAL_SYSTICK_Callback(void)
 {
+	if (!g_main_bInit)
+	{
+		return;
+	}
+
 	++f_uTic;
 
 	if (BUTTON_A_ISPRESSED())
@@ -42,10 +54,18 @@ void HAL_SYSTICK_Callback(void)
 	hal503_do_systick();
 	imu_do_systick();
 
+
+	if ( (f_uTic % 10) == 0)
+	{
+		us_do_systick();
+	}
+
+
 	if ( (f_uTic % 1000) == 0)
 	{
-		//DRVBAT_ON();
-		//display_println_uint("pwm: ", TIM2->CCR1);
+		//us_do_systick();
+		//display_println_uint("us: ", 1);
+		display_println_uint("us: ", us_getVal());
 	}
 
 	if ( (f_uTic % 500) == 0 )

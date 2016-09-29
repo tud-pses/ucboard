@@ -11,32 +11,60 @@
 
 
 #include "stdtypes.h"
+#include "i2cmgr.h"
 
-extern bool gUSonic_bNewData;
+typedef enum EnUSonicDataState {
+	USONICDATA_IDLE,
+	USONICDATA_INITMEASUREMENT,
+	USONICDATA_CHECKIFCOMPLETED,
+	USONICDATA_QUERYDATA
+} EnUSonicDataState_t;
 
-void usonic_init();
-bool usonic_ping();
 
 
-inline bool usonic_hasNewData();
-inline bool usonic_getData(uint16_t* pDistance);
-void usonic_copyData(uint16_t* pData);
-void usonic_do();
-void usonic_trigger();
 
-inline bool usonic_hasNewData()
+typedef struct USdevice_
 {
-	return gUSonic_bNewData;
+	uint8_t uI2CDeviceID;
+	uint8_t uI2CAddress;
+	uint8_t acRxBuffer[10];
+	uint8_t acTxBuffer[10];
+	I2CMGR_Msg_t aMsgs[4];
+
+	bool bNewData;
+	bool bStartNewMeasurement;
+
+	uint16_t uCurData;
+	uint16_t uCommErrorCount;
+	EnUSonicDataState_t eDataState;
+} USdevice_t;
+
+
+void usonic_init(USdevice_t* this, uint8_t address);
+bool usonic_ping(USdevice_t* this);
+
+
+inline bool usonic_hasNewData(USdevice_t* this);
+inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance);
+void usonic_copyData(USdevice_t* this, uint16_t* pData);
+void usonic_do(USdevice_t* this);
+void usonic_trigger(USdevice_t* this);
+
+inline bool usonic_hasNewData(USdevice_t* this)
+{
+	return this->bNewData;
 }
 
-inline bool usonic_getData(uint16_t* pDistance)
+inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance)
 {
-	if (!gUSonic_bNewData)
+	if (!this->bNewData)
+	{
 		return false;
+	}
 	else
 	{
-		usonic_copyData(pDistance);
-		gUSonic_bNewData = false;
+		usonic_copyData(this, pDistance);
+		this->bNewData = false;
 	}
 
 	return true;
@@ -60,7 +88,7 @@ inline bool usonic_getData(uint16_t* pDistance)
 #define	US_CMD_MEASURE_INCH		80
 #define US_CMD_MEASURE_CM		81
 #define US_CMD_MEASURE_US		82
-#define US_CMD_MEASUREMENT		US_CMD_MEASURE_CM
+#define US_CMD_MEASUREMENT		US_CMD_MEASURE_US
 
 
 #define US_CMD_SET_SLAVEID_1BYTE	160

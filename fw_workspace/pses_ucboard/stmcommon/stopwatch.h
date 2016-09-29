@@ -6,6 +6,7 @@
 #define _STOPWATCH_H_
 //#include 
 
+#include "stm32f3xx.h"
 #include "stm32f3xx_hal_tim.h"
 #include <stdint.h>
 

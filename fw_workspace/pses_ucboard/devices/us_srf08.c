@@ -15,38 +15,28 @@
 #include "i2cmgr.h"
 
 #include "debug.h"
-
-#include "stdtypes.h"
-
-static uint8_t f_uI2CDeviceID = 0xFF;
-
-static uint8_t f_acRxBuffer[10];
-static uint8_t f_acTxBuffer[10];
-static I2CMGR_Msg_t f_aMsgs[4];
-
-bool gUSonic_bNewData = false;
-
-bool Usonic_startNewMeasurement = false;
-
-static uint16_t f_uCurData = 0;
-static uint16_t f_uCommErrorCount = 0;
-
-static bool setConfig();
-
-typedef enum EnUSonicDataState {
-	USONICDATA_IDLE,
-	USONICDATA_INITMEASUREMENT,
-	USONICDATA_CHECKIFCOMPLETED,
-	USONICDATA_QUERYDATA
-} EnUSonicDataState_t;
-
-static EnUSonicDataState_t f_eDataState;
+#include "display.h"
+#include "ucboard_hwfcts.h"
 
 
-void usonic_init(void)
+
+static bool setConfig(USdevice_t* this);
+
+
+
+void usonic_init(USdevice_t* this, uint8_t address)
 {
 	EnI2CMgrRes_t res;
 	I2C_InitTypeDef stI2CConfig;
+
+	this->bNewData = false;
+	this->bStartNewMeasurement = false;
+	this->uI2CDeviceID = 0xFF;
+	this->uCommErrorCount = 0;
+	this->uCurData = 0;
+	this->eDataState = USONICDATA_IDLE;
+	this->uI2CAddress = address;
+
 
 	stI2CConfig.Timing = 0x2000090E;
 	stI2CConfig.OwnAddress1 = 0;
@@ -57,72 +47,78 @@ void usonic_init(void)
 	stI2CConfig.GeneralCallMode = I2C_GENERALCALL_DISABLE;
 	stI2CConfig.NoStretchMode = I2C_NOSTRETCH_DISABLE;
 
-
-	res = i2cmgr_addDevice(I2CPORT_2, &stI2CConfig, US_SLAVE_ADDR, &f_uI2CDeviceID);
+	res = i2cmgr_addDevice(I2CPORT_1, &stI2CConfig, address, &(this->uI2CDeviceID));
 
 	if (res != I2CMGRRES_OK)
 	{
-		DEBUG_OUT_HEX("ultrasonic businit failed: ", res);
+		display_println_hex("ultrasonic businit failed: ", res);
 		return;
 	}
 
-	DEBUG_OUT_HEX("ultrasonic device: ", f_uI2CDeviceID);
+	display_println_hex("ultrasonic device: ", this->uI2CDeviceID);
 
-	if (!usonic_ping())
+	if (!usonic_ping(this))
 	{
-		DEBUG_OUT("usonic ping failed!");
+		display_println("usonic ping failed!");
 		return;
 	}
 
-	if (!setConfig())
+	if (!setConfig(this))
 	{
-		DEBUG_OUT("usonic config failed!");
+		display_println("usonic config failed!");
 		return;
 	}
 
-	f_eDataState = USONICDATA_IDLE;
+	this->eDataState = USONICDATA_IDLE;
 
-	Usonic_startNewMeasurement=false;
+	this->bStartNewMeasurement = false;
 	return;
 }
 
 
-bool usonic_ping()
+bool usonic_ping(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;
 	uint8_t uRxByte;
 
-	if (i2cmgr_getMsgState(f_uI2CDeviceID) != I2CMSGSTATE_IDLE)
+	if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
 	{
-		DEBUG_OUT("usonic not idle (p)");
+		display_println("usonic not idle (p)");
 		return false;
 	}
 
-	f_acTxBuffer[0] = 1;
+	this->acTxBuffer[0] = 0;
 
-
-	res = i2cmgr_enqueueAsynchWriteRead(f_uI2CDeviceID, 1, f_acTxBuffer,
-															1, f_acRxBuffer);
+	res = i2cmgr_enqueueAsynchWriteRead(this->uI2CDeviceID, 1, this->acTxBuffer,
+															1, this->acRxBuffer);
 
 	if (res != I2CMGRRES_OK)
 	{
 		return false;
 	}
 
-
-	while ( !( i2cmgr_getMsgState(f_uI2CDeviceID)
+	while ( !( i2cmgr_getMsgState(this->uI2CDeviceID)
 						& (I2CMSGSTATE_COMPLETED | I2CMSGSTATE_ERROR)) )
 	{
 		// * do nothing *
 	}
 
-	uRxByte = f_acRxBuffer[0];
+	uRxByte = this->acRxBuffer[0];
 
-	i2cmgr_resetMsg(f_uI2CDeviceID);
 
-	if (uRxByte != 0x80)
+	if (i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_COMPLETED)
 	{
-		DEBUG_OUT("usonic ping failed");
+		display_println_hex("us firmware version: ", uRxByte);
+	}
+	else
+	{
+		display_println_hex("ping msgstate: ", i2cmgr_getMsgState(this->uI2CDeviceID));
+	}
+
+	i2cmgr_resetMsg(this->uI2CDeviceID);
+
+	if ((uRxByte == 0x00) || (uRxByte == 0xFF))
+	{
 		return false;
 	}
 
@@ -130,64 +126,64 @@ bool usonic_ping()
 }
 
 
-static bool setConfig()
+static bool setConfig(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;
 
-	if (i2cmgr_getMsgState(f_uI2CDeviceID) != I2CMSGSTATE_IDLE)
+	if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
 	{
-		DEBUG_OUT("usonic not idle (sc)");
+		display_println("usonic not idle (sc)");
 		return false;
 	}
 
-	f_acTxBuffer[0] = US_ADDR_GAIN;
-	f_acTxBuffer[1] = US_GAIN;
+	this->acTxBuffer[0] = US_ADDR_GAIN;
+	this->acTxBuffer[1] = US_GAIN;
 
-	f_acTxBuffer[2] = US_ADDR_RANGE;
-	f_acTxBuffer[3] = US_RANGE;
+	this->acTxBuffer[2] = US_ADDR_RANGE;
+	this->acTxBuffer[3] = US_RANGE;
 
-	i2cmgr_setupMsgStruct(&f_aMsgs[0], I2CMGRMSG_TX, 2, &f_acTxBuffer[0]);
-	i2cmgr_setupMsgStruct(&f_aMsgs[1], I2CMGRMSG_TX, 2, &f_acTxBuffer[2]);
+	i2cmgr_setupMsgStruct(&this->aMsgs[0], I2CMGRMSG_TX, 2, &this->acTxBuffer[0]);
+	i2cmgr_setupMsgStruct(&this->aMsgs[1], I2CMGRMSG_TX, 2, &this->acTxBuffer[2]);
 
-	res = i2cmgr_enqueueAsynchMsgs(f_uI2CDeviceID, 2, f_aMsgs);
+	res = i2cmgr_enqueueAsynchMsgs(this->uI2CDeviceID, 2, this->aMsgs);
 
 	if (res != I2CMGRRES_OK)
 	{
 		return false;
 	}
 
-	while ( !( i2cmgr_getMsgState(f_uI2CDeviceID)
+	while ( !( i2cmgr_getMsgState(this->uI2CDeviceID)
 						& (I2CMSGSTATE_COMPLETED | I2CMSGSTATE_ERROR)) )
 	{
 		// * do nothing *
 	}
 
-	i2cmgr_resetMsg(f_uI2CDeviceID);
+	i2cmgr_resetMsg(this->uI2CDeviceID);
 
 	return true;
 }
 
 
-void usonic_copyData(uint16_t* pData)
+void usonic_copyData(USdevice_t* this, uint16_t* pData)
 {
-	*pData = f_uCurData;
+	*pData = this->uCurData;
 	return;
 }
 
 
-static bool startInitMeasurement()
+static bool startInitMeasurement(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;
 
-	if (i2cmgr_getMsgState(f_uI2CDeviceID) != I2CMSGSTATE_IDLE)
+	if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
 	{
-		DEBUG_OUT("usonic not idle (sim)");
+		display_println("usonic not idle (sim)");
 		return false;
 	}
 
-	f_acTxBuffer[0] = US_ADDR_CMD;
-	f_acTxBuffer[1] = US_CMD_MEASURE_CM;	// Messung in Zentimeter
-	res = i2cmgr_enqueueAsynchWrite(f_uI2CDeviceID, 2, f_acTxBuffer);
+	this->acTxBuffer[0] = US_ADDR_CMD;
+	this->acTxBuffer[1] = US_CMD_MEASUREMENT;	// Messung in Zentimeter
+	res = i2cmgr_enqueueAsynchWrite(this->uI2CDeviceID, 2, this->acTxBuffer);
 
 	if (res != I2CMGRRES_OK)
 	{
@@ -198,19 +194,19 @@ static bool startInitMeasurement()
 }
 
 
-static bool startDataAvailableQuery()
+static bool startDataAvailableQuery(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;
 
-	if (i2cmgr_getMsgState(f_uI2CDeviceID) != I2CMSGSTATE_IDLE)
+	if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
 	{
-		DEBUG_OUT("usonic not idle (sdaq)");
+		display_println("usonic not idle (sdaq)");
 		return false;
 	}
 
-	f_acTxBuffer[0] = 0;
-	res = i2cmgr_enqueueAsynchWriteRead(f_uI2CDeviceID, 1, f_acTxBuffer,
-															1, f_acRxBuffer);
+	this->acTxBuffer[0] = 0;
+	res = i2cmgr_enqueueAsynchWriteRead(this->uI2CDeviceID, 1, this->acTxBuffer,
+															1, this->acRxBuffer);
 
 
 	if (res != I2CMGRRES_OK)
@@ -222,26 +218,26 @@ static bool startDataAvailableQuery()
 
 }
 
-static bool startDataQuery()
+static bool startDataQuery(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;
 
 
-	if (i2cmgr_getMsgState(f_uI2CDeviceID) != I2CMSGSTATE_IDLE)
+	if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
 	{
-		DEBUG_OUT("usonic not idle (sdq)");
+		display_println("usonic not idle (sdq)");
 		return false;
 	}
 
-	f_acTxBuffer[0] = US_ADDR_DISTANCE_H;
-	f_acTxBuffer[1] = US_ADDR_DISTANCE_L;
+	this->acTxBuffer[0] = US_ADDR_DISTANCE_H;
+	this->acTxBuffer[1] = US_ADDR_DISTANCE_L;
 
-	i2cmgr_setupMsgStruct(&f_aMsgs[0], I2CMGRMSG_TX, 1, &f_acTxBuffer[0]);
-	i2cmgr_setupMsgStruct(&f_aMsgs[1], I2CMGRMSG_RX, 1, &f_acRxBuffer[0]);
-	i2cmgr_setupMsgStruct(&f_aMsgs[2], I2CMGRMSG_TX, 1, &f_acTxBuffer[1]);
-	i2cmgr_setupMsgStruct(&f_aMsgs[3], I2CMGRMSG_RX, 1, &f_acRxBuffer[1]);
+	i2cmgr_setupMsgStruct(&this->aMsgs[0], I2CMGRMSG_TX, 1, &this->acTxBuffer[0]);
+	i2cmgr_setupMsgStruct(&this->aMsgs[1], I2CMGRMSG_RX, 1, &this->acRxBuffer[0]);
+	i2cmgr_setupMsgStruct(&this->aMsgs[2], I2CMGRMSG_TX, 1, &this->acTxBuffer[1]);
+	i2cmgr_setupMsgStruct(&this->aMsgs[3], I2CMGRMSG_RX, 1, &this->acRxBuffer[1]);
 
-	res = i2cmgr_enqueueAsynchMsgs(f_uI2CDeviceID, 4, f_aMsgs);
+	res = i2cmgr_enqueueAsynchMsgs(this->uI2CDeviceID, 4, this->aMsgs);
 
 
 	if (res != I2CMGRRES_OK)
@@ -253,136 +249,142 @@ static bool startDataQuery()
 }
 
 
-void usonic_trigger()
+void usonic_trigger(USdevice_t* this)
 {
-	Usonic_startNewMeasurement = true;
+	this->bStartNewMeasurement = true;
+
+	return;
 }
 
 
-void usonic_do()
+void usonic_do(USdevice_t* this)
 {
 //	if (GETDEVICESTATE(DEVICE_ULTRASONIC) != DEVICESTATE_OK)
 //	{
 //		return;
 //	}
 
-	switch (f_eDataState)
+	//display_println_hex("us state: ", this->eDataState);
+
+	switch (this->eDataState)
 	{
 		case USONICDATA_CHECKIFCOMPLETED:
-			//DEBUG_OUT("cic");
-			if ( i2cmgr_getMsgState(f_uI2CDeviceID)	== I2CMSGSTATE_COMPLETED )
+			//display_println("cic");
+			if ( i2cmgr_getMsgState(this->uI2CDeviceID)	== I2CMSGSTATE_COMPLETED )
 			{
-				i2cmgr_resetMsg(f_uI2CDeviceID);
+				i2cmgr_resetMsg(this->uI2CDeviceID);
 
 				// Wenn der Sensor reagiert hat, also nicht 0xFF sendet
-				if (f_acRxBuffer[0] != US_NO_RESPONSE)
+				if (this->acRxBuffer[0] != US_NO_RESPONSE)
 				{
-					if (f_acRxBuffer[0]!=0x05)
+					if (this->acRxBuffer[0] != 0x0A)
 					{				// Wenn ein Kommunikationsfehler auftritt
-						DEBUG_OUT("US Firmware falsch");
+						//display_println("US Firmware falsch");
 					}
-					if ( startDataQuery() )	//Ergebnis abrufen
+
+					if ( startDataQuery(this) )	//Ergebnis abrufen
 					{
-						f_eDataState = USONICDATA_QUERYDATA;
+						this->eDataState = USONICDATA_QUERYDATA;
 					}
 					else
 					{
-						f_eDataState = USONICDATA_IDLE;
-						DEBUG_OUT("US OVRUN");
+						this->eDataState = USONICDATA_IDLE;
+						display_println("US OVRUN");
 					}
 				}
 				else
-				{	//Nochmal versuchen ob der Sensor bereit ist
-					if (!startDataAvailableQuery())
+				{
+					//Nochmal versuchen ob der Sensor bereit ist
+					if (!startDataAvailableQuery(this))
 					{
-						f_eDataState = USONICDATA_IDLE;
-						DEBUG_OUT("US OVRUN");
+						this->eDataState = USONICDATA_IDLE;
+						display_println("US OVRUN");
 					}
 				}
 			}
-			else if ( i2cmgr_getMsgState(f_uI2CDeviceID) == I2CMSGSTATE_ERROR )
+			else if ( i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_ERROR )
 			{
 				// Solange Messung dauert, antwortet Ultraschallsensor nicht
-				// (auch kein ACK, was con i2cmgr als Fehler gewertet wird)
-				i2cmgr_resetMsg(f_uI2CDeviceID);
+				// (auch kein ACK, was von i2cmgr als Fehler gewertet wird)
+				i2cmgr_resetMsg(this->uI2CDeviceID);
 
-				if (!startDataAvailableQuery())
+				if (!startDataAvailableQuery(this))
 				{
-					f_eDataState = USONICDATA_IDLE;
-					DEBUG_OUT("US OVRUN");
+					this->eDataState = USONICDATA_IDLE;
+					display_println("US OVRUN");
 				}
 			}
 			break;
 
 		case USONICDATA_QUERYDATA:
-			//DEBUG_OUT("qd");
-			if ( i2cmgr_getMsgState(f_uI2CDeviceID)	== I2CMSGSTATE_COMPLETED )
+			//display_println("qd");
+			if ( i2cmgr_getMsgState(this->uI2CDeviceID)	== I2CMSGSTATE_COMPLETED )
 			{
-				f_uCurData = ((uint16_t)f_acRxBuffer[0] << 8) | f_acRxBuffer[1];
-				gUSonic_bNewData = true;
+				this->uCurData = ((uint16_t)this->acRxBuffer[0] << 8) | this->acRxBuffer[1];
+				this->bNewData = true;
 
-				i2cmgr_resetMsg(f_uI2CDeviceID);
+				i2cmgr_resetMsg(this->uI2CDeviceID);
 
-				f_eDataState = USONICDATA_IDLE;
+				this->eDataState = USONICDATA_IDLE;
 			}
-			else if ( i2cmgr_getMsgState(f_uI2CDeviceID) == I2CMSGSTATE_ERROR )
+			else if ( i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_ERROR )
 			{
-				EnI2CMgrRes_t UNUSED_(res) = i2cmgr_getMsgRes(f_uI2CDeviceID);
+				EnI2CMgrRes_t res = i2cmgr_getMsgRes(this->uI2CDeviceID);
 
-				i2cmgr_resetMsg(f_uI2CDeviceID);
-				f_eDataState = USONICDATA_IDLE;
-				f_uCommErrorCount++;
+				i2cmgr_resetMsg(this->uI2CDeviceID);
+				this->eDataState = USONICDATA_IDLE;
+				this->uCommErrorCount++;
 
-				DEBUG_OUT_UINT("usonic err count: ", f_uCommErrorCount);
-				DEBUG_OUT_HEX("usonic err code: ", res);
+				display_println_uint("usonic err count: ", this->uCommErrorCount);
+				display_println_hex("usonic err code: ", res);
 			}
 
 			break;
 
 		case USONICDATA_INITMEASUREMENT:
-			//DEBUG_OUT("im");
+			//display_println("im");
 
-			if ( i2cmgr_getMsgState(f_uI2CDeviceID)	== I2CMSGSTATE_COMPLETED )
+			if ( i2cmgr_getMsgState(this->uI2CDeviceID)	== I2CMSGSTATE_COMPLETED )
 			{
-				i2cmgr_resetMsg(f_uI2CDeviceID);
+				i2cmgr_resetMsg(this->uI2CDeviceID);
 
-				if (!startDataAvailableQuery())
+				if (!startDataAvailableQuery(this))
 				{
-					f_eDataState = USONICDATA_IDLE;
-					DEBUG_OUT("US OVRUN");
+					this->eDataState = USONICDATA_IDLE;
+					display_println("US OVRUN");
 				}
 				else
 				{
-					f_eDataState = USONICDATA_CHECKIFCOMPLETED;
+					this->eDataState = USONICDATA_CHECKIFCOMPLETED;
 				}
 			}
-			else if ( i2cmgr_getMsgState(f_uI2CDeviceID) == I2CMSGSTATE_ERROR )
+			else if ( i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_ERROR )
 			{
-				EnI2CMgrRes_t UNUSED_(res) = i2cmgr_getMsgRes(f_uI2CDeviceID);
+				EnI2CMgrRes_t res = i2cmgr_getMsgRes(this->uI2CDeviceID);
 
-				i2cmgr_resetMsg(f_uI2CDeviceID);
-				f_eDataState = USONICDATA_IDLE;
-				f_uCommErrorCount++;
+				i2cmgr_resetMsg(this->uI2CDeviceID);
+				this->eDataState = USONICDATA_IDLE;
+				this->uCommErrorCount++;
 
-				DEBUG_OUT_UINT("usonic err count: ", f_uCommErrorCount);
-				DEBUG_OUT_HEX("usonic err code: ", res);
+				display_println_uint("usonic err count: ", this->uCommErrorCount);
+				display_println_hex("usonic err code: ", res);
 			}
 
 			break;
 
 		case USONICDATA_IDLE:
-			//DEBUG_OUT("i");
-			if (Usonic_startNewMeasurement)
+			//display_println("i");
+			if (this->bStartNewMeasurement)
 			{
-				Usonic_startNewMeasurement = false;
+				this->bStartNewMeasurement = false;
 
-				if (!startInitMeasurement())
+				if (!startInitMeasurement(this))
 				{
-					f_eDataState = USONICDATA_IDLE;
+					this->eDataState = USONICDATA_IDLE;
 				}
 				else
 				{
-					f_eDataState = USONICDATA_INITMEASUREMENT;
+					this->eDataState = USONICDATA_INITMEASUREMENT;
 				}
 			}
 			break;

@@ -39,11 +39,15 @@
 
 #include "stopwatch.h"
 
+#include "spimgr.h"
+#include "i2cmgr.h"
+
 #include "carbasicfcts.h"
 #include "hal503.h"
 #include "imu_mpu9250.h"
+#include "us.h"
 
-#include "spimgr.h"
+#include "led.h"
 
 /* USER CODE END Includes */
 
@@ -107,6 +111,8 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN 0 */
 
+bool g_main_bInit = false;
+
 /* USER CODE END 0 */
 
 int main(void)
@@ -154,14 +160,18 @@ int main(void)
   comm_init();
 
   spimgr_init();
+  i2cmgr_init();
 
   imu_init();
+  us_init();
 
   car_init();
   hal503_init();
 
 
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
+
+  g_main_bInit = true;
 
   /* USER CODE END 2 */
 
@@ -929,7 +939,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
 /* USER CODE END 4 */
 
 /**
@@ -940,6 +949,9 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler */
+
+	LED_loopForever_showErrCode(LEDERRCODE_STDEXCEPTION);
+
   /* User can add his own implementation to report the HAL error return state */
   while(1) 
   {

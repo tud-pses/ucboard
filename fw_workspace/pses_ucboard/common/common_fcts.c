@@ -8,7 +8,7 @@
 #include "stm32f3xx.h"
 
 #include "common_fcts.h"
-
+#include <string.h>
 
 
 
@@ -92,6 +92,46 @@ char* utoa(uint32_t value, char * const result, int base) {
 		*ptr-- = *ptr1;
 		*ptr1++ = tmp_char;
 	}
+
+	return result;
+}
+
+
+char* utoa_bits(uint32_t value, char* const result)
+{
+	char tmp[37];
+	char* p;
+	uint8_t i;
+
+	p = &tmp[36];
+	*p = '\0';
+	*--p = 'b';
+
+	for (i = 0; i < 32; i++)
+	{
+		if ( (i > 0) && ((i & 0x3) == 0) )
+		{
+			*--p = ' ';
+		}
+
+		if (value & (1 << i))
+		{
+			*--p = '1';
+
+			value &= ~(1 << i);
+		}
+		else
+		{
+			*--p = '0';
+		}
+
+		if (value == 0)
+		{
+			break;
+		}
+	}
+
+	strcpy(result, p);
 
 	return result;
 }

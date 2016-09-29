@@ -24,11 +24,12 @@ extern void Error_Handler(void);
 
 
 #define I2CMGR_MANAGEI2C_1
-#define I2CMGR_MANAGEI2C_2
-#define I2CMGR_MANAGEI2C_3
+//#define I2CMGR_MANAGEI2C_2
+//#define I2CMGR_MANAGEI2C_3
 
 
-static I2C_TypeDef* const f_aI2CPTR[NI2C] = {I2C1, I2C2, I2C3};
+//static I2C_TypeDef* const f_aI2CPTR[NI2C] = {I2C1, I2C2, I2C3};
+static I2C_TypeDef* const f_aI2CPTR[NI2C] = {I2C1, NULL, NULL};
 // Ports und Pins angeben, die zu den verwalteten I2C-Bussen gehören
 static const I2CMGR_I2C_Pins_t f_aI2CPINS[NI2C] = {
 								{GPIOB, GPIO_PIN_6, GPIOB, GPIO_PIN_7},
@@ -122,18 +123,29 @@ inline void initDebugPins() {}
 
 #endif
 
+#include "ucboard_hwfcts.h"
+#include "display.h"
+
+
 static TIM_HandleTypeDef htim6;
 
 void i2cmgr_init()
 {
 	uint8_t u;
 
+
+	__HAL_RCC_TIM6_CLK_ENABLE();
+
+    HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+
+
 	// Timer 6 auf eine Frequenz von 1 MHz einstellen
 
 	// Timer läuft mit 1MHz (72 MHz Prozessor, 72er Prescaler)
 	htim6.Instance = TIM6;
 	htim6.Init.Prescaler = 71;
-	htim6.Init.CounterMode = TIM_COUNTERMODE_DOWN;
+	htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
 	htim6.Init.Period = 0xFFFF;
 	htim6.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	htim6.Init.RepetitionCounter = 0;
@@ -144,6 +156,8 @@ void i2cmgr_init()
 	}
 
 	__TIM_CLEAR_FLAG( TIM6, TIM_FLAG_UPDATE );
+
+	startTimer(1);
 
 
 	initDebugPins();
@@ -175,7 +189,6 @@ void i2cmgr_init()
 		f_aDevices[u].nMsgs = 0;
 	}
 
-
 	for (u = 0; u < NI2C; u++)
 	{
 		if (f_aI2C[u].pI2C == NULL)
@@ -192,7 +205,7 @@ void i2cmgr_init()
 
 		while ( f_aI2C[u].state != STATE_IDLE )
 		{
-			/* do nothing */
+			// * do nothing *
 		}
 	}
 
@@ -201,30 +214,81 @@ void i2cmgr_init()
 
 static void configPins(EnI2C_PORT_t eI2CPort, bool bI2CFunc)
 {
-	GPIO_InitTypeDef stGPIOConfig;
-	uint32_t ePortMode;
+	GPIO_InitTypeDef GPIO_InitStruct;
 
-	if (bI2CFunc)
+	if (eI2CPort == I2CPORT_1)
 	{
-		ePortMode = GPIO_MODE_AF_OD;
+		if (bI2CFunc)
+		{
+			GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+			GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+			GPIO_InitStruct.Pull = GPIO_PULLUP;
+			GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+			GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+			HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+		}
+		else
+		{
+			GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+			GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+			GPIO_InitStruct.Pull = GPIO_PULLUP;
+			GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+			HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+		}
 	}
-	else
+	else if (eI2CPort == I2CPORT_2)
 	{
-		ePortMode = GPIO_MODE_OUTPUT_OD;
+		if (bI2CFunc)
+		{
+		    GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
+		    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+		    GPIO_InitStruct.Pull = GPIO_PULLUP;
+		    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+		    GPIO_InitStruct.Alternate = GPIO_AF4_I2C2;
+		    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+		}
+		else
+		{
+		    GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
+		    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+		    GPIO_InitStruct.Pull = GPIO_PULLUP;
+		    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+		    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+		}
 	}
+	else if (eI2CPort == I2CPORT_3)
+	{
+		if (bI2CFunc)
+		{
+		    GPIO_InitStruct.Pin = GPIO_PIN_8;
+		    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+		    GPIO_InitStruct.Pull = GPIO_PULLUP;
+		    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+		    GPIO_InitStruct.Alternate = GPIO_AF3_I2C3;
+		    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-	// PINS
-	// SCL
-	stGPIOConfig.Pin = f_aI2CPINS[eI2CPort].pinSCL;
-	stGPIOConfig.Speed = GPIO_SPEED_FREQ_HIGH;
-	stGPIOConfig.Mode = ePortMode;
-	HAL_GPIO_Init( f_aI2CPINS[eI2CPort].portSCL, &stGPIOConfig );
+		    GPIO_InitStruct.Pin = GPIO_PIN_5;
+		    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+		    GPIO_InitStruct.Pull = GPIO_PULLUP;
+		    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+		    GPIO_InitStruct.Alternate = GPIO_AF8_I2C3;
+		    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+		}
+		else
+		{
+		    GPIO_InitStruct.Pin = GPIO_PIN_8;
+		    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+		    GPIO_InitStruct.Pull = GPIO_PULLUP;
+		    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+		    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-	// SDL
-	stGPIOConfig.Pin = f_aI2CPINS[eI2CPort].pinSDL;
-	stGPIOConfig.Speed = GPIO_SPEED_FREQ_HIGH;
-	stGPIOConfig.Mode = ePortMode;
-	HAL_GPIO_Init( f_aI2CPINS[eI2CPort].portSDL, &stGPIOConfig );
+		    GPIO_InitStruct.Pin = GPIO_PIN_5;
+		    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+		    GPIO_InitStruct.Pull = GPIO_PULLUP;
+		    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+		    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+		}
+	}
 
 	return;
 }
@@ -262,7 +326,7 @@ static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 			// Deaktivieren des Bustreibers
 			__I2C_DISABLE(pI2C);
 			// Software-Reset setzen
-			pI2C->CR1 |= I2C_CR1_SWRST;
+			//pI2C->CR1 |= I2C_CR1_SWRST;
 
 			configPins(eI2CPort, false);
 
@@ -312,10 +376,9 @@ static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 			__GPIO_SET_BITS(pSDLPort, uSDLPin);
 			configPins(eI2CPort, true);
 			
-
 			// Bustreiber aus Reset nehmen
-			pI2C->CR1 &= ~I2C_CR1_SWRST;
-			
+			//pI2C->CR1 &= ~I2C_CR1_SWRST;
+
 			// Hardware-Bustreiber aktivieren
 			if (f_aI2C[eI2CPort].bInit)
 			{
@@ -323,7 +386,6 @@ static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 				__I2C_Init(pI2C, (I2C_InitTypeDef*)&(f_aI2C[eI2CPort].stConfig) );
 				__I2C_ENABLE(pI2C);
 			}
-
 
 			pBusResetData->eState = BUSRESETSTATE_NORESET;
 
@@ -438,11 +500,11 @@ static bool setI2CConfig(EnI2C_PORT_t eI2CPort, const I2C_InitTypeDef* pstConfig
 
 	if (bReconfig)
 	{
+		__I2C_DISABLE_IT( pI2C, I2C_IT_ALL );
 		__I2C_DISABLE(pI2C);
 		__I2C_DeInit(pI2C);
 		__I2C_Init( pI2C, pCurConfig );
 		__I2C_ENABLE(pI2C);
-		__I2C_DISABLE_IT( pI2C, I2C_IT_ALL );
 
 		f_aI2C[eI2CPort].bInit = true;
 	}
@@ -641,8 +703,7 @@ static void startComm(EnI2C_PORT_t eI2C, uint8_t uDeviceID, uint8_t uMsg)
 	f_aI2C[eI2C].uCurMsgDevice = uDeviceID;
 	f_aI2C[eI2C].eCurMsgRes = I2CMGRRES_OK;
 
-
-	__I2C_ENABLE_IT( f_aI2C[eI2C].pI2C, I2C_IT_ERRI | I2C_IT_MASTER );
+	__I2C_ENABLE_IT( f_aI2C[eI2C].pI2C, I2C_IT_ERRI );// | I2C_IT_MASTER );
 
 	if ( (pMsg->eDir == I2CMGRMSG_TX) && !bDMA )
 	{
@@ -681,6 +742,7 @@ static void finishCurComm(EnI2C_PORT_t eI2C)
 
 	if (f_aI2C[eI2C].eCurMsgRes != I2CMGRRES_OK)
 	{
+		//display_println_hex("msg res: ", f_aI2C[eI2C].eCurMsgRes);
 		f_aDevices[uDevice].eMsgState = I2CMSGSTATE_ERROR;
 		f_aDevices[uDevice].eMsgRes = f_aI2C[eI2C].eCurMsgRes;
 		bSkipCurDevice = true;
@@ -817,11 +879,11 @@ void stateMachine_TXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent)
 			cr2tmp = pI2C->CR2;
 
 			cr2tmp &= ~I2C_CR2_SADD_Msk;
-			cr2tmp |= f_aDevices[pI2CM->uCurMsgDevice].uAddress;
+			cr2tmp |= (I2C_CR2_SADD_Msk & f_aDevices[pI2CM->uCurMsgDevice].uAddress);
 
 			nbytes = (pI2CM->pCurMsg->pBufferEnd1 - pI2CM->pCurMsg->pBuffer);
 			cr2tmp &= ~I2C_CR2_NBYTES_Msk;
-			cr2tmp |= (nbytes << 16);
+			cr2tmp |= (I2C_CR2_NBYTES_Msk & (nbytes << 16));
 
 			cr2tmp &= ~I2C_CR2_RD_WRN;
 
@@ -833,9 +895,12 @@ void stateMachine_TXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent)
 
 			pI2CM->state = STATE_DATATRANSFER;
 
+			__I2C_ENABLE_IT(pI2C, I2C_IT_TXI | I2C_IT_STOPI | I2C_IT_TCI | I2C_IT_NACKI);
+
 			break;
 		}
 		case STATE_DATATRANSFER:
+
 			if (eEvent & I2CEVENT_TXIS)
 			{
 				// Data in DR
@@ -854,9 +919,9 @@ void stateMachine_TXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent)
 				__I2C_SEND_STOP(pI2C);
 
 				pI2CM->state = STATE_STOPREQ;
-				__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
+				//__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
 
-				startTimer(100);
+				//startTimer(100);
 			}
 			else
 			{
@@ -866,9 +931,20 @@ void stateMachine_TXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent)
 			break;
 
 		case STATE_STOPREQ:
-			bUnexpectedEvent = true;
+			if (eEvent & I2CEVENT_STOPF)
+			{
+				__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
+				pI2C->ICR = I2C_ISR_STOPF;
+
+				finishCurComm(eI2C);
+			}
+			else
+			{
+				bUnexpectedEvent = true;
+			}
 
 			break;
+
 
 		default: //ADDRSENT, RESETBUSINIT, RESETBUSERROR
 			break;
@@ -876,7 +952,11 @@ void stateMachine_TXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent)
 
 	if (bUnexpectedEvent)
 	{
+		//display_println_bits("tx event: ", eEvent);
+		//display_println_hex("tx state: ", pI2CM->state);
+
 		__I2C_DISABLE_IT( f_aI2C[eI2C].pI2C, I2C_IT_ALL );
+
 		f_aI2C[eI2C].pI2C->ISR &= 0x00FF;
 
 		pI2CM->state = STATE_ERROR;
@@ -916,7 +996,6 @@ void stateMachine_TXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent)
 	}
 
 	SETDEBUGPINS(f_aI2C[eI2C].state);
-
 	return;
 }
 
@@ -967,10 +1046,12 @@ void stateMachine_RXEvents(EnI2C_PORT_t ePort, EnI2CEvent_t eEvent)
 
 			pI2CM->state = STATE_DATATRANSFER;
 
+			__I2C_ENABLE_IT(pI2C, I2C_IT_RXI | I2C_IT_STOPI | I2C_IT_TCI | I2C_IT_NACKI);
+
 			break;
 		}
 		case STATE_DATATRANSFER:
-			if (eEvent == I2CEVENT_RXNE)
+			if (eEvent & I2CEVENT_RXNE)
 			{
 				if (pI2CM->pCurMsg->pBufferEnd1 == pI2CM->pCurMsg->pBufferCur)
 				{
@@ -987,9 +1068,9 @@ void stateMachine_RXEvents(EnI2C_PORT_t ePort, EnI2CEvent_t eEvent)
 				__I2C_SEND_STOP(pI2C);
 
 				pI2CM->state = STATE_STOPREQ;
-				__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
+				//__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
 
-				startTimer(100);
+				//startTimer(100);
 			}
 			else
 			{
@@ -999,7 +1080,18 @@ void stateMachine_RXEvents(EnI2C_PORT_t ePort, EnI2CEvent_t eEvent)
 			break;
 
 		case STATE_STOPREQ:
-			bUnexpectedEvent = true;
+
+			if (eEvent & I2CEVENT_STOPF)
+			{
+				__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
+				pI2C->ICR = I2C_ISR_STOPF;
+
+				finishCurComm(ePort);
+			}
+			else
+			{
+				bUnexpectedEvent = true;
+			}
 
 			break;
 
@@ -1011,6 +1103,9 @@ void stateMachine_RXEvents(EnI2C_PORT_t ePort, EnI2CEvent_t eEvent)
 
 	if (bUnexpectedEvent)
 	{
+		display_println_bits("rx event: ", eEvent);
+		display_println_hex("rx state: ", pI2CM->state);
+
 		pI2CM->state = STATE_ERROR;
 
 		if ( eEvent & (I2CEVENT_BERR | I2CEVENT_ARLO |
@@ -1049,24 +1144,14 @@ void stateMachine_RXEvents(EnI2C_PORT_t ePort, EnI2CEvent_t eEvent)
 	}
 
 	SETDEBUGPINS(f_aI2C[ePort].state);
-
 	return;
 }
 
-
-//void stateMachine_TXDMA(EnI2C_PORT_t UNUSED(ePort), EnI2CEvent_t UNUSED(eEvent))
-//{
-//}
-//
-//void stateMachine_RXDMA(EnI2C_PORT_t UNUSED(ePort), EnI2CEvent_t UNUSED(eEvent))
-//{
-//}
 
 #ifdef I2CMGR_MANAGEI2C_1
 void I2C1_EV_IRQHandler()
 {
 	f_aI2C[I2CPORT_1].stateMachine(I2CPORT_1, (uint16_t)I2C1->ISR);
-
 	return;
 }
 
@@ -1076,6 +1161,7 @@ void I2C1_ER_IRQHandler()
 	return;
 }
 #endif
+
 
 #ifdef I2CMGR_MANAGEI2C_2
 void I2C2_EV_IRQHandler()
@@ -1095,6 +1181,7 @@ void I2C2_ER_IRQHandler()
 }
 #endif
 
+
 #ifdef I2CMGR_MANAGEI2C_2
 void I2C3_EV_IRQHandler()
 {
@@ -1113,7 +1200,8 @@ void I2C3_ER_IRQHandler()
 }
 #endif
 
-void TIM6_IRQHandler( void )
+
+void TIM6_DAC_IRQHandler( void )
 {
 	uint16_t uNextTimer = 0xFFFF;
 	uint16_t uCurNextTimer;
@@ -1162,11 +1250,11 @@ void TIM6_IRQHandler( void )
 		{
 			if ( __I2C_IS_BUSY(f_aI2C[uBus].pI2C) )
 			{
-				finishCurComm(uBus);
+				uCurNextTimer = 20;
 			}
 			else
 			{
-				uCurNextTimer = 20;
+				finishCurComm(uBus);
 			}
 		}
 		else if (*pState == STATE_IDLE)
@@ -1202,11 +1290,14 @@ inline void initBusResetStruct(BusResetData_t* pData)
 	pData->uTic = 0;
 	pData->uToggleCount = 0;
 	pData->eState = BUSRESETSTATE_INIT;
+
+	return;
 }
 
 inline void startTimer(uint16_t us)
 {
-	__TIM_SET_COUNTER( TIM6, us );
+	TIM6->CNT = 0xFFFF - us;
+	//TIM6->ARR = us;
 
 	// Interrupt aktivieren
 	TIM6->DIER |= 0x1;
@@ -1219,7 +1310,6 @@ inline void startTimer(uint16_t us)
 
 inline void stopTimer()
 {
-
 	__TIM_DISABLE(TIM6);
 
 	// Interrupt deaktivieren
