@@ -9,6 +9,7 @@
 
 
 
+extern bool cmd_daq(COMMCMDFCT_ARGS);
 extern bool cmd_drv(COMMCMDFCT_ARGS);
 //extern bool cmd_drvbat(COMMCMDFCT_ARGS);
 extern bool cmd_carid(COMMCMDFCT_ARGS);
@@ -20,6 +21,7 @@ extern bool cmd_reset(COMMCMDFCT_ARGS);
 
 CommCmdTableEntry_t g_commCmdFctTable[] =
 {
+		{"DAQ",  &cmd_daq},
 		{"DRV",  &cmd_drv},
 //		{"DRVBAT",  &cmd_drvbat},
 		{"ID",  &cmd_carid},

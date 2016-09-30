@@ -11,11 +11,20 @@
 
 #include "spimgr.h"
 
+#include "daq.h"
+
 #include "display.h"
 #include "ucboard_hwfcts.h"
 #include "stopwatch.h"
 
 static uint8_t f_uDeviceID = 0;
+
+static uint8_t f_uDAQCh_ACCX;
+static uint8_t f_uDAQCh_ACCY;
+static uint8_t f_uDAQCh_ACCZ;
+static uint8_t f_uDAQCh_GYROX;
+static uint8_t f_uDAQCh_GYROY;
+static uint8_t f_uDAQCh_GYROZ;
 
 void imu_init()
 {
@@ -71,6 +80,14 @@ void imu_init()
 //	{
 //		display_println("imu ping failed!");
 //	}
+
+
+	daq_provideChannel("AX", "acc. ahead", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_ACCX);
+	daq_provideChannel("AY", "acc. left", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_ACCY);
+	daq_provideChannel("AZ", "acc. up", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_ACCZ);
+	daq_provideChannel("GX", "gyro roll", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_GYROX);
+	daq_provideChannel("GY", "gyro -pitch", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_GYROY);
+	daq_provideChannel("GZ", "gyro -yaw", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_GYROZ);
 
 	return;
 }

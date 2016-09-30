@@ -194,6 +194,45 @@ char* strcpy_returnend(char* target, char* const targetend,
 }
 
 
+char* strcpyfixedwidth_returnend(char* target, char* const targetend, const char* source, uint16_t width)
+{
+	uint16_t w = 0;
+
+	while ( (*source != '\0') && (target < targetend) && (++w <= width))
+	{
+		*target++ = *source++;
+	}
+
+	if (*source != '\0')
+	{
+		if (w > 2)
+		{
+			*(target-1) = '.';
+			*(target-2) = '.';
+			*(target-3) = '.';
+		}
+		else if (w == 2)
+		{
+			*(target-1) = '.';
+			*(target-2) = '.';
+		}
+		else if (w == 1)
+		{
+			*(target-1) = '.';
+		}
+	}
+
+	while ((++w <= width) && (target < targetend))
+	{
+		*target++ = ' ';
+	}
+
+	*target = '\0';
+
+	return target;
+}
+
+
 char* strcat_returnend(char* target, char* const targetend, ...)
 {
 	va_list valist;

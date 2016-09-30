@@ -26,14 +26,32 @@
 #define SOT_RXOUT	'\''
 
 
-#define RXMAXMSGLEN	256
-#define TXMAXMSGLEN	256
+#define RXMAXMSGLEN	1000
+#define TXMAXMSGLEN	1000
 
 typedef enum EnCmdSpec_
 {
 	CMDSPEC_GET,
 	CMDSPEC_SET,
 } EnCmdSpec_t;
+
+
+#define COMMMAXARGS 10
+
+typedef struct CommCmdArgs_
+{
+	uint8_t nArgs;
+	char* args[COMMMAXARGS + 1];
+	uint8_t nParams;
+	char* paramnames[COMMMAXARGS + 1];
+	char* paramvals[COMMMAXARGS + 1];
+} CommCmdArgs_t;
+
+
+bool comm_parseArgs(CommCmdArgs_t* args, char* argstr);
+bool comm_parseSubcmdArgs(char** subcmd, CommCmdArgs_t* args, char* argstr);
+void comm_displayArgs(CommCmdArgs_t* args);
+
 
 
 typedef bool (*CommCmdFctPtr) (EnCmdSpec_t, char*, uint16_t, char*, uint16_t*, void*);
@@ -47,7 +65,8 @@ char* createErrStr_returnend(char* buf, char* const bufend, char sotchar, EnErrC
 
 bool comm_addStream(CommStreamFctPtr fct);
 bool comm_removeStream(CommStreamFctPtr fct);
-
+bool comm_setPriorityStream(CommStreamFctPtr fct);
+bool comm_unsetPriorityStream(CommStreamFctPtr fct);
 
 
 #endif /* COMM_PUBLIC_H_ */

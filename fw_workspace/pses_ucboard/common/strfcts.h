@@ -50,4 +50,6 @@ char* strcpy_returnend(char* target, char* const targetend,
 
 char* strcat_returnend(char* target, char* const targetend, ...);
 
+char* strcpyfixedwidth_returnend(char* target, char* const targetend, const char* source, uint16_t width);
+
 #endif /* STRFCTS_H_ */

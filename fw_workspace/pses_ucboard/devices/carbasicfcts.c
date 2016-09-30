@@ -11,6 +11,9 @@
 #include "comm_public.h"
 #include "common_fcts.h"
 
+#include "daq.h"
+#include "systick.h"
+
 #include "ucboard_hwdefs.h"
 #include "ucboard_hwfcts.h"
 #include <string.h>
@@ -42,10 +45,16 @@ static uint16_t f_uDrvBatVoltage = 0;
 
 extern ADC_HandleTypeDef hadc4;
 
+static uint8_t f_daqDrvBatVoltage = 0xFF;
+static uint8_t f_daqCarBatVoltage = 0xFF;
+
 void car_init()
 {
 	initPWM();
 	initBats();
+
+	daq_provideChannel("VDRV", "Voltage drive battery", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqDrvBatVoltage);
+	daq_provideChannel("VCAR", "Voltage car battery", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqCarBatVoltage);
 
 	return;
 }
@@ -115,6 +124,8 @@ void car_do_systick()
 
 				f_uCarBatVoltage = (uint16_t)raw;
 
+				daq_setChannelValue_uint16(f_daqCarBatVoltage, DAQVALUEMOD_OK, GETSYSTICS(), f_uCarBatVoltage);
+
 				DRVBATVMEASCTRL_PORT->BSRR = DRVBATVMEASCTRL_PIN;
 
 				s_eVoltageMeasState = BATVOLTAGEMEASSTATE_DRVBATCONNECTED;
@@ -137,6 +148,8 @@ void car_do_systick()
 				raw = (raw * 9287) / 2048;
 
 				f_uDrvBatVoltage = (uint16_t)raw;
+
+				daq_setChannelValue_uint16(f_daqDrvBatVoltage, DAQVALUEMOD_OK, GETSYSTICS(), f_uDrvBatVoltage);
 
 				s_eVoltageMeasState = BATVOLTAGEMEASSTATE_IDLE;
 				s_uVoltageStateDownCnt = 5000 - 5 - (1900 + 1 + 1900 + 1);

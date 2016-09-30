@@ -157,3 +157,25 @@ int atoi(const char* p)
 
 	return k * s;
 }
+
+
+bool isInteger(const char *s)
+{
+	while (1)
+	{
+		if (*s == '\0')
+		{
+			return true;
+		}
+
+		if ((*s < '0') || (*s > '9'))
+		{
+			if ((*s != '-') && (*s != '+'))
+			{
+				return false;
+			}
+		}
+
+		s++;
+	}
+}

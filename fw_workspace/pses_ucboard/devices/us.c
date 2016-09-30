@@ -13,6 +13,8 @@
 #include "us_srf08.h"
 #include "i2cmgr.h"
 
+#include "daq.h"
+
 #include "display.h"
 
 #define USPORT			I2CPORT_1
@@ -24,9 +26,16 @@
 #define NDEVICES 3
 static const uint8_t f_uADDRESSES[NDEVICES] = {USADDRESS_LEFT, USADDRESS_FRONT, USADDRESS_RIGHT};
 
+static uint8_t f_auDAQChs[NDEVICES] = {0};
+
 static USdevice_t f_usdevices[NDEVICES];
 
 static USbroadcaster_t f_usbroadcaster;
+
+
+
+#define CONV_VALUE(raw) ((uint16_t)( ((uint32_t)(raw) * 11246) / 65536 ))
+
 
 
 void us_init()
@@ -40,11 +49,12 @@ void us_init()
 		usonic_init(&f_usdevices[i], USPORT, f_uADDRESSES[i]);
 	}
 
+	daq_provideChannel("USL", "ultrasonic left distance", "mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[0]);
+	daq_provideChannel("USF", "ultrasonic front distance", "mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[1]);
+	daq_provideChannel("USR", "ultrasonic right distance", "mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[2]);
 
 	return;
 }
-
-static uint16_t f_val = 0xFFFF;
 
 
 typedef enum EnUSQueryState_
@@ -69,18 +79,10 @@ void us_do_systick()
 
 	static uint16_t s_uNextStep_ms = 0;
 
-//	static uint16_t k = 0;
-
-
-//	if (k++ == 100)
-//	{
-//		k = 0;
-
-		if (s_eState == USQUERYSTATE_IDLE)
-		{
-			s_eState = USQUERYSTATE_PENDING;
-		}
-//	}
+	if (s_eState == USQUERYSTATE_IDLE)
+	{
+		s_eState = USQUERYSTATE_PENDING;
+	}
 
 
 	if (s_uNextStep_ms > 0)
@@ -181,10 +183,20 @@ void us_do_systick()
 					if (res == USDATAQUERYRES_OK)
 					{
 						s_auData[i] = val;
+
+						daq_setChannelValue_uint16(f_auDAQChs[i],
+														DAQVALUEMOD_OK,
+														(s_auTicEnd[i] + s_uTicStart) / 2,
+														CONV_VALUE(val));
 					}
 					else if (res == USDATAQUERYRES_ERROR)
 					{
 						s_auData[i] = ERRORFLAG;
+
+						daq_setChannelValue_uint16(f_auDAQChs[i],
+														DAQVALUEMOD_SENSORERROR,
+														(s_auTicEnd[i] + s_uTicStart) / 2,
+														0);
 					}
 					else
 					{
@@ -205,13 +217,3 @@ void us_do_systick()
 }
 
 
-uint16_t us_getVal()
-{
-	uint32_t tmp;
-
-	tmp = f_val;
-
-	tmp = (tmp * 11246) / 65536;
-
-	return (uint16_t)tmp;
-}

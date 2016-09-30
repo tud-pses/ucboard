@@ -47,7 +47,15 @@
 #include "imu_mpu9250.h"
 #include "us.h"
 
+#include "daq.h"
+
 #include "led.h"
+
+#include <string.h>
+
+
+#include "comm_public.h"
+
 
 /* USER CODE END Includes */
 
@@ -159,6 +167,8 @@ int main(void)
 
   comm_init();
 
+  daq_init();
+
   spimgr_init();
   i2cmgr_init();
 
@@ -167,6 +177,7 @@ int main(void)
 
   car_init();
   hal503_init();
+
 
 
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
@@ -959,7 +970,6 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler */ 
 }
 
-#include "comm_public.h"
 
 bool cmd_reset(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,

@@ -27,6 +27,7 @@
 
 #include "display.h"
 
+#include <string.h>
 
 static uint32_t f_nORECount = 0;
 
@@ -192,6 +193,127 @@ static bool checkCommandFctsTable(uint16_t* pnCmdCount)
 	*pnCmdCount = i;
 
 	return true;
+}
+
+
+bool parseArgs_sstr(CommCmdArgs_t* args, SplittedStr_t* sstr)
+{
+	bool bInvalidArgs = false;
+
+	args->nArgs = 0;
+	args->args[0] = NULL;
+	args->nParams = 0;
+	args->paramnames[0] = NULL;
+	args->paramvals[0] = NULL;
+
+	for (uint8_t i = 0; i < sstr->cnt; ++i)
+	{
+		char* s = sstr->strs[i];
+
+		if (*s != '~')
+		{
+			args->args[args->nArgs] = s;
+			args->nArgs++;
+		}
+		else
+		{
+			char* pstart = s + 1;
+			int len = strlen(pstart);
+			char* pequal = strchr(pstart, '=');
+
+			if (len == 0)
+			{
+				bInvalidArgs = true;
+			}
+			else if (pequal == NULL)
+			{
+				args->paramnames[args->nParams] = pstart;
+				args->paramvals[args->nParams] = NULL;
+				args->nParams++;
+			}
+			else
+			{
+				if ((pequal == pstart) || (pequal - pstart == len - 1))
+				{
+					bInvalidArgs = true;
+				}
+				else
+				{
+					*pequal = '\0';
+					args->paramnames[args->nParams] = pstart;
+					args->paramvals[args->nParams] = pequal + 1;
+					args->nParams++;
+				}
+			}
+		}
+	}
+
+	return (!bInvalidArgs);
+}
+
+
+bool comm_parseArgs(CommCmdArgs_t* args, char* argstr)
+{
+	SplittedStr_t sstr;
+
+	strsplit(&sstr, argstr, ' ', '"', MAXSPLITS);
+
+	return parseArgs_sstr(args, &sstr);
+}
+
+
+bool comm_parseSubcmdArgs(char** subcmd, CommCmdArgs_t* args, char* argstr)
+{
+	SplittedStr_t sstr;
+
+	strsplit(&sstr, argstr, ' ', '"', MAXSPLITS);
+
+	if (sstr.cnt == 0)
+	{
+		*subcmd = NULL;
+	}
+	else
+	{
+		*subcmd = sstr.strs[0];
+
+		for (uint8_t i = 1; i < sstr.cnt; ++i)
+		{
+			sstr.strs[i-1] = sstr.strs[i];
+		}
+
+		sstr.cnt--;
+	}
+
+	return parseArgs_sstr(args, &sstr);
+}
+
+
+void comm_displayArgs(CommCmdArgs_t* args)
+{
+	display_println_uint("nArgs: ", args->nArgs);
+
+	for (uint8_t i = 0; i < args->nArgs; ++i)
+	{
+		display_println(args->args[i]);
+	}
+
+	display_println_uint("nParams: ", args->nParams);
+
+	for (uint8_t i = 0; i < args->nParams; ++i)
+	{
+		display_println(args->paramnames[i]);
+
+		if (args->paramvals[i] == NULL)
+		{
+			display_println("---");
+		}
+		else
+		{
+			display_println(args->paramvals[i]);
+		}
+	}
+
+	return;
 }
 
 
@@ -417,6 +539,7 @@ bool comm_addStream(CommStreamFctPtr fct)
 		if (f_streams[i] == NULL)
 		{
 			f_streams[i] = fct;
+			break;
 		}
 	}
 

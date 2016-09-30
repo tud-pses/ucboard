@@ -10,6 +10,7 @@
 #include "display.h"
 #include "stopwatch.h"
 
+#include "daq.h"
 #include "carbasicfcts.h"
 #include "hal503.h"
 #include "imu_mpu9250.h"
@@ -60,6 +61,7 @@ void HAL_SYSTICK_Callback(void)
 	imu_do_systick();
 	us_do_systick();
 
+	daq_do_systick();
 
 	if ( (f_uTic % 10) == 0)
 	{

@@ -354,7 +354,7 @@ EnUSDataQueryResult_t usonic_getDataQueryResult(USdevice_t* this, uint16_t* pVal
 	}
 	else if ( i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_ERROR )
 	{
-		EnI2CMgrRes_t res = i2cmgr_getMsgRes(this->uI2CDeviceID);
+		//EnI2CMgrRes_t res = i2cmgr_getMsgRes(this->uI2CDeviceID);
 
 		i2cmgr_resetMsg(this->uI2CDeviceID);
 		this->eDataState = USONICDATA_IDLE;
