@@ -16,13 +16,18 @@
 #include "us.h"
 
 
+#include "systick.h"
+
+
 static uint32_t f_uTic = 0;
 
+const uint32_t * const g_systick_puTic = &f_uTic;
 
-uint32_t systick_getTics()
-{
-	return f_uTic;
-}
+
+//uint32_t systick_getTics()
+//{
+//	return f_uTic;
+//}
 
 
 extern bool g_main_bInit;
@@ -53,11 +58,12 @@ void HAL_SYSTICK_Callback(void)
 	car_do_systick();
 	hal503_do_systick();
 	imu_do_systick();
+	us_do_systick();
 
 
 	if ( (f_uTic % 10) == 0)
 	{
-		us_do_systick();
+
 	}
 
 
@@ -65,7 +71,7 @@ void HAL_SYSTICK_Callback(void)
 	{
 		//us_do_systick();
 		//display_println_uint("us: ", 1);
-		display_println_uint("us: ", us_getVal());
+		//display_println_uint("us: ", us_getVal());
 	}
 
 	if ( (f_uTic % 500) == 0 )

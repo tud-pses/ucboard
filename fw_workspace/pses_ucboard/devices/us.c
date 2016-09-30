@@ -8,19 +8,37 @@
 
 #include "us.h"
 
+#include "systick.h"
 
 #include "us_srf08.h"
 #include "i2cmgr.h"
 
+#include "display.h"
 
+#define USPORT			I2CPORT_1
 
-static USdevice_t f_usdevices[3];
+#define USADDRESS_LEFT	0xE0
+#define USADDRESS_FRONT	0xE2
+#define USADDRESS_RIGHT	0xE4
+
+#define NDEVICES 3
+static const uint8_t f_uADDRESSES[NDEVICES] = {USADDRESS_LEFT, USADDRESS_FRONT, USADDRESS_RIGHT};
+
+static USdevice_t f_usdevices[NDEVICES];
+
+static USbroadcaster_t f_usbroadcaster;
 
 
 void us_init()
 {
+	uint8_t i;
 
-	usonic_init(&f_usdevices[0], 0xE4);
+	usonicbc_init(&f_usbroadcaster, USPORT);
+
+	for (i = 0; i < NDEVICES; ++i)
+	{
+		usonic_init(&f_usdevices[i], USPORT, f_uADDRESSES[i]);
+	}
 
 
 	return;
@@ -28,20 +46,159 @@ void us_init()
 
 static uint16_t f_val = 0xFFFF;
 
+
+typedef enum EnUSQueryState_
+{
+	USQUERYSTATE_IDLE = 0,
+	USQUERYSTATE_PENDING,
+	USQUERYSTATE_TRIGGERED,
+	USQUERYSTATE_DATAAVAILABLEQUERIED,
+	USQUERYSTATE_DATAQUERIED
+} EnUSQueryState_t;
+
+
+#define NODATAFLAG (1 << 31)
+#define ERRORFLAG (1 << 30)
+
 void us_do_systick()
 {
-	usonic_do(&f_usdevices[0]);
+	static EnUSQueryState_t s_eState = USQUERYSTATE_IDLE;
+	static uint32_t s_uTicStart = 0;
+	static uint32_t s_auTicEnd[NDEVICES] = {0};
+	static uint32_t s_auData[NDEVICES] = {0};
 
-	if (f_val == 0xFFFF)
+	static uint16_t s_uNextStep_ms = 0;
+
+//	static uint16_t k = 0;
+
+
+//	if (k++ == 100)
+//	{
+//		k = 0;
+
+		if (s_eState == USQUERYSTATE_IDLE)
+		{
+			s_eState = USQUERYSTATE_PENDING;
+		}
+//	}
+
+
+	if (s_uNextStep_ms > 0)
 	{
-		f_val = 0;
-		usonic_trigger(&f_usdevices[0]);
+		s_uNextStep_ms--;
+		return;
 	}
-	else if (usonic_hasNewData(&f_usdevices[0]))
-	{
-		usonic_getData(&f_usdevices[0], &f_val);
 
-		usonic_trigger(&f_usdevices[0]);
+	switch (s_eState)
+	{
+		case USQUERYSTATE_IDLE:
+			break;
+
+		case USQUERYSTATE_PENDING:
+			for (int i = 0; i < NDEVICES; ++i)
+			{
+				s_auTicEnd[i] = 0;
+				s_auData[i] = NODATAFLAG;
+			}
+
+			usonicbc_trigger(&f_usbroadcaster);
+			s_uTicStart = GETSYSTICS();
+
+			s_eState = USQUERYSTATE_TRIGGERED;
+
+			s_uNextStep_ms = 50;
+
+			break;
+
+		case USQUERYSTATE_TRIGGERED:
+			for (int i = 0; i < NDEVICES; ++i)
+			{
+				usonic_startDataAvailableQuery(&f_usdevices[i]);
+			}
+
+			s_eState = USQUERYSTATE_DATAAVAILABLEQUERIED;
+
+			break;
+
+		case USQUERYSTATE_DATAAVAILABLEQUERIED:
+			{
+				EnUSDataAvailableQueryResult_t res;
+				bool bAllAvailable = true;
+
+				for (int i = 0; i < NDEVICES; ++i)
+				{
+					if (s_auTicEnd[i] != 0)
+					{
+						continue;
+					}
+
+					res = usonic_getDataAvailableQueryResult(&f_usdevices[i]);
+
+					if (res == USDATAAVAILABLEQUERYRES_DATAAVAILABLE)
+					{
+						s_auTicEnd[i] = GETSYSTICS();
+					}
+					else
+					{
+						bAllAvailable = false;
+
+						if (res == USDATAAVAILABLEQUERYRES_DATANOTAVAILABLE)
+						{
+							usonic_startDataAvailableQuery(&f_usdevices[i]);
+						}
+					}
+				}
+
+
+				if (bAllAvailable)
+				{
+					for (int i = 0; i < NDEVICES; ++i)
+					{
+						usonic_startDataQuery(&f_usdevices[i]);
+					}
+
+					s_eState = USQUERYSTATE_DATAQUERIED;
+				}
+			}
+
+			break;
+
+		case USQUERYSTATE_DATAQUERIED:
+			{
+				EnUSDataQueryResult_t res;
+				bool bAllReceived = true;
+				uint16_t val;
+
+				for (int i = 0; i < NDEVICES; ++i)
+				{
+					if ((s_auData[i] & NODATAFLAG) == 0)
+					{
+						continue;
+					}
+
+					res = usonic_getDataQueryResult(&f_usdevices[i], &val);
+
+					if (res == USDATAQUERYRES_OK)
+					{
+						s_auData[i] = val;
+					}
+					else if (res == USDATAQUERYRES_ERROR)
+					{
+						s_auData[i] = ERRORFLAG;
+					}
+					else
+					{
+						bAllReceived = false;
+					}
+				}
+
+				if (bAllReceived)
+				{
+					s_eState = USQUERYSTATE_IDLE;
+				}
+			}
+
+			break;
 	}
 
 	return;

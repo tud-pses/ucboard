@@ -22,9 +22,65 @@
 
 static bool setConfig(USdevice_t* this);
 
+void usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort)
+{
+	EnI2CMgrRes_t res;
+	I2C_InitTypeDef stI2CConfig;
+
+	this->uI2CDeviceID = 0xFF;
+	this->eI2CPort = ePort;
+	this->uI2CAddress = 0x00;
 
 
-void usonic_init(USdevice_t* this, uint8_t address)
+	stI2CConfig.Timing = 0x2000090E;
+	stI2CConfig.OwnAddress1 = 0;
+	stI2CConfig.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+	stI2CConfig.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+	stI2CConfig.OwnAddress2 = 0;
+	stI2CConfig.OwnAddress2Masks = I2C_OA2_NOMASK;
+	stI2CConfig.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+	stI2CConfig.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+
+	res = i2cmgr_addDevice(ePort, &stI2CConfig, this->uI2CAddress, &(this->uI2CDeviceID));
+
+	if (res != I2CMGRRES_OK)
+	{
+		display_println_hex("ultrasonic businit failed: ", res);
+		return;
+	}
+
+	return;
+}
+
+
+bool usonicbc_trigger(USbroadcaster_t* this)
+{
+	EnI2CMgrRes_t res;
+
+	if ( (i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_COMPLETED)
+			|| (i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_ERROR) )
+	{
+		i2cmgr_resetMsg(this->uI2CDeviceID);
+	}
+	else if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
+	{
+		return false;
+	}
+
+	this->acTxBuffer[0] = US_ADDR_CMD;
+	this->acTxBuffer[1] = US_CMD_MEASUREMENT;
+	res = i2cmgr_enqueueAsynchWrite(this->uI2CDeviceID, 2, this->acTxBuffer);
+
+	if (res != I2CMGRRES_OK)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+
+void usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address)
 {
 	EnI2CMgrRes_t res;
 	I2C_InitTypeDef stI2CConfig;
@@ -35,6 +91,7 @@ void usonic_init(USdevice_t* this, uint8_t address)
 	this->uCommErrorCount = 0;
 	this->uCurData = 0;
 	this->eDataState = USONICDATA_IDLE;
+	this->eI2CPort = ePort;
 	this->uI2CAddress = address;
 
 
@@ -47,7 +104,7 @@ void usonic_init(USdevice_t* this, uint8_t address)
 	stI2CConfig.GeneralCallMode = I2C_GENERALCALL_DISABLE;
 	stI2CConfig.NoStretchMode = I2C_NOSTRETCH_DISABLE;
 
-	res = i2cmgr_addDevice(I2CPORT_1, &stI2CConfig, address, &(this->uI2CDeviceID));
+	res = i2cmgr_addDevice(ePort, &stI2CConfig, address, &(this->uI2CDeviceID));
 
 	if (res != I2CMGRRES_OK)
 	{
@@ -72,6 +129,7 @@ void usonic_init(USdevice_t* this, uint8_t address)
 	this->eDataState = USONICDATA_IDLE;
 
 	this->bStartNewMeasurement = false;
+
 	return;
 }
 
@@ -182,7 +240,7 @@ static bool startInitMeasurement(USdevice_t* this)
 	}
 
 	this->acTxBuffer[0] = US_ADDR_CMD;
-	this->acTxBuffer[1] = US_CMD_MEASUREMENT;	// Messung in Zentimeter
+	this->acTxBuffer[1] = US_CMD_MEASUREMENT;
 	res = i2cmgr_enqueueAsynchWrite(this->uI2CDeviceID, 2, this->acTxBuffer);
 
 	if (res != I2CMGRRES_OK)
@@ -194,7 +252,7 @@ static bool startInitMeasurement(USdevice_t* this)
 }
 
 
-static bool startDataAvailableQuery(USdevice_t* this)
+bool usonic_startDataAvailableQuery(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;
 
@@ -218,7 +276,37 @@ static bool startDataAvailableQuery(USdevice_t* this)
 
 }
 
-static bool startDataQuery(USdevice_t* this)
+
+EnUSDataAvailableQueryResult_t usonic_getDataAvailableQueryResult(USdevice_t* this)
+{
+	if ( i2cmgr_getMsgState(this->uI2CDeviceID)	== I2CMSGSTATE_COMPLETED )
+	{
+		i2cmgr_resetMsg(this->uI2CDeviceID);
+
+		// Wenn der Sensor reagiert hat, also nicht 0xFF sendet
+		if (this->acRxBuffer[0] != US_NO_RESPONSE)
+		{
+			return USDATAAVAILABLEQUERYRES_DATAAVAILABLE;
+		}
+		else
+		{
+			return USDATAAVAILABLEQUERYRES_DATANOTAVAILABLE;
+		}
+	}
+	else if ( i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_ERROR )
+	{
+		// Solange Messung dauert, antwortet Ultraschallsensor nicht
+		// (auch kein ACK, was von i2cmgr als Fehler gewertet wird)
+		i2cmgr_resetMsg(this->uI2CDeviceID);
+
+		return USDATAAVAILABLEQUERYRES_DATANOTAVAILABLE;
+	}
+
+	return USDATAAVAILABLEQUERYRES_INPROGRESS;
+}
+
+
+bool usonic_startDataQuery(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;
 
@@ -249,6 +337,38 @@ static bool startDataQuery(USdevice_t* this)
 }
 
 
+EnUSDataQueryResult_t usonic_getDataQueryResult(USdevice_t* this, uint16_t* pVal)
+{
+	if ( i2cmgr_getMsgState(this->uI2CDeviceID)	== I2CMSGSTATE_COMPLETED )
+	{
+		this->uCurData = ((uint16_t)this->acRxBuffer[0] << 8) | this->acRxBuffer[1];
+		this->bNewData = true;
+
+		*pVal = this->uCurData;
+
+		i2cmgr_resetMsg(this->uI2CDeviceID);
+
+		this->eDataState = USONICDATA_IDLE;
+
+		return USDATAQUERYRES_OK;
+	}
+	else if ( i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_ERROR )
+	{
+		EnI2CMgrRes_t res = i2cmgr_getMsgRes(this->uI2CDeviceID);
+
+		i2cmgr_resetMsg(this->uI2CDeviceID);
+		this->eDataState = USONICDATA_IDLE;
+		this->uCommErrorCount++;
+
+		return USDATAQUERYRES_ERROR;
+	}
+	else
+	{
+		return USDATAQUERYRES_INPROGRESS;
+	}
+}
+
+
 void usonic_trigger(USdevice_t* this)
 {
 	this->bStartNewMeasurement = true;
@@ -259,13 +379,6 @@ void usonic_trigger(USdevice_t* this)
 
 void usonic_do(USdevice_t* this)
 {
-//	if (GETDEVICESTATE(DEVICE_ULTRASONIC) != DEVICESTATE_OK)
-//	{
-//		return;
-//	}
-
-	//display_println_hex("us state: ", this->eDataState);
-
 	switch (this->eDataState)
 	{
 		case USONICDATA_CHECKIFCOMPLETED:
@@ -282,7 +395,7 @@ void usonic_do(USdevice_t* this)
 						//display_println("US Firmware falsch");
 					}
 
-					if ( startDataQuery(this) )	//Ergebnis abrufen
+					if ( usonic_startDataQuery(this) )	//Ergebnis abrufen
 					{
 						this->eDataState = USONICDATA_QUERYDATA;
 					}
@@ -295,7 +408,7 @@ void usonic_do(USdevice_t* this)
 				else
 				{
 					//Nochmal versuchen ob der Sensor bereit ist
-					if (!startDataAvailableQuery(this))
+					if (!usonic_startDataAvailableQuery(this))
 					{
 						this->eDataState = USONICDATA_IDLE;
 						display_println("US OVRUN");
@@ -308,7 +421,7 @@ void usonic_do(USdevice_t* this)
 				// (auch kein ACK, was von i2cmgr als Fehler gewertet wird)
 				i2cmgr_resetMsg(this->uI2CDeviceID);
 
-				if (!startDataAvailableQuery(this))
+				if (!usonic_startDataAvailableQuery(this))
 				{
 					this->eDataState = USONICDATA_IDLE;
 					display_println("US OVRUN");
@@ -348,7 +461,7 @@ void usonic_do(USdevice_t* this)
 			{
 				i2cmgr_resetMsg(this->uI2CDeviceID);
 
-				if (!startDataAvailableQuery(this))
+				if (!usonic_startDataAvailableQuery(this))
 				{
 					this->eDataState = USONICDATA_IDLE;
 					display_println("US OVRUN");

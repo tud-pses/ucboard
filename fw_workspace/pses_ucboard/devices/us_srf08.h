@@ -13,7 +13,7 @@
 #include "stdtypes.h"
 #include "i2cmgr.h"
 
-typedef enum EnUSonicDataState {
+typedef enum EnUSonicDataState_ {
 	USONICDATA_IDLE,
 	USONICDATA_INITMEASUREMENT,
 	USONICDATA_CHECKIFCOMPLETED,
@@ -21,11 +21,24 @@ typedef enum EnUSonicDataState {
 } EnUSonicDataState_t;
 
 
+typedef enum EnUSDataQueryResult_ {
+	USDATAQUERYRES_INPROGRESS,
+	USDATAQUERYRES_OK,
+	USDATAQUERYRES_ERROR
+} EnUSDataQueryResult_t;
+
+typedef enum EnUSDataAvailableQueryResult_ {
+	USDATAAVAILABLEQUERYRES_INPROGRESS,
+	USDATAAVAILABLEQUERYRES_DATAAVAILABLE,
+	USDATAAVAILABLEQUERYRES_DATANOTAVAILABLE,
+	USDATAAVAILABLEQUERYRES_ERROR
+} EnUSDataAvailableQueryResult_t;
 
 
 typedef struct USdevice_
 {
 	uint8_t uI2CDeviceID;
+	EnI2C_PORT_t eI2CPort;
 	uint8_t uI2CAddress;
 	uint8_t acRxBuffer[10];
 	uint8_t acTxBuffer[10];
@@ -40,9 +53,28 @@ typedef struct USdevice_
 } USdevice_t;
 
 
-void usonic_init(USdevice_t* this, uint8_t address);
+typedef struct USbroadcaster_
+{
+	uint8_t uI2CDeviceID;
+	EnI2C_PORT_t eI2CPort;
+	uint8_t uI2CAddress;
+	uint8_t acRxBuffer[10];
+	uint8_t acTxBuffer[10];
+	I2CMGR_Msg_t aMsgs[4];
+} USbroadcaster_t;
+
+
+void usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort);
+bool usonicbc_trigger(USbroadcaster_t* this);
+
+void usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address);
 bool usonic_ping(USdevice_t* this);
 
+bool usonic_startDataAvailableQuery(USdevice_t* this);
+EnUSDataAvailableQueryResult_t usonic_getDataAvailableQueryResult(USdevice_t* this);
+
+bool usonic_startDataQuery(USdevice_t* this);
+EnUSDataQueryResult_t usonic_getDataQueryResult(USdevice_t* this, uint16_t* pVal);
 
 inline bool usonic_hasNewData(USdevice_t* this);
 inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance);
