@@ -829,6 +829,16 @@ void USART3_IRQHandler(void)
 		USART3->ICR = USART_ICR_ORECF;
 
 		f_nORECount++;
+
+		return;
+	}
+
+	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_FE | USART_ISR_NE | USART_ISR_LBDF) != RESET )
+	{
+		// reset USART_IT_FE
+		USART3->ICR = USART_ICR_FECF | USART_ICR_NCF | USART_ICR_LBDCF;
+
+		return;
 	}
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
