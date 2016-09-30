@@ -16,12 +16,14 @@ extern bool cmd_sessionid(COMMCMDFCT_ARGS);
 extern bool cmd_steer(COMMCMDFCT_ARGS);
 extern bool cmd_tics(COMMCMDFCT_ARGS);
 extern bool cmd_vout12v(COMMCMDFCT_ARGS);
+extern bool cmd_reset(COMMCMDFCT_ARGS);
 
 CommCmdTableEntry_t g_commCmdFctTable[] =
 {
 		{"DRV",  &cmd_drv},
 //		{"DRVBAT",  &cmd_drvbat},
 		{"ID",  &cmd_carid},
+		{"RESET",  &cmd_reset},
 		{"SID",  &cmd_sessionid},
 		{"STEER",  &cmd_steer},
 		{"TICS",  &cmd_tics},

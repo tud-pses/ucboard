@@ -959,6 +959,65 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler */ 
 }
 
+#include "comm_public.h"
+
+bool cmd_reset(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
+					char* acRespData, uint16_t* pnRespLen,
+					void* pDirectCallback)
+{
+	SplittedStr_t sstr;
+
+	*(CommDirectFctPtr*)pDirectCallback = 0;
+
+	strsplit(&sstr, acData, ' ', '"', 10);
+
+	if (eSpec == CMDSPEC_SET)
+	{
+		bool bWrongUsage = false;
+
+		if (sstr.cnt != 1)
+		{
+			bWrongUsage = true;
+		}
+		else
+		{
+			if (strcmpi(sstr.strs[0], "NOW") != STRCMPRES_EQUAL)
+			{
+				bWrongUsage = true;
+			}
+			else
+			{
+				NVIC_SystemReset();
+			}
+		}
+
+		if (bWrongUsage)
+		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN - 1,
+					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+					"Usage: !RESET NOW");
+
+			*pnRespLen = strend - acRespData;
+		}
+	}
+	else
+	{
+		char* strend = createErrStr_returnend(
+				acRespData,
+				acRespData + RXMAXMSGLEN - 1,
+				SOT_RXRESP, ERRCODE_COMM_WRITEONLY,
+				"RESET is a write-only parameter!");
+
+		*pnRespLen = strend - acRespData;
+	}
+
+	return true;
+}
+
+
+
 #ifdef USE_FULL_ASSERT
 
 /**
