@@ -16,6 +16,7 @@ typedef struct DAQValue_
 	EnDAQValueMod_t mod;
 	uint32_t tic;
 	int32_t value;
+	uint32_t updatetic;
 } DAQValue_t;
 
 
@@ -40,20 +41,38 @@ typedef struct DAQChannel_
 #define NMAXPKGCHS	10
 #define NMAXPKGS	10
 
+typedef enum DAQSampling_
+{
+	DAQSAMPLING_ANY = 0,
+	DAQSAMPLING_ALL,
+	DAQSAMPLING_TS,
+} DAQSampling_t;
+
+
+typedef enum DAQEncoding_
+{
+	DAQENCODING_ASCII = 0,
+	DAQENCODING_B64,
+} DAQEncoding_t;
+
+
 typedef struct DAQPkg_
 {
 	bool bActive;
 	uint8_t nchs;
 	uint8_t chs[NMAXPKGCHS];
-	uint32_t prevtics[NMAXPKGCHS];
+	uint32_t prevupdatetics[NMAXPKGCHS];
+	DAQSampling_t eSampling;
+	uint32_t uTs;
+	uint32_t uSkip;
+	uint32_t uCurSkipCnt;
+	uint32_t uAllMaxTime;
+	bool bSynced;
 	bool bAge;
 	bool bTics;
 	bool bCRC;
 	bool bAvg;
-	bool bB64;
-	bool bAll;
-	bool bAny;
-	uint32_t uAllMaxTime;
+	DAQEncoding_t eEncoding;
 } DAQPkg_t;
 
 
@@ -103,7 +122,7 @@ static uint8_t f_nChs = 0;
 #define SPECIALCHANNEL_DTICS16	(SPECIALCHANNELSFLAG | 6)
 
 
-static const struct {const char* const name; uint8_t id;} f_aSpecialChannelDict[] =
+static const struct {const char* const name; const uint8_t id;} f_aSpecialChannelDict[] =
 {
 		{"_TIC", SPECIALCHANNEL_TIC},
 		{"_TIC16", SPECIALCHANNEL_TIC16},
@@ -124,7 +143,7 @@ static DAQValueDS_t f_vals[NMAXCHS];
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMax);
 
 
-char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend, DAQPkg_t* pkg, uint32_t maxtics, uint32_t mintics);
+char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend, DAQPkg_t* pkg, bool* abSendChValue, uint32_t maxtics, uint32_t mintics);
 
 
 
@@ -237,68 +256,75 @@ void daq_do_systick()
 
 			bool bSendPkg = false;
 
-			if (pkg->bAny)
+			switch (pkg->eSampling)
 			{
-				bSendPkg = false;
-
-				for (uint8_t c = 0; c < pkg->nchs; ++c)
-				{
-					if ((pkg->chs[c] & SPECIALCHANNELSFLAG) == 0)
+				case DAQSAMPLING_ANY:
+					for (uint8_t c = 0; c < pkg->nchs; ++c)
 					{
-						uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->tic;
+						if ((pkg->chs[c] & SPECIALCHANNELSFLAG) == 0)
+						{
+							uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->updatetic;
 
-						if (curtic > pkg->prevtics[c])
+							if (curtic > pkg->prevupdatetics[c])
+							{
+								bSendPkg = true;
+								break;
+							}
+						}
+					}
+
+					break;
+
+				case DAQSAMPLING_ALL:
+				{
+					uint32_t uOldestNewValueTic = 0xFFFFFFFF;
+					bool bAllValuesNew = true;
+
+					for (uint8_t c = 0; c < pkg->nchs; ++c)
+					{
+						if ((pkg->chs[c] & SPECIALCHANNELSFLAG) == 0)
+						{
+							uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->updatetic;
+
+							if (curtic > pkg->prevupdatetics[c])
+							{
+								if (curtic < uOldestNewValueTic)
+								{
+									uOldestNewValueTic = curtic;
+								}
+							}
+							else
+							{
+								bAllValuesNew = false;
+							}
+						}
+					}
+
+					if (uOldestNewValueTic != 0xFFFFFFFF)
+					{
+						// >= instead of == because of the possibility that one channels invalidates its data
+						if (bAllValuesNew || (GETSYSTICS() - uOldestNewValueTic) >= pkg->uAllMaxTime)
 						{
 							bSendPkg = true;
-							break;
 						}
 					}
+
+					break;
 				}
-			}
-			else if (pkg->bAll)
-			{
-				bSendPkg = true;
+				case DAQSAMPLING_TS:
+					// todo: fixed sampling time
 
-				bool bOneNewDataVal = false;
-
-				for (uint8_t c = 0; c < pkg->nchs; ++c)
-				{
-					if ((pkg->chs[c] & SPECIALCHANNELSFLAG) == 0)
+					if (pkg->bSynced == false)
 					{
-						uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->tic;
 
-						if (curtic > pkg->prevtics[c])
-						{
-							bOneNewDataVal = true;
-						}
-						else if ( (GETSYSTICS() - curtic) < pkg->uAllMaxTime )
-						{
-							bSendPkg = false;
-							break;
-						}
 					}
-				}
 
-				if (!bOneNewDataVal)
-				{
-					bSendPkg = false;
-				}
+					break;
 			}
-			else
-			{
-				// todo: fixed sampling time
-				bSendPkg = false;
-			}
+
 
 			if (bSendPkg)
 			{
-//				static uint16_t kk = 0;
-//
-//				if (kk++ == 2)
-//				{
-//					f_bStarted = false;
-//				}
-
 				char tmp[10];
 				char bufstart[200];
 				char* buf = bufstart;
@@ -306,15 +332,19 @@ void daq_do_systick()
 
 				uint32_t maxtic = 0;
 				uint32_t mintic = 0xFFFFFFFF;
+				bool abSendChValue[NMAXPKGCHS];
 
 				for (uint8_t c = 0; c < pkg->nchs; ++c)
 				{
 					if ((pkg->chs[c] & SPECIALCHANNELSFLAG) == 0)
 					{
-						uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->tic;
+						uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->updatetic;
 
-						if (curtic > pkg->prevtics[c])
+						if (curtic > pkg->prevupdatetics[c])
 						{
+							pkg->prevupdatetics[c] = curtic;
+							abSendChValue[c] = true;
+
 							if (curtic > maxtic)
 							{
 								maxtic = curtic;
@@ -325,29 +355,45 @@ void daq_do_systick()
 								mintic = curtic;
 							}
 						}
+						else
+						{
+							abSendChValue[c] = false;
+						}
 					}
 				}
 
-				if (pkg->bB64)
-				{
 
+				if (pkg->uCurSkipCnt != 0)
+				{
+					pkg->uCurSkipCnt--;
+					bSendPkg = false;
 				}
 				else
 				{
-					*buf++ = '#';
-					*buf++ = '#';
+					pkg->uCurSkipCnt = pkg->uSkip;
 
-					buf = strcpy_returnend(buf, bufend, utoa(p, tmp, 10));
-					*buf++ = ':';	// overwrite '\0' with ':'
-					buf = getGetPkgDataStringAscii_returnend(buf, bufend - 1, pkg, maxtic, mintic);
-					*buf++ = '\n';
-					*buf = '\0';
 
-					uint16_t fmark = 0;
+					if (pkg->eEncoding == DAQENCODING_B64)
+					{
 
-					ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
-					ARingbuffer_atomicput_putS(&f_buffer, bufstart, false);
-					ARingbuffer_atomicput_end(&f_buffer);
+					}
+					else
+					{
+						*buf++ = '#';
+						*buf++ = '#';
+
+						buf = strcpy_returnend(buf, bufend - 1, utoa(p, tmp, 10));
+						*buf++ = ':';	// overwrite '\0' with ':'
+						buf = getGetPkgDataStringAscii_returnend(buf, bufend - 1, pkg, abSendChValue, maxtic, mintic);
+						*buf++ = '\n';
+						*buf = '\0';
+
+						uint16_t fmark = 0;
+
+						ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
+						ARingbuffer_atomicput_putS(&f_buffer, bufstart, false);
+						ARingbuffer_atomicput_end(&f_buffer);
+					}
 				}
 			}
 		}
@@ -407,9 +453,55 @@ void setChannelValue(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, int32_t valu
 	pVal->tic = tic;
 	pVal->value = value;
 
+	pVal->updatetic = GETSYSTICS();
+
 	ds->curValToRead = pVal;
 
 	return;
+}
+
+
+EnDAQRes_t daq_setChannelValue_uint32(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, uint32_t value)
+{
+	if (ch == CHID_NOCHANNEL)
+	{
+		return DAQRES_NOCHANNEL;
+	}
+	else if (ch >= f_nChs)
+	{
+		return DAQRES_INVALIDCHANNEL;
+	}
+
+	if (f_chs[ch].type != DAQVALUETYPE_UINT32)
+	{
+		return DAQRES_WRONGDATATYPE;
+	}
+
+	setChannelValue(ch, mod, tic, value);
+
+	return DAQRES_OK;
+}
+
+
+EnDAQRes_t daq_setChannelValue_int32(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, int32_t value)
+{
+	if (ch == CHID_NOCHANNEL)
+	{
+		return DAQRES_NOCHANNEL;
+	}
+	else if (ch >= f_nChs)
+	{
+		return DAQRES_INVALIDCHANNEL;
+	}
+
+	if (f_chs[ch].type != DAQVALUETYPE_INT32)
+	{
+		return DAQRES_WRONGDATATYPE;
+	}
+
+	setChannelValue(ch, mod, tic, value);
+
+	return DAQRES_OK;
 }
 
 
@@ -447,6 +539,50 @@ EnDAQRes_t daq_setChannelValue_int16(uint8_t ch, EnDAQValueMod_t mod, uint32_t t
 	}
 
 	if (f_chs[ch].type != DAQVALUETYPE_INT16)
+	{
+		return DAQRES_WRONGDATATYPE;
+	}
+
+	setChannelValue(ch, mod, tic, value);
+
+	return DAQRES_OK;
+}
+
+
+EnDAQRes_t daq_setChannelValue_uint8(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, uint8_t value)
+{
+	if (ch == CHID_NOCHANNEL)
+	{
+		return DAQRES_NOCHANNEL;
+	}
+	else if (ch >= f_nChs)
+	{
+		return DAQRES_INVALIDCHANNEL;
+	}
+
+	if (f_chs[ch].type != DAQVALUETYPE_UINT8)
+	{
+		return DAQRES_WRONGDATATYPE;
+	}
+
+	setChannelValue(ch, mod, tic, value);
+
+	return DAQRES_OK;
+}
+
+
+EnDAQRes_t daq_setChannelValue_int8(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, int8_t value)
+{
+	if (ch == CHID_NOCHANNEL)
+	{
+		return DAQRES_NOCHANNEL;
+	}
+	else if (ch >= f_nChs)
+	{
+		return DAQRES_INVALIDCHANNEL;
+	}
+
+	if (f_chs[ch].type != DAQVALUETYPE_INT8)
 	{
 		return DAQRES_WRONGDATATYPE;
 	}
@@ -515,6 +651,24 @@ char* createChsList_returnend(char* buf, char* const bufend, char sotchar)
 //} EnTristate_t;
 
 
+void clearDAQPkgStruct(DAQPkg_t* pkg)
+{
+	pkg->bActive = false;
+	pkg->eSampling = DAQSAMPLING_ANY;
+	pkg->eEncoding = DAQENCODING_ASCII;
+	pkg->bAge = false;
+	pkg->bTics = false;
+	pkg->bCRC = false;
+	pkg->bAvg = false;
+	pkg->nchs = 0;
+	pkg->uCurSkipCnt = 0;
+	pkg->uSkip = 0;
+	pkg->bSynced = false;
+
+	return;
+}
+
+
 void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszError)
 {
 	*pErrCode = ERRCODE_NOERR;
@@ -550,12 +704,12 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 
 	DAQPkg_t pkg;
 
-	pkg.bActive = true;
+	clearDAQPkgStruct(&pkg);
+
+	uint8_t nSamplingOptions = 0;
+
 	pkg.bAge = false;
 	pkg.bTics = false;
-	pkg.bAll = false;
-	pkg.bAny = false;
-	pkg.bB64 = false;
 	pkg.bCRC = false;
 	pkg.bAvg = false;
 	pkg.nchs = 0;
@@ -572,11 +726,13 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 		}
 		else if (strcmpi(args->paramnames[p], "ANY") == STRCMPRES_EQUAL)
 		{
-			pkg.bAny = true;
+			pkg.eSampling = DAQSAMPLING_ANY;
+			nSamplingOptions++;
 		}
 		else if (strcmpi(args->paramnames[p], "ALL") == STRCMPRES_EQUAL)
 		{
-			pkg.bAll = true;
+			pkg.eSampling = DAQSAMPLING_ALL;
+			nSamplingOptions++;
 
 			if (args->paramvals[p] != NULL)
 			{
@@ -585,6 +741,35 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 			else
 			{
 				pkg.uAllMaxTime = 0xFFFFFFFF;
+			}
+		}
+		else if (strcmpi(args->paramnames[p], "TS") == STRCMPRES_EQUAL)
+		{
+			pkg.eSampling = DAQSAMPLING_TS;
+			nSamplingOptions++;
+
+			if ( (args->paramvals[p] == NULL) || (!isInteger(args->paramvals[p])) )
+			{
+				*pErrCode = ERRCODE_DAQ_INVALIDPARAMETER;
+				*pszError = "Option TS needs value!";
+				return;
+			}
+			else
+			{
+				pkg.uTs = (uint32_t)atoi(args->paramvals[p]);
+			}
+		}
+		else if (strcmpi(args->paramnames[p], "SKIP") == STRCMPRES_EQUAL)
+		{
+			if ( (args->paramvals[p] == NULL) || (!isPositiveInteger(args->paramvals[p])) )
+			{
+				*pErrCode = ERRCODE_DAQ_INVALIDPARAMETER;
+				*pszError = "Option SKIP needs value!";
+				return;
+			}
+			else
+			{
+				pkg.uSkip = (uint32_t)atoi(args->paramvals[p]);
 			}
 		}
 		else
@@ -596,10 +781,10 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 	}
 
 
-	if (pkg.bAll && pkg.bAny)
+	if (nSamplingOptions > 1)
 	{
 		*pErrCode = ERRCODE_DAQ_CONTRADICTINGPARAMETERS;
-		*pszError = "ALL and ANY cannot both be set!";
+		*pszError = "Only one of the options ALL, ANY and TS can be set!";
 		return;
 	}
 
@@ -628,11 +813,12 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 		}
 
 		pkg.chs[pkg.nchs] = chid;
-		pkg.prevtics[pkg.nchs] = GETSYSTICS();
+		pkg.prevupdatetics[pkg.nchs] = GETSYSTICS();
 		pkg.nchs++;
 	}
 
 	f_pkgs[pkgid] = pkg;
+	f_pkgs[pkgid].bActive = true;
 
 	return;
 }
@@ -749,7 +935,10 @@ char* getGetDataString_returnend(char* buf, char* const bufend, CommCmdArgs_t* a
 }
 
 
-char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend, DAQPkg_t* pkg, uint32_t maxtics, uint32_t mintics)
+char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
+												DAQPkg_t* pkg,
+												bool* abSendChValues,
+												uint32_t maxtics, uint32_t mintics)
 {
 	uint32_t tics = GETSYSTICS();
 
@@ -770,19 +959,17 @@ char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend, DAQPkg_t
 		{
 			uint32_t val = 0;
 
+			val = maxtics - mintics;
+
 			switch (id)
 			{
-				case SPECIALCHANNEL_TIC:
-				case SPECIALCHANNEL_TIC16:
-				case SPECIALCHANNEL_TIC8:
-					val = mintics;
-					break;
+				case SPECIALCHANNEL_TIC: val = mintics; break;
+				case SPECIALCHANNEL_TIC16: val = mintics & 0xFFFF ; break;
+				case SPECIALCHANNEL_TIC8: val = mintics & 0xFF ; break;
 
-				case SPECIALCHANNEL_DTICS:
-				case SPECIALCHANNEL_DTICS16:
-				case SPECIALCHANNEL_DTICS8:
-					val = maxtics - mintics;
-					break;
+				case SPECIALCHANNEL_DTICS: break;
+				case SPECIALCHANNEL_DTICS16: val &= 0xFFFF ; break;
+				case SPECIALCHANNEL_DTICS8: val &= 0xFF ; break;
 			}
 
 			buf = strcpy_returnend(buf, bufend, utoa(val, tmp, 10));
@@ -795,11 +982,7 @@ char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend, DAQPkg_t
 
 			pVal = f_vals[id].curValToRead;
 
-			if (pVal->tic > pkg->prevtics[c])
-			{
-				pkg->prevtics[c] = pVal->tic;
-			}
-			else
+			if (!abSendChValues[c])
 			{
 				tmpval.mod = DAQVALUEMOD_NOVALUE;
 				tmpval.tic = GETSYSTICS();

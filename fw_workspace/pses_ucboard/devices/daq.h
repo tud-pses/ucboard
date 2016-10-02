@@ -55,8 +55,14 @@ void daq_do_systick();
 
 EnDAQRes_t daq_provideChannel(const char* name, const char* desc, const char* unit, EnDAQValueType_t type, uint16_t samplingtime, uint8_t* pChID);
 
+EnDAQRes_t daq_setChannelValue_uint32(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, uint32_t value);
+EnDAQRes_t daq_setChannelValue_int32(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, int32_t value);
 EnDAQRes_t daq_setChannelValue_uint16(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, uint16_t value);
 EnDAQRes_t daq_setChannelValue_int16(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, int16_t value);
+EnDAQRes_t daq_setChannelValue_uint8(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, uint8_t value);
+EnDAQRes_t daq_setChannelValue_int8(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, int8_t value);
+
+
 
 
 #endif /* DAQ_H_ */

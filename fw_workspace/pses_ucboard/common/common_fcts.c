@@ -161,6 +161,20 @@ int atoi(const char* p)
 
 bool isInteger(const char *s)
 {
+	// if first character is a sign, then the string must contain at least
+	// two characters
+	if ( (*s == '-') && (*s == '+') )
+	{
+		if (*++s == '\0')
+		{
+			return false;
+		}
+	}
+	else if ((*s < '0') || (*s > '9'))
+	{
+		return false;
+	}
+
 	while (1)
 	{
 		if (*s == '\0')
@@ -170,10 +184,40 @@ bool isInteger(const char *s)
 
 		if ((*s < '0') || (*s > '9'))
 		{
-			if ((*s != '-') && (*s != '+'))
-			{
-				return false;
-			}
+			return false;
+		}
+
+		s++;
+	}
+}
+
+
+bool isPositiveInteger(const char *s)
+{
+	// if first character is a sign, then the string must contain at least
+	// two characters
+	if ( *s == '+' )
+	{
+		if (*++s == '\0')
+		{
+			return false;
+		}
+	}
+	else if ((*s < '0') || (*s > '9'))
+	{
+		return false;
+	}
+
+	while (1)
+	{
+		if (*s == '\0')
+		{
+			return true;
+		}
+
+		if ((*s < '0') || (*s > '9'))
+		{
+			return false;
 		}
 
 		s++;
