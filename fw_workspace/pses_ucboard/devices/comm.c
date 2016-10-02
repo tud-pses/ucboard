@@ -77,11 +77,14 @@ typedef struct Buffer_
 
 #define BUFFER_GETCOUNT(buf)	((buf).head - (buf).tail)
 #define BUFFER_ISFILLED(buf)	((buf).head > (buf).end)
-#define BUFFER_ISEMPTY(buf) 	((buf).tail == (buf).head)
+#define BUFFER_ISEMPTY(buf) 	((buf).tail >= (buf).head)
+#define BUFFER_ISNOTEMPTY(buf) 	((buf).tail < (buf).head)
 #define BUFFER_CLEAR(buf) 		((buf).head = (buf).tail = (buf).start)
 #define BUFFER_PUSH(buf, c) 	(*(buf).head++ = c)
 #define BUFFER_POP(buf)			(*(buf).tail++)
-
+// logically, BUFFER_ISEMPTY(buf) should be tail == head, but as this is no ringbuffer tail >= head
+// is more robust to changes to the buffer variables from other points in the code.
+// (This should be reviewed ...)
 
 
 
