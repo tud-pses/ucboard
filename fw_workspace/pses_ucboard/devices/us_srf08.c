@@ -22,7 +22,7 @@
 
 static bool setConfig(USdevice_t* this);
 
-void usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort)
+bool usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort)
 {
 	EnI2CMgrRes_t res;
 	I2C_InitTypeDef stI2CConfig;
@@ -46,10 +46,10 @@ void usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort)
 	if (res != I2CMGRRES_OK)
 	{
 		display_println_hex("ultrasonic businit failed: ", res);
-		return;
+		return false;
 	}
 
-	return;
+	return true;
 }
 
 
@@ -80,7 +80,7 @@ bool usonicbc_trigger(USbroadcaster_t* this)
 }
 
 
-void usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address)
+bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address)
 {
 	EnI2CMgrRes_t res;
 	I2C_InitTypeDef stI2CConfig;
@@ -108,29 +108,26 @@ void usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address)
 
 	if (res != I2CMGRRES_OK)
 	{
-		display_println_hex("ultrasonic businit failed: ", res);
-		return;
+		return false;
 	}
-
-	display_println_hex("ultrasonic device: ", this->uI2CDeviceID);
 
 	if (!usonic_ping(this))
 	{
 		display_println("usonic ping failed!");
-		return;
+		return false;
 	}
 
 	if (!setConfig(this))
 	{
 		display_println("usonic config failed!");
-		return;
+		return false;
 	}
 
 	this->eDataState = USONICDATA_IDLE;
 
 	this->bStartNewMeasurement = false;
 
-	return;
+	return false;
 }
 
 
@@ -141,7 +138,6 @@ bool usonic_ping(USdevice_t* this)
 
 	if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
 	{
-		display_println("usonic not idle (p)");
 		return false;
 	}
 
@@ -166,11 +162,11 @@ bool usonic_ping(USdevice_t* this)
 
 	if (i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_COMPLETED)
 	{
-		display_println_hex("us firmware version: ", uRxByte);
+		//display_println_hex("us firmware version: ", uRxByte);
 	}
 	else
 	{
-		display_println_hex("ping msgstate: ", i2cmgr_getMsgState(this->uI2CDeviceID));
+		//display_println_hex("ping msgstate: ", i2cmgr_getMsgState(this->uI2CDeviceID));
 	}
 
 	i2cmgr_resetMsg(this->uI2CDeviceID);

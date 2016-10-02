@@ -64,10 +64,10 @@ typedef struct USbroadcaster_
 } USbroadcaster_t;
 
 
-void usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort);
+bool usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort);
 bool usonicbc_trigger(USbroadcaster_t* this);
 
-void usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address);
+bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address);
 bool usonic_ping(USdevice_t* this);
 
 bool usonic_startDataAvailableQuery(USdevice_t* this);

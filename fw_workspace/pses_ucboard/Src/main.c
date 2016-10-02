@@ -165,7 +165,7 @@ int main(void)
   stopwatch_init();
 
   display_init();
-  display_println("ucboard");
+  display_println("PS Echtzeitsysteme - ucboard");
 
   comm_init();
 
