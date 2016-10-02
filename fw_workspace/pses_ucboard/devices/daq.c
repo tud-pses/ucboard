@@ -330,7 +330,7 @@ void daq_init()
 			f_acErrMsg + 1,
 			f_acErrMsg + MAXERRMSGLEN,
 			SOT_RXDAQ, ERRCODE_DAQ_MSGDROPPED,
-			"DAQ buffer overrun: At least one package message has been dropped!\n");
+			"DAQ OVRRUN!\n");
 
 	f_nErrMsgLen = strend - f_acErrMsg;
 
@@ -1418,6 +1418,7 @@ uint8_t* getGetPkgDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
 {
 	static uint16_t s_nBytesLeft = 0;
+	*pbMsgComplete = true;
 
 	if (s_nBytesLeft > 0)
 	{
@@ -1461,6 +1462,7 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 			{
 				*pnCnt = f_nErrMsgLen;
 				memcpy(buf, f_acErrMsg, f_nErrMsgLen);
+				ARingbuffer_dropX(&f_buffer, 2);
 			}
 		}
 		else
@@ -1471,7 +1473,6 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 			{
 				ARingbuffer_getX(&f_buffer, (uint8_t*)buf, len);
 				*pnCnt = len;
-				*pbMsgComplete = true;
 			}
 			else
 			{
