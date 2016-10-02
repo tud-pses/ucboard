@@ -11,22 +11,16 @@
 
 #include "spimgr.h"
 
-#include "daq.h"
 
-#include "display.h"
-#include "ucboard_hwfcts.h"
-#include "stopwatch.h"
+uint8_t readRegister(IMUDevice_t* this, EnRegister_t reg);
+void writeRegister(IMUDevice_t* this, EnRegister_t reg, uint8_t val);
 
-static uint8_t f_uDeviceID = 0;
+void writeRegister_masked(IMUDevice_t* this, EnRegister_t reg, uint8_t val, uint8_t mask);
 
-static uint8_t f_uDAQCh_ACCX;
-static uint8_t f_uDAQCh_ACCY;
-static uint8_t f_uDAQCh_ACCZ;
-static uint8_t f_uDAQCh_GYROX;
-static uint8_t f_uDAQCh_GYROY;
-static uint8_t f_uDAQCh_GYROZ;
+void readRegisters_burst(IMUDevice_t* this, EnRegister_t startreg, uint8_t cnt, uint8_t* auData);
 
-void imu_init()
+
+bool imuMPU9250_init(IMUDevice_t* this, EnSPI_PORT_t ePort, char cCSPort, uint8_t uCSPin)
 {
 	EnSPIMgrRes_t res;
 	SPI_InitTypeDef cfg;
@@ -45,83 +39,153 @@ void imu_init()
 	cfg.CRCLength = SPI_CRC_LENGTH_DATASIZE;
 	cfg.NSSPMode = SPI_NSS_PULSE_DISABLED;
 
-	res = spimgr_addDevice(SPIPORT_1, &cfg, 'A', 4, SPICSIDLEPOL_HIGH, &f_uDeviceID);
+	res = spimgr_addDevice(ePort, &cfg, cCSPort, uCSPin, SPICSIDLEPOL_HIGH, &this->f_uDeviceID);
 
 	if (res != SPIMGRRES_OK)
 	{
-		display_println_hex("spi err: ", res);
+		return false;
 	}
 
-	uint16_t rx = 0;
 
-	spimgr_send16(f_uDeviceID, (1 << 15) | (0x75 << 8), &rx);
+	uint8_t rx = readRegister(this, REG_WHO_AM_I);
 
-	rx = rx & 0xFF;
-
-	if (rx == 0x71)
+	if (rx != WHO_AM_I_VALUE)
 	{
-		display_println("imu ping ok");
-	}
-	else
-	{
-		display_println("imu ping failed!");
-		return;
+		return false;
 	}
 
 	// deactivate i2c
-	spimgr_send16(f_uDeviceID, (0 << 15) | (0x6A << 8) | (1 << 4), &rx);
-
-//
-//	spimgr_send16(f_uDeviceID, (1 << 15) | (0x75 << 8), &rx);
-//
-//	rx = rx & 0xFF;
-//
-//	if (rx != 0x71)
-//	{
-//		display_println("imu ping failed!");
-//	}
+	writeRegister_masked(this, REG_USER_CTRL, USERCTRL_I2CMSTIF_MASK, USERCTRL_I2CMSTIF_DISABLEI2CSLV);
 
 
-	daq_provideChannel("AX", "acc. ahead", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_ACCX);
-	daq_provideChannel("AY", "acc. left", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_ACCY);
-	daq_provideChannel("AZ", "acc. up", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_ACCZ);
-	daq_provideChannel("GX", "gyro roll", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_GYROX);
-	daq_provideChannel("GY", "gyro -pitch", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_GYROY);
-	daq_provideChannel("GZ", "gyro -yaw", "opt-dep.!", DAQVALUETYPE_INT16, 1, &f_uDAQCh_GYROZ);
+//	writeRegister_masked(this, REG_CONFIG, CONFIG_DLPFCFG_GYROBW184_FS1k, CONFIG_DLPFCFG_MASK);
+//	writeRegister_masked(this, REG_GYRO_CONFIG, GYROCONFIG_FCHOICEB_GYROBW184_FS1k, GYROCONFIG_FCHOICEB_MASK);
+//
+//	writeRegister_masked(this, REG_ACCEL_CONFIG2,
+//								ACCELCONFIG2_DLPFCFG_BW218_FS1k | ACCELCONFIG2_FCHOICEB_BW218_FS1k,
+//								ACCELCONFIG2_DLPFCFG_MASK | ACCELCONFIG2_FCHOICEB_MASK);
+
+	return true;
+}
+
+
+uint8_t readRegister(IMUDevice_t* this, EnRegister_t reg)
+{
+	uint16_t rx;
+
+	spimgr_send16(this->f_uDeviceID, READCMD(reg), &rx);
+
+	return (uint8_t)(rx & 0xFF);
+}
+
+
+void writeRegister(IMUDevice_t* this, EnRegister_t reg, uint8_t val)
+{
+	uint16_t rx;
+
+	spimgr_send16(this->f_uDeviceID, WRITECMD(reg) | val, &rx);
 
 	return;
 }
 
 
-void imu_do_systick()
+void writeRegister_masked(IMUDevice_t* this, EnRegister_t reg, uint8_t val, uint8_t mask)
 {
-	uint16_t tx[] = {(1 << 15) | (0x3F << 8), 0};
-//	uint16_t tx[] = {(1 << 15) | (0x3F << 8), (1 << 15) | (0x40 << 8)};
-	uint16_t rx[2];
+	uint8_t tmp = readRegister(this, reg);
 
-	static uint16_t s_cnt = 0;
+	tmp &= ~mask;
+	tmp |= (val & mask);
 
-	uint32_t tic;
-
-	tic = stopwatch_getTic();
-	spimgr_send16Mult(f_uDeviceID, 2, tx, rx);
-	tic = stopwatch_getDeltaTime_us(tic);
-
-	s_cnt++;
-
-	if (s_cnt == 1000)
-	{
-		s_cnt = 0;
-		int16_t val = ((rx[0] & 0xFF) << 8) | ((rx[1] >> 8) & 0xFF);
-
-		int32_t val32 = val;
-
-		val32 = (val32 * 1000) / 16384;
-
-		//display_println_int("z [ug]: ", val32);
-		//display_println_int("Dt [us]: ", tic);
-	}
-
+	writeRegister(this, reg, tmp);
 
 	return;
+}
+
+
+void readRegisters_burst(IMUDevice_t* this, EnRegister_t startreg, uint8_t cnt, uint8_t* auData)
+{
+	uint8_t words_to_read = cnt / 2 + 1;
+
+	uint16_t tx[words_to_read];
+	uint16_t rx[words_to_read];
+
+	tx[0] = READCMD(startreg);
+
+	for (uint8_t i = 1; i < words_to_read; ++i)
+	{
+		tx[i] = 0;
+	}
+
+	spimgr_send16Mult(this->f_uDeviceID, words_to_read, tx, rx);
+
+	uint8_t* tmp = auData;
+
+	for (uint8_t i = 0; i < cnt/2; ++i)
+	{
+		*tmp++ = (uint8_t)(rx[i] & 0xFF);
+		*tmp++ = (uint8_t)((rx[i+1] >> 8) & 0xFF);
+	}
+
+	if (cnt & 1)
+	{
+		*tmp++ = (uint8_t)(rx[words_to_read] & 0xFF);
+	}
+
+	return;
+}
+
+
+bool imuMPU9250_setAccRange(IMUDevice_t* this, EnMPU9250AccRange_t eRange)
+{
+	uint8_t val = 0;
+
+	switch (eRange)
+	{
+		case MPU9250ACCRANGE_2G: val = ACCELCONFIG_FULLSCALESEL_2; break;
+		case MPU9250ACCRANGE_4G: val = ACCELCONFIG_FULLSCALESEL_4; break;
+		case MPU9250ACCRANGE_8G: val = ACCELCONFIG_FULLSCALESEL_8; break;
+		case MPU9250ACCRANGE_16G: val = ACCELCONFIG_FULLSCALESEL_16; break;
+	}
+
+	writeRegister_masked(this, REG_ACCEL_CONFIG, val, ACCELCONFIG_FULLSCALESEL_MASK);
+
+	return true;
+}
+
+
+bool imuMPU9250_setGyroRange(IMUDevice_t* this, EnMPU9250GyroRange_t eRange)
+{
+	uint8_t val = 0;
+
+	switch (eRange)
+	{
+		case MPU9250GYRORANGE_250DEGSPERSEC: val = GYROCONFIG_FULLSCALESEL_250; break;
+		case MPU9250GYRORANGE_500DEGSPERSEC: val = GYROCONFIG_FULLSCALESEL_500; break;
+		case MPU9250GYRORANGE_1000DEGSPERSEC: val = GYROCONFIG_FULLSCALESEL_1000; break;
+		case MPU9250GYRORANGE_2000DEGSPERSEC: val = GYROCONFIG_FULLSCALESEL_2000; break;
+	}
+
+	writeRegister_masked(this, REG_GYRO_CONFIG, val, GYROCONFIG_FULLSCALESEL_MASK);
+
+	return true;
+}
+
+
+#define READ_INT16(b) ( ((uint16_t)(*b) << 8) | (*(b+1)) )
+
+bool imuMPU9250_readData(IMUDevice_t* this, IMUData_t* imudata)
+{
+	uint8_t auData[14];
+
+	readRegisters_burst(this, REG_ACCEL_XOUT_H, 14, auData);
+
+	imudata->accX = READ_INT16(&auData[0]);
+	imudata->accY = READ_INT16(&auData[2]);
+	imudata->accZ = READ_INT16(&auData[4]);
+	imudata->temperature = READ_INT16(&auData[6]);
+	imudata->gyroX = READ_INT16(&auData[8]);
+	imudata->gyroY = READ_INT16(&auData[10]);
+	imudata->gyroZ = READ_INT16(&auData[12]);
+
+	return true;
 }

@@ -13,7 +13,7 @@
 #include "daq.h"
 #include "carbasicfcts.h"
 #include "hal503.h"
-#include "imu_mpu9250.h"
+#include "imu.h"
 #include "us.h"
 
 
