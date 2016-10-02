@@ -52,6 +52,7 @@ typedef enum DAQSampling_
 typedef enum DAQEncoding_
 {
 	DAQENCODING_ASCII = 0,
+	DAQENCODING_HEX,
 	DAQENCODING_B64,
 } DAQEncoding_t;
 
@@ -95,7 +96,8 @@ static uint16_t f_nErrMsgLen = 0;
 #include "ucboard_hwfcts.h"
 
 
-
+#include "encoding.h"
+#include "crc.h"
 
 #include "comm_public.h"
 #include "common_fcts.h"
@@ -143,8 +145,108 @@ static DAQValueDS_t f_vals[NMAXCHS];
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMax);
 
 
-char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend, DAQPkg_t* pkg, bool* abSendChValue, uint32_t maxtics, uint32_t mintics);
+char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
+											DAQPkg_t* pkg, bool* abSendChValue,
+											uint32_t maxtics, uint32_t mintics);
+uint8_t* getGetPkgDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
+											DAQPkg_t* pkg, bool* abSendChValue,
+											uint32_t maxtics, uint32_t mintics);
 
+
+
+#define DAQ_VALMARK_NOVALUE 0
+#define DAQ_VALMARK_MEASERROR 1
+#define DAQ_VALMARK_SENSORERROR 2
+#define DAQ_VALMARK_OUTOFBOUNDS 3
+#define DAQ_VALMARK_OUTOFBOUNDS_HIGH 4
+#define DAQ_VALMARK_OUTOFBOUNDS_LOW 5
+
+#define DAQMAXVAL_UINT32				(0xFFFFFFFF - DAQ_VALMARK_OUTOFBOUNDS_LOW - 1)
+#define DAQVAL_NOVALUE_UINT32			(0xFFFFFFFF - DAQ_VALMARK_NOVALUE)
+#define DAQVAL_MEASERROR_UINT32			(0xFFFFFFFF - DAQ_VALMARK_MEASERROR)
+#define DAQVAL_SENSORERROR_UINT32		(0xFFFFFFFF - DAQ_VALMARK_SENSORERROR)
+#define DAQVAL_OUTOFBOUNDS_UINT32		(0xFFFFFFFF - DAQ_VALMARK_OUTOFBOUNDS)
+#define DAQVAL_OUTOFBOUNDS_HIGH_UINT32	(0xFFFFFFFF - DAQ_VALMARK_OUTOFBOUNDS_HIGH)
+#define DAQVAL_OUTOFBOUNDS_LOW_UINT32	(0xFFFFFFFF - DAQ_VALMARK_OUTOFBOUNDS_LOW)
+
+#define DAQMAXVAL_INT32					(0x7FFF - DAQ_VALMARK_OUTOFBOUNDS_LOW - 1)
+#define DAQVAL_NOVALUE_INT32			(0x7FFF - DAQ_VALMARK_NOVALUE)
+#define DAQVAL_MEASERROR_INT32			(0x7FFF - DAQ_VALMARK_MEASERROR)
+#define DAQVAL_SENSORERROR_INT32		(0x7FFF - DAQ_VALMARK_SENSORERROR)
+#define DAQVAL_OUTOFBOUNDS_INT32		(0x7FFF - DAQ_VALMARK_OUTOFBOUNDS)
+#define DAQVAL_OUTOFBOUNDS_HIGH_INT32	(0x7FFF - DAQ_VALMARK_OUTOFBOUNDS_HIGH)
+#define DAQVAL_OUTOFBOUNDS_LOW_INT32	(0x7FFF - DAQ_VALMARK_OUTOFBOUNDS_LOW)
+
+#define DAQMAXVAL_UINT16				(0xFFFF - DAQ_VALMARK_OUTOFBOUNDS_LOW - 1)
+#define DAQVAL_NOVALUE_UINT16			(0xFFFF - DAQ_VALMARK_NOVALUE)
+#define DAQVAL_MEASERROR_UINT16			(0xFFFF - DAQ_VALMARK_MEASERROR)
+#define DAQVAL_SENSORERROR_UINT16		(0xFFFF - DAQ_VALMARK_SENSORERROR)
+#define DAQVAL_OUTOFBOUNDS_UINT16		(0xFFFF - DAQ_VALMARK_OUTOFBOUNDS)
+#define DAQVAL_OUTOFBOUNDS_HIGH_UINT16	(0xFFFF - DAQ_VALMARK_OUTOFBOUNDS_HIGH)
+#define DAQVAL_OUTOFBOUNDS_LOW_UINT16	(0xFFFF - DAQ_VALMARK_OUTOFBOUNDS_LOW)
+
+#define DAQMAXVAL_INT16					(0x7FFF - DAQ_VALMARK_OUTOFBOUNDS_LOW - 1)
+#define DAQVAL_NOVALUE_INT16			(0x7FFF - DAQ_VALMARK_NOVALUE)
+#define DAQVAL_MEASERROR_INT16			(0x7FFF - DAQ_VALMARK_MEASERROR)
+#define DAQVAL_SENSORERROR_INT16		(0x7FFF - DAQ_VALMARK_SENSORERROR)
+#define DAQVAL_OUTOFBOUNDS_INT16		(0x7FFF - DAQ_VALMARK_OUTOFBOUNDS)
+#define DAQVAL_OUTOFBOUNDS_HIGH_INT16	(0x7FFF - DAQ_VALMARK_OUTOFBOUNDS_HIGH)
+#define DAQVAL_OUTOFBOUNDS_LOW_INT16	(0x7FFF - DAQ_VALMARK_OUTOFBOUNDS_LOW)
+
+#define DAQMAXVAL_UINT8					(0xFF - DAQ_VALMARK_OUTOFBOUNDS_LOW - 1)
+#define DAQVAL_NOVALUE_UINT8			(0xFF - DAQ_VALMARK_NOVALUE)
+#define DAQVAL_MEASERROR_UINT8			(0xFF - DAQ_VALMARK_MEASERROR)
+#define DAQVAL_SENSORERROR_UINT8		(0xFF - DAQ_VALMARK_SENSORERROR)
+#define DAQVAL_OUTOFBOUNDS_UINT8		(0xFF - DAQ_VALMARK_OUTOFBOUNDS)
+#define DAQVAL_OUTOFBOUNDS_HIGH_UINT8	(0xFF - DAQ_VALMARK_OUTOFBOUNDS_HIGH)
+#define DAQVAL_OUTOFBOUNDS_LOW_UINT8	(0xFF - DAQ_VALMARK_OUTOFBOUNDS_LOW)
+
+#define DAQMAXVAL_INT8					(0x7F - DAQ_VALMARK_OUTOFBOUNDS_LOW - 1)
+#define DAQVAL_NOVALUE_INT8				(0x7F - DAQ_VALMARK_NOVALUE)
+#define DAQVAL_MEASERROR_INT8			(0x7F - DAQ_VALMARK_MEASERROR)
+#define DAQVAL_SENSORERROR_INT8			(0x7F - DAQ_VALMARK_SENSORERROR)
+#define DAQVAL_OUTOFBOUNDS_INT8			(0x7F - DAQ_VALMARK_OUTOFBOUNDS)
+#define DAQVAL_OUTOFBOUNDS_HIGH_INT8	(0x7F - DAQ_VALMARK_OUTOFBOUNDS_HIGH)
+#define DAQVAL_OUTOFBOUNDS_LOW_INT8		(0x7F - DAQ_VALMARK_OUTOFBOUNDS_LOW)
+
+
+
+
+inline uint8_t* memcpy8_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
+{
+	if (buf <= bufend)
+	{
+		*buf = *data;
+	}
+
+	return buf;
+}
+
+
+inline uint8_t* memcpy16_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
+{
+	if (buf <= bufend - 1)
+	{
+		*buf++ = *data++;
+		*buf = *data;
+	}
+
+	return buf;
+}
+
+
+inline uint8_t* memcpy32_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
+{
+	if (buf <= bufend - 3)
+	{
+		*buf++ = *data++;
+		*buf++ = *data++;
+		*buf++ = *data++;
+		*buf = *data;
+	}
+
+	return buf;
+}
 
 
 
@@ -373,11 +475,7 @@ void daq_do_systick()
 					pkg->uCurSkipCnt = pkg->uSkip;
 
 
-					if (pkg->eEncoding == DAQENCODING_B64)
-					{
-
-					}
-					else
+					if (pkg->eEncoding == DAQENCODING_ASCII)
 					{
 						*buf++ = '#';
 						*buf++ = '#';
@@ -387,13 +485,41 @@ void daq_do_systick()
 						buf = getGetPkgDataStringAscii_returnend(buf, bufend - 1, pkg, abSendChValue, maxtic, mintic);
 						*buf++ = '\n';
 						*buf = '\0';
-
-						uint16_t fmark = 0;
-
-						ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
-						ARingbuffer_atomicput_putS(&f_buffer, bufstart, false);
-						ARingbuffer_atomicput_end(&f_buffer);
 					}
+					else
+					{
+
+						uint8_t btmpstart[200];
+						uint8_t* btmp = btmpstart;
+						uint8_t * const btmpend = btmpstart + 199;
+
+						*btmp++ = p;
+						btmp = getGetPkgDataBinary_returnend(btmp, btmpend, pkg, abSendChValue, maxtic, mintic);
+
+						if (pkg->bCRC)
+						{
+							uint16_t crc = crc16(btmpstart, btmp - btmpstart + 1);
+							btmp = memcpy16_returnend(btmp+1, btmpend, (uint8_t*)&crc);
+						}
+
+						if (pkg->eEncoding == DAQENCODING_HEX)
+						{
+							*buf++ = '#';
+							buf = encodeHEX_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
+						}
+						else
+						{
+							*buf++ = '#';
+							buf = encodeB64woPadding_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
+						}
+					}
+
+					uint16_t fmark = 0;
+
+					ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
+					ARingbuffer_atomicput_putS(&f_buffer, bufstart, false);
+					ARingbuffer_atomicput_end(&f_buffer);
+
 				}
 			}
 		}
@@ -772,6 +898,37 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 				pkg.uSkip = (uint32_t)atoi(args->paramvals[p]);
 			}
 		}
+		else if (strcmpi(args->paramnames[p], "ENC") == STRCMPRES_EQUAL)
+		{
+			if ( (args->paramvals[p] == NULL) )
+			{
+				*pErrCode = ERRCODE_DAQ_INVALIDPARAMETER;
+				*pszError = "Option ENC needs value!";
+				return;
+			}
+			else if (strcmpi(args->paramvals[p], "HEX") == STRCMPRES_EQUAL)
+			{
+				pkg.eEncoding = DAQENCODING_HEX;
+			}
+			else if (strcmpi(args->paramvals[p], "B64") == STRCMPRES_EQUAL)
+			{
+				pkg.eEncoding = DAQENCODING_B64;
+			}
+			else if (strcmpi(args->paramvals[p], "ASCII") == STRCMPRES_EQUAL)
+			{
+				pkg.eEncoding = DAQENCODING_ASCII;
+			}
+			else
+			{
+				*pErrCode = ERRCODE_DAQ_INVALIDPARAMETER;
+				*pszError = "Invalid value for parameter ENC! (Must be B64, HEX or ASCII.)";
+				return;
+			}
+		}
+		else if (strcmpi(args->paramnames[p], "CRC") == STRCMPRES_EQUAL)
+		{
+			pkg.bCRC = true;
+		}
 		else
 		{
 			*pErrCode = ERRCODE_DAQ_UNKNOWNPARAMETER;
@@ -937,7 +1094,7 @@ char* getGetDataString_returnend(char* buf, char* const bufend, CommCmdArgs_t* a
 
 char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
 												DAQPkg_t* pkg,
-												bool* abSendChValues,
+												bool* abSendChValue,
 												uint32_t maxtics, uint32_t mintics)
 {
 	uint32_t tics = GETSYSTICS();
@@ -982,7 +1139,7 @@ char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
 
 			pVal = f_vals[id].curValToRead;
 
-			if (!abSendChValues[c])
+			if (!abSendChValue[c])
 			{
 				tmpval.mod = DAQVALUEMOD_NOVALUE;
 				tmpval.tic = GETSYSTICS();
@@ -1012,6 +1169,249 @@ char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
 	*--buf = '\0'; // undo last space character
 
 	return buf;
+}
+
+
+uint8_t* getGetPkgDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
+											DAQPkg_t* pkg, bool* abSendChValue,
+											uint32_t maxtics, uint32_t mintics)
+{
+	uint8_t * const bufstart = buf;
+	uint32_t tics = GETSYSTICS();
+
+	for (uint8_t c = 0; c < pkg->nchs; ++c)
+	{
+		uint8_t id = pkg->chs[c];
+
+		if (id & SPECIALCHANNELSFLAG)
+		{
+			uint32_t val = 0;
+
+			val = maxtics - mintics;
+
+			switch (id)
+			{
+				case SPECIALCHANNEL_TIC:
+					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&mintics) + 1;
+					break;
+
+				case SPECIALCHANNEL_TIC16:
+					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&mintics) + 1;
+					break;
+
+				case SPECIALCHANNEL_TIC8:
+					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&mintics) + 1;
+					break;
+
+				case SPECIALCHANNEL_DTICS:
+					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&val) + 1;
+					break;
+
+				case SPECIALCHANNEL_DTICS16:
+					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&val) + 1;
+					break;
+
+				case SPECIALCHANNEL_DTICS8:
+					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&val) + 1;
+					break;
+			}
+		}
+		else
+		{
+			DAQValue_t* pVal;
+			DAQValue_t tmpval;
+
+			pVal = f_vals[id].curValToRead;
+
+			if (!abSendChValue[c])
+			{
+				tmpval.mod = DAQVALUEMOD_NOVALUE;
+				tmpval.tic = GETSYSTICS();
+				tmpval.value = 0;
+
+				pVal = &tmpval;
+			}
+
+			switch (f_chs[id].type)
+			{
+				case DAQVALUETYPE_UINT32:
+				{
+					uint32_t val = *(uint32_t*)&pVal->value;
+
+					if (pVal->mod != DAQVALUEMOD_OK)
+					{
+						switch (pVal->mod)
+						{
+							case DAQVALUEMOD_NOVALUE: val = DAQVAL_NOVALUE_UINT32; break;
+							case DAQVALUEMOD_MEASERROR: val = DAQVAL_MEASERROR_UINT32; break;
+							case DAQVALUEMOD_SENSORERROR: val = DAQVAL_SENSORERROR_UINT32; break;
+							case DAQVALUEMOD_OUTOFBOUNDS: val = DAQVAL_OUTOFBOUNDS_UINT32; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_HIGH: val = DAQVAL_OUTOFBOUNDS_HIGH_UINT32; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_LOW: val = DAQVAL_OUTOFBOUNDS_LOW_UINT32; break;
+							case DAQVALUEMOD_OK: break; // to avoid warning
+						}
+					}
+					else if (val > DAQMAXVAL_UINT32)
+					{
+						val = DAQVAL_OUTOFBOUNDS_HIGH_UINT32;
+					}
+
+					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&val) + 1;
+
+					break;
+				}
+
+				case DAQVALUETYPE_INT32:
+				{
+					int32_t val = pVal->value;
+
+					if (pVal->mod != DAQVALUEMOD_OK)
+					{
+						switch (pVal->mod)
+						{
+							case DAQVALUEMOD_NOVALUE: val = DAQVAL_NOVALUE_INT32; break;
+							case DAQVALUEMOD_MEASERROR: val = DAQVAL_MEASERROR_INT32; break;
+							case DAQVALUEMOD_SENSORERROR: val = DAQVAL_SENSORERROR_INT32; break;
+							case DAQVALUEMOD_OUTOFBOUNDS: val = DAQVAL_OUTOFBOUNDS_INT32; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_HIGH: val = DAQVAL_OUTOFBOUNDS_HIGH_INT32; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_LOW: val = DAQVAL_OUTOFBOUNDS_LOW_INT32; break;
+							case DAQVALUEMOD_OK: break; // to avoid warning
+						}
+					}
+					else if (val > DAQMAXVAL_INT32)
+					{
+						val = DAQVAL_OUTOFBOUNDS_HIGH_INT32;
+					}
+
+					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&val) + 1;
+
+					break;
+				}
+
+				case DAQVALUETYPE_UINT16:
+				{
+					uint16_t val = (uint16_t)pVal->value;
+
+					if (pVal->mod != DAQVALUEMOD_OK)
+					{
+						switch (pVal->mod)
+						{
+							case DAQVALUEMOD_NOVALUE: val = DAQVAL_NOVALUE_UINT16; break;
+							case DAQVALUEMOD_MEASERROR: val = DAQVAL_MEASERROR_UINT16; break;
+							case DAQVALUEMOD_SENSORERROR: val = DAQVAL_SENSORERROR_UINT16; break;
+							case DAQVALUEMOD_OUTOFBOUNDS: val = DAQVAL_OUTOFBOUNDS_UINT16; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_HIGH: val = DAQVAL_OUTOFBOUNDS_HIGH_UINT16; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_LOW: val = DAQVAL_OUTOFBOUNDS_LOW_UINT16; break;
+							case DAQVALUEMOD_OK: break; // to avoid warning
+						}
+					}
+					else if (val > DAQMAXVAL_UINT16)
+					{
+						val = DAQVAL_OUTOFBOUNDS_HIGH_UINT16;
+					}
+
+					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&val) + 1;
+
+					break;
+				}
+
+				case DAQVALUETYPE_INT16:
+				{
+					int16_t val = (int16_t)pVal->value;
+
+					if (pVal->mod != DAQVALUEMOD_OK)
+					{
+						switch (pVal->mod)
+						{
+						case DAQVALUEMOD_NOVALUE: val = DAQVAL_NOVALUE_INT16; break;
+						case DAQVALUEMOD_MEASERROR: val = DAQVAL_MEASERROR_INT16; break;
+						case DAQVALUEMOD_SENSORERROR: val = DAQVAL_SENSORERROR_INT16; break;
+						case DAQVALUEMOD_OUTOFBOUNDS: val = DAQVAL_OUTOFBOUNDS_INT16; break;
+						case DAQVALUEMOD_OUTOFBOUNDS_HIGH: val = DAQVAL_OUTOFBOUNDS_HIGH_INT16; break;
+						case DAQVALUEMOD_OUTOFBOUNDS_LOW: val = DAQVAL_OUTOFBOUNDS_LOW_INT16; break;
+						case DAQVALUEMOD_OK: break; // to avoid warning
+						}
+					}
+					else if (val > DAQMAXVAL_INT16)
+					{
+						val = DAQVAL_OUTOFBOUNDS_HIGH_INT16;
+					}
+
+					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&val) + 1;
+
+					break;
+				}
+
+				case DAQVALUETYPE_UINT8:
+				{
+					uint8_t val = (uint8_t)pVal->value;
+
+					if (pVal->mod != DAQVALUEMOD_OK)
+					{
+						switch (pVal->mod)
+						{
+							case DAQVALUEMOD_NOVALUE: val = DAQVAL_NOVALUE_UINT8; break;
+							case DAQVALUEMOD_MEASERROR: val = DAQVAL_MEASERROR_UINT8; break;
+							case DAQVALUEMOD_SENSORERROR: val = DAQVAL_SENSORERROR_UINT8; break;
+							case DAQVALUEMOD_OUTOFBOUNDS: val = DAQVAL_OUTOFBOUNDS_UINT8; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_HIGH: val = DAQVAL_OUTOFBOUNDS_HIGH_UINT8; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_LOW: val = DAQVAL_OUTOFBOUNDS_LOW_UINT8; break;
+							case DAQVALUEMOD_OK: break; // to avoid warning
+						}
+					}
+					else if (val > DAQMAXVAL_UINT8)
+					{
+						val = DAQVAL_OUTOFBOUNDS_HIGH_UINT8;
+					}
+
+					buf = memcpy8_returnend(buf, bufend, &val) + 1;
+
+					break;
+				}
+
+				case DAQVALUETYPE_INT8:
+				{
+					int8_t val = (int8_t)pVal->value;
+
+					if (pVal->mod != DAQVALUEMOD_OK)
+					{
+						switch (pVal->mod)
+						{
+							case DAQVALUEMOD_NOVALUE: val = DAQVAL_NOVALUE_INT8; break;
+							case DAQVALUEMOD_MEASERROR: val = DAQVAL_MEASERROR_INT8; break;
+							case DAQVALUEMOD_SENSORERROR: val = DAQVAL_SENSORERROR_INT8; break;
+							case DAQVALUEMOD_OUTOFBOUNDS: val = DAQVAL_OUTOFBOUNDS_INT8; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_HIGH: val = DAQVAL_OUTOFBOUNDS_HIGH_INT8; break;
+							case DAQVALUEMOD_OUTOFBOUNDS_LOW: val = DAQVAL_OUTOFBOUNDS_LOW_INT8; break;
+							case DAQVALUEMOD_OK: break; // to avoid warning
+						}
+					}
+					else if (val > DAQMAXVAL_INT8)
+					{
+						val = DAQVAL_OUTOFBOUNDS_HIGH_INT8;
+					}
+
+					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&val) + 1;
+
+					break;
+				}
+			}
+
+			if (pkg->bAge)
+			{
+				uint32_t age = tics - pVal->tic;
+
+				buf = memcpy32_returnend(buf, bufend, (uint8_t*)&age) + 1;
+			}
+
+			if (pkg->bTics)
+			{
+				buf = memcpy32_returnend(buf, bufend, (uint8_t*)&pVal->tic) + 1;
+			}
+		}
+	}
+
+	return (buf == bufstart) ? buf : buf - 1;
 }
 
 
