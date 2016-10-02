@@ -158,6 +158,7 @@ void display_printerror(EnErrCode_t errcode, const char* errdesc)
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
 {
 	static uint16_t s_nBytesLeft = 0;
+	*pbMsgComplete = true;
 
 	if (s_nBytesLeft > 0)
 	{
@@ -165,7 +166,6 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 		{
 			ARingbuffer_getX(&f_buffer, (uint8_t*)buf, s_nBytesLeft);
 			*pnCnt = s_nBytesLeft;
-			*pbMsgComplete = true;
 
 			s_nBytesLeft = 0;
 		}
@@ -212,7 +212,6 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 			{
 				ARingbuffer_getX(&f_buffer, (uint8_t*)buf, len);
 				*pnCnt = len;
-				*pbMsgComplete = true;
 			}
 			else
 			{
