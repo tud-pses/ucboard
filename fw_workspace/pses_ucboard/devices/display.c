@@ -201,6 +201,7 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 			{
 				*pnCnt = f_nErrMsgLen;
 				memcpy(buf, f_acErrMsg, f_nErrMsgLen);
+				ARingbuffer_dropX(&f_buffer, 2);
 			}
 		}
 		else
