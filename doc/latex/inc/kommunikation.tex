@@ -6,8 +6,8 @@
 
 
 \begin{itemize}
-	\item Die Kommunikation des ucboard soll so aufgebaut sein, dass eine Bedienung über ein einfaches Terminalprogramm möglich ist, um ein einfaches Debuggen zu ermöglichen.
-	\item Es soll eine einfache Interaktion möglich sein. (\ZB zum Kalibrieren der Sensoren.)
+	\item Die Kommunikation des ucboard ist so aufgebaut sein, dass eine Bedienung über ein einfaches Terminalprogramm möglich ist, um ein einfaches Testen und Debuggen zu ermöglichen.
+	\item Es ist eine einfache Interaktion möglich. (\ZB zum Kalibrieren der Sensoren.)
 	\item Ein einfaches Parsen der vom ucboard gesendeten Daten soll aber ebenso möglich sein.
 \end{itemize}
 
@@ -59,19 +59,84 @@
 	\item Fehler bei der Abarbeitung von Befehlen beginnen mit \texttt{:ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{:ERR(code):Beschreibung} 
 	\item Textausgaben (Display-Funktion) beginnen mit \texttt{'}
 	\item Fehlermeldungen sind Textausgaben. Diese beginnen mit \texttt{'ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{'ERR(code):Beschreibung} 
-	\item Ohne Auf"|forderung versendete Messdaten beginnen mit \texttt{\#} (base64-codiert) \bzw \texttt{\#\#} (lesbarer Text).
+	\item Ohne Auf"|forderung versendete Messdaten beginnen mit \texttt{\#} (base64- oder hex-codiert) \bzw \texttt{\#\#} (lesbarer Text).
 	\item Wenn eine Nutzerinteraktion notwendig ist, dann sollte das letzte Zeichen vor dem Nachrichtendezeichen ein \texttt{?} sein.
-	\item Alle Nachrichten vom ucboard haben EOT (0x??) als Endzeichen. (Dadurch ist es möglich, eine mehrzeilige Ausgabe auf dem Terminalprogramm zu erzeugen.)
+	\item Alle Nachrichten vom ucboard haben ETX (0x03) als Endzeichen. (Dadurch ist es möglich, eine mehrzeilige Ausgabe auf dem Terminalprogramm zu erzeugen.)
+		\begin{itemize}
+			\item Für die bessere Lesbarkeit ist es empfehlenswert, alle Textnachrichten mit einem Zeilenumbruch (vor ETX) abzuschließen. Lediglich bei hex- oder base64-basierten Messdatennachrichten wird dies nicht gemacht, da diese gerade für eine sparsame Kommunikation gedacht sind.
+		\end{itemize}
 \end{itemize}
+
+
+
+\section{Hardware}
+
+Das ucboard verfügt über zwei Schnittstellen für die Kommunikation mit dem PC. Zum einen kann über einen USB-Anschluss eine serielle Kommunikation aufgebaut werden und zum anderen kann eine RS232-Schnittstelle verwendet werden. Die RS232-Schnittstelle wird dabei nicht als Standard-D-SUB-Stecker (9-polig) angeboten, sondern als Wannensteckeranschluss. Dieser ist so belegt, dass eine direkte Verbindung zu den Anschlüssen des Onboard-PC über ein Flachbandkabel erfolgen kann.
+
+Der dritte, "`reine"' UART-Anschluss ist für den Anschluss möglicher Erweiterungen und nicht die Kommunikation mit dem PC vorgesehen.\footnote{Man könnte auch noch darüber nachdenken, die dritte UART auch für die Kommunikation mit einem PC zu verwenden, da an dieser einfach ein Bluetooth-Adapter angeschlossen werden könnte. Damit wäre es möglich, auch ohne den Onboard-PC das Fahrzeug ferngesteuert zu betreiben.}
+
+
+Die Parameter der Schnittstellen
+
+\begin{table}%
+	\centering
+	\caption{Einstellungen serielle Schnittstellen}
+	\label{tab:Comm:UARTParam}
+	\begin{tabular}{lcr}
+			\mytoprule
+			 & USB & RS232 \\
+			\mymidrule
+			Baudrate & 57\,600 & 57\,600 \\
+			Datenbits & 8 & 8 \\
+			Stopbits & 1 & 1 \\
+			Parity & keine & keine \\
+			Hardware-Flowcontrol & Nein & Nein \\
+			\mybottomrule
+	\end{tabular}\\
+	\color[rgb]{1,0,0}{ToDo: Testen, welche Baudrate jeweils maximal möglich ist!} \textcolor[rgb]{0.75,0.75,0.75}{\footnotesize{Man könnte dies auch über einen Befehl einstellbar machen, und ein Rücksetzen darüber erreichen, dass beim Starten des ucboards \zB der Taster A betätigt wird. Aber das erscheint mir für diesen Zweck unnötig.}}
+\end{table}
 
 
 \section{Befehle}
 
+\subsection{Übersicht}
+
+\begin{table}[htbp]%
+	\centering
+	\caption{Übersicht über Hauptbefehle ucboard}
+	\label{tab:Comm:Cmds}
+	\begin{tabular}{ll}
+		\mytoprule
+		\verb|RESET| & Neustart ucboard \\
+		\verb|ID|	& Abfragen der Fahrzeug-ID \\
+		\verb|SID| & Setzen und Abfragen der Session-ID \\
+		\verb|TICS| & Abfrage ucboard-Zeit (Millisekunden nach (Neu)start) \\
+		\verb|STEER| & Setzen und Abfragen des (Soll-)Lenkwinkels \\
+		\verb|DRV| & Setzen und Abfragen der Fahrgeschwindigkeit \\
+		\verb|DAQ| & Datenerfassung \\
+		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{IMU}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der IMU} \\
+		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{US}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der US-Sensoren}\\
+		\mybottomrule
+	\end{tabular}
+\end{table}
+
+
+\subsection{Beschreibung}
+
+\subsubsection{RESET}
+
+Führt einen Neustart des ucboards durch.
+
+
+\begin{verbatim}
+	!RESET NOW
+\end{verbatim}
+
+
 \subsubsection{ID}
 
-Car-ID
+Zur Abfrage der Fahrzeug-ID, also der Nummer, die über die Dipschalter auf der Platine eingestellt wird.
 
-Abfrage 
 
 \begin{verbatim}
 	?ID
@@ -81,13 +146,13 @@ Abfrage
 
 \subsubsection{SID}
 
-Session-ID
+Zum Abfragen und Setzen der Session-ID. Dies ist einfach eine Zahl, die nach einem Neustart des ucboards auf 0 gesetzt wird, und der beliebige \verb|int32|-Werte gegeben werden können.
+
 
 \begin{verbatim}
 	?SID
 	:0
 \end{verbatim}
-
 
 \begin{verbatim}
 	!SID 25363
@@ -100,15 +165,19 @@ Session-ID
 \end{verbatim}
 
 
+
+
 \subsubsection{STEER}
 
+Zum Setzen und Abfragen des Soll-Lenkwinkels (Servo-Vorgabe). Der Wert muss eine Ganzzahl zwischen $-1\,000$ und $1\,000$ sein.
+
+Setzen:
 \begin{verbatim}
 	!STEER -200
 	:-200
 \end{verbatim}
 
-Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren
-
+\textcolor[rgb]{0.75,0.75,0.75}{Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren:}
 \begin{verbatim}
 	!STEER -200 -200
 	:-200
@@ -119,102 +188,145 @@ Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren
 	:ERR(1001):Msg corrupted
 \end{verbatim}
 
+Abfragen:
 \begin{verbatim}
 	?STEER
 	:-200
 \end{verbatim}
 
 
+
 \subsubsection{DRV}
 
+Zum Setzen und Abfragen der Fahrgeschwindigkeit. Der Wert muss eine Ganzzahl zwischen $-1\,000$ und 1\,000 oder \verb|OFF| sein.
+
+Setzen:
 \begin{verbatim}
 	!DRV 300
 	:300
 \end{verbatim}
 
 
-Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren
-
-
+\textcolor[rgb]{0.75,0.75,0.75}{Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren:}
 \begin{verbatim}
 	!DRV 300 300
 	:300
 \end{verbatim}
 
+
+Ausschalten des Fahrtenreglers:
+\begin{verbatim}
+	!DRV OFF
+	:OFF
+\end{verbatim}
+Der Unterschied zwischen den Werten 0 und \verb|OFF| liegt darin, dass bei \verb|OFF| der Fahrtenregler vom Fahrakku getrennt wird, also tatsächlich ausgeschaltet ist. Der Fahrtenregler wird bei Übermittlung des nächsten Sollwertes ungleich \verb|OFF| wieder eingeschaltet, jedoch dauert dies einen Moment. (Das Einschalten wird auch mit einem Piepston des Fahrtenreglers begleitet.)
+
+
+Abfragen:
 \begin{verbatim}
 	?DRV
 	:300
 \end{verbatim}
 
 
-DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeitzählung der Totmannschaltung (\bzw Tot-PC-Schaltung) neu zu starten.
+\textcolor[rgb]{0.75,0.75,0.75}{DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeitzählung der Totmannschaltung (\bzw Tot-PC-Schaltung) neu zu starten.
+}
 \begin{verbatim}
 	!DRV
 	:ok
 \end{verbatim}
 
 
+
+
 \paragraph{DMS}
 
-"`Totmannschaltung"' (Dead-man switch)
-
-Dieser Parameter gibt die Zeit in Millisekunden an, innerhalb derer eine neue DRV-Nachricht erhalten sein muss. Wird diese Zeit ohne DRV-Nachricht überschritten, so wird der Motor gestoppt. (Bei der nächsten DRV-Nachricht wird der Motor dann wieder angesteuert.)
-
+\textcolor[rgb]{0.75,0.75,0.75}{
+"`Totmannschaltung"' (Dead-man switch)\\
+\\
+Dieser Parameter gibt die Zeit in Millisekunden an, innerhalb derer eine neue DRV-Nachricht erhalten sein muss. Wird diese Zeit ohne DRV-Nachricht überschritten, so wird der Motor gestoppt, \dah der Sollwert auf 0 (aber nicht \texttt{OFF} gesetzt.) (Bei der nächsten \texttt{DRV}-Nachricht wird der Motor dann wieder angesteuert.)
+}
 \begin{verbatim}
 	!DRV ~DMS=1000
-	:1000
+	:ok
 \end{verbatim}
+\textcolor[rgb]{0.75,0.75,0.75}{
+Zum Abschalten der Sicherheitsschaltung dient der Wert \texttt{OFF}.}
 
-$-1$ bedeutet deaktiviert ("`unendlich"').
 
 
 \subsubsection{DAQ}
 
+\begin{table}[htbp]%
+	\centering
+	\caption{Signale}
+	\label{tab:Comm:DAQ:Signals}
+	\begin{tabular}{lllll}
+		\mytoprule
+		Signal & Beschreibung & Einheit & Datentyp & Länge \\
+		\mymidrule
+		\verb|AX| & Beschleunigung $x$-Richtung &  & \verb|int16_t| & 2 \\
+		\verb|AY| & Beschleunigung $y$-Richtung &  & \verb|int16_t| & 2 \\
+		\verb|AZ| & Beschleunigung $z$-Richtung &  & \verb|int16_t| & 2 \\
+		\verb|GX| & Drehrate um $x$-Achse & & \verb|int16_t| & 2 \\
+		\verb|GY| & Drehrate um $y$-Achse & & \verb|int16_t| & 2 \\
+		\verb|GZ| & Drehrate um $z$-Achse & & \verb|int16_t| & 2 \\
+		\verb|USF| & Abstand vorne & mm & \verb|uint16_t| & \\
+		\verb|USL| & Abstand links & mm & \verb|uint16_t| & \\
+		\verb|USR| & Abstand rechts & mm & \verb|uint16_t| & \\
+		\verb|VSBAT| & Spannung Systemakku & mV & \verb|uint16_t| & 2\\
+		\verb|VDBAT| & Spannung Fahrakku & mV & \verb|uint16_t| & 2\\
+		\mybottomrule
+	\end{tabular}
+\end{table}
 
-Signale:\\
-\begin{tabular}{lllll}
-	\mytoprule
-	Signal & Beschreibung & Einheit & Datentyp & Länge \\
-	\mymidrule
-	\verb|AX| & Beschleunigung $x$-Richtung &  & \verb|int16_t| & 2 \\
-	\verb|AY| & Beschleunigung $y$-Richtung &  & \verb|int16_t| & 2 \\
-	\verb|AZ| & Beschleunigung $z$-Richtung &  & \verb|int16_t| & 2 \\
-	\verb|GX| & Drehrate um $x$-Achse & & \verb|int16_t| & 2 \\
-	\verb|GY| & Drehrate um $y$-Achse & & \verb|int16_t| & 2 \\
-	\verb|GZ| & Drehrate um $z$-Achse & & \verb|int16_t| & 2 \\
-	\verb|USF| & Abstand vorne & mm & \verb|uint16_t| & \\
-	\verb|USL| & Abstand links & mm & \verb|uint16_t| & \\
-	\verb|USR| & Abstand rechts & mm & \verb|uint16_t| & \\
-	\verb|VSBAT| & Spannung Systemakku & mV & \verb|uint16_t| & 2\\
-	\verb|VDBAT| & Spannung Fahrakku & mV & \verb|uint16_t| & 2\\
-	\mybottomrule
-\end{tabular}
 
-Allgemein gilt:
 
-\begin{tabular}{lll}
-	\mytoprule
-	Datentyp & \verb|uint16_t| & \verb|int16_t| \\
-	\mymidrule
-	Keine Daten vorhanden & \verb|0xFFFF| & \verb|0x7FFF| \\
-	Messfehler & \verb|0xFFFE| & \verb|0x7FFE| \\
-	Sensorfehler & \verb|0xFFFD| & \verb|0x7FFD| \\
-	Wert zu groß  & \verb|0xFFFC| & \verb|0x7FFC| \\
-	Wert zu klein & & \verb|0x8000| \\
-	\mybottomrule
-\end{tabular}
+\begin{table}[htbp]%
+	\centering
+	\caption{}
+	\label{tab:Comm:DAQ:SpecialValues}
+	\subfloat[Binärcodierung]{%
+		\begin{tabular}{lcccccc}
+			\mytoprule
+			Datentyp & \texttt{uint32\_t} & \texttt{int32\_t} & \texttt{uint16\_t} & \texttt{int16\_t} & \texttt{uint8\_t} & \texttt{int8\_t} \\
+			\mymidrule
+			Keine Daten vorhanden & \texttt{0xFFFFFFFF} & \texttt{0x7FFFFFFF} & \texttt{0xFFFF} & \texttt{0x7FFF} & \texttt{0xFF} & \texttt{0x7F} \\
+			Messfehler & \texttt{0xFFFFFFFE} & \texttt{0x7FFFFFFE} & \texttt{0xFFFE} & \texttt{0x7FFE} & \texttt{0xFE} & \texttt{0x7E} \\
+			Sensorfehler & \texttt{0xFFFFFFFD} & \texttt{0x7FFFFFFD} & \texttt{0xFFFD} & \texttt{0x7FFD} & \texttt{0xFD} & \texttt{0x7D} \\
+			Wert zu groß oder zu klein  & \texttt{0xFFFFFFFC} & \texttt{0x7FFFFFFC} & \texttt{0xFFFC} & \texttt{0x7FFC} & \texttt{0xFC} & \texttt{0x7C} \\
+			Wert zu groß  & \texttt{0xFFFFFFFC} & \texttt{0x7FFFFFFC} & \texttt{0xFFFC} & \texttt{0x7FFC} & \texttt{0xFC} & \texttt{0x7C} \\
+			Wert zu klein & \texttt{0xFFFFFFFB} & \texttt{0x7FFFFFFB} & \texttt{0xFFFB} & \texttt{0x7FFB} & \texttt{0xFB} & \texttt{0x7B} \\
+			\mybottomrule
+		\end{tabular}}\\
+	\subfloat[Textausgabe]{%
+		\begin{tabular}{lc}
+			\mytoprule
+			 & \\
+			\mymidrule
+			Keine Daten vorhanden & \texttt{[-{}-{}-]}  \\
+			Messfehler & \texttt{[mfault]}  \\
+			Sensorfehler & \texttt{[fault]} \\
+			Wert zu groß oder zu klein & \texttt{[range]} \\
+			Wert zu groß  & \texttt{[over]}  \\
+			Wert zu klein & \texttt{[under]} \\
+			\mybottomrule
+		\end{tabular}}
+\end{table}
 
-\begin{tabular}{lll}
-	\mytoprule
-	Datentyp & \verb|uint16_t| & \verb|int16_t| \\
-	\mymidrule
-	Keine Daten vorhanden & \verb|[]| & \verb|[]| \\
-	Messfehler & \verb|undef| & \verb|undef| \\
-	Sensorfehler & \verb|fault| & \verb|fault| \\
-	Wert zu groß  & \verb|over| & \verb|over| \\
-	Wert zu klein & & \verb|under| \\
-	\mybottomrule
-\end{tabular}
+
+\textcolor[rgb]{1,0,0}{ToDo: Befehl anpassen (CHS -> CH)}
+\begin{verbatim}
+	?DAQ CH
+	:[...]
+\end{verbatim}
+
+\textcolor[rgb]{1,0,0}{ToDo:}
+\begin{verbatim}
+	?DAQ CH AX
+	:[...]
+\end{verbatim}
+
 
 
 Einzelabfrage von Werten:
@@ -246,11 +358,11 @@ Erster Rückgabewert ist Wert (Einheit siehe Tabelle), zweiter Wert ist Alter in
 
 \paragraph{Automatische Messgruppen}
 
-Es stehen zehn automatisierbare Messgruppen zur Verfügung. In diesen können verschiedene Sensorwerte zusammengefasst werden.
+Es stehen zehn parametrierbare Messgruppen zur Verfügung. In diesen können verschiedene Sensorwerte zusammengefasst werden.
 
-Paket 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{100}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
+Paket 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{10}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
 \begin{verbatim}
-	!DAQ MKPKG 1 ~ALL=100 ~B64 ~CRC16 _TIC USF USL USR 
+	!DAQ MKPKG 1 ~ALL=100 ~B64 ~CRC _TIC USF USL USR 
 \end{verbatim}
 
 Paket 2 enthält die Spannungen der beiden Akkus, wobei immer eine Nachricht verschickt wird, sobald eine neue Spannung gemessen ist.
@@ -258,7 +370,7 @@ Paket 2 enthält die Spannungen der beiden Akkus, wobei immer eine Nachricht ver
 	!DAQ MKPKG 2 ~ANY VSBAT VDBAT 
 \end{verbatim}
 
-Paket 3 enthält die Beschleunigungswerte in der Ebene mit der Gierrate. Die Daten werden alle \valunit{10}{ms} verschickt. Dabei werden alle innerhalb der \valunit{10}{ms} erfassten Daten gemittelt.
+Paket 3 enthält die Beschleunigungswerte in der Ebene und die Gierrate. Die Daten werden alle \valunit{10}{ms} verschickt. Dabei werden alle innerhalb der \valunit{10}{ms} erfassten Daten gemittelt.
 \begin{verbatim}
 	!DAQ MKPKG 3 ~TS=10 ~AVG ~B64 ~CRC16 AX AY GZ 
 \end{verbatim}
@@ -266,59 +378,69 @@ Paket 3 enthält die Beschleunigungswerte in der Ebene mit der Gierrate. Die Dat
 
 Optionen:
 \begin{itemize}
-	\item \verb+~ALL+: Sendet, wenn alle Daten vorhanden sind
-	\item \verb+~ANY+: Sendet, wenn ein Datum vorhanden ist
-	\item \verb+~B64+: Nachricht wird base64-codiert (ohne Padding) 
-	\item \verb+~CRC16+: CRC16-Prüfsumme
-	\item \verb+~TS+: Abtastzeit
-	\item \verb+~AVG+: Mittelung, wenn TS größer als Sensorabtastzeit ist. (TS muss ein ganzes Vielfaches der Sensorabtastzeit sein.)
+	\item \verb+~ALL[=maxwait]+: Sendet, wenn alle Daten vorhanden sind. Wenn maxwait gegeben ist, dann wird nach dem ersten neuen Wert maximal diese Zeit in Millisekunden gewartet, bis die Daten verschickt werden.\footnote{Dies ist \zB für die US-Sensoren gedacht, deren Daten meist an nacheinander liegenden Zeitschritten ankommen.}
+	\item \verb+~ANY+: Sendet, wenn ein neues Datum vorhanden ist.
+	\item \verb+~ENC=B64|HEX|ASCII+: Nachricht wird base64-codiert (ohne Padding), Hex-codiert oder Ascii-codiert. ASCII meint hierbei "`lesbaren Text"'. Standardwert ist ASCII.
+	\item \verb+~CRC+: CRC16-Prüfsumme
+	\item \verb+~TS=Ts+: \textcolor[rgb]{0.75,0.75,0.75}{Abtastzeit in Millisekunden. (Muss ein ganzes Vielfaches aller Kanäle des Paketes sein.)}
+	\item \verb+~AVG[=Ta]+: \textcolor[rgb]{0.75,0.75,0.75}{Mittelung über Ta. Ta darf dabei maximal TS sein. Wenn kein Ta angegeben ist, dann wird Ta = Ts gesetzt.}
 \end{itemize}
 
 
+\begin{table}[htbp]%
+	\centering
+	\caption{}
+	\label{tab:Comm:DAQ:SpecialChannels}
+	\begin{tabular}{lp{10cm}lll}
+		\mytoprule
+		Signal & Beschreibung & & Datentyp & Länge \\
+		\mymidrule
+		\verb|_TIC| & ucboard-Zeit (tics) der Erfassung des ersten Datums & ms & \verb|uint32_t| & 4 \\
+		\verb|_TIC16| & die niederwertigen \valunit{16}{bits} von \verb|_TIC| & ms & \verb|uint16_t| & 2 \\
+		\verb|_TIC8| & die niederwertigen \valunit{8}{bits} von \verb|_TIC| & ms & \verb|uint8_t| & 1 \\
+		\verb|_DTICS| & Delta der ucboard-Zeit zwischen ersten und letztem Datum & ms & \verb|uint32_t| & 4 \\
+		\verb|_DTICS16| & Delta der ucboard-Zeit zwischen ersten und letztem Datum, Maximalwert 65\,535 & ms & \verb|uint16_t| & 2 \\
+		\verb|_DTICS8| & Delta der ucboard-Zeit zwischen ersten und letztem Datum, Maximalwert 255 (sättigend) & ms & \verb|uint8_t| & 1 \\
+		\mybottomrule
+	\end{tabular}
+	\textcolor[rgb]{1,0,0}{ToDo: Implementierung DTICS16/8 an Tabelle anpassen.}
+\end{table}
 
-\begin{tabular}{lllll}
-	\mytoprule
-	Signal & Beschreibung & & Datentyp & Länge \\
-	\mymidrule
-	\verb|_TIC| & ucboard-Zeit (tics) der Erfassung des ersten Datums & tics & \verb|uint32_t| & 4 \\
-	\verb|_STIC| & die niederwertigen \valunit{16}{bits} von \verb|_TIC| & tics & \verb|uint16_t| & 2 \\
-	\verb|_SSTIC| & die niederwertigen \valunit{8}{bits} von \verb|_TIC| & tics & \verb|uint8_t| & 1 \\
-	\verb|_DTICS| & Delta der ucboard-Zeit zwischen ersten und letztem Datum & & \verb|int16_t| & 2 \\
-	\mybottomrule
-\end{tabular}
 
-
-
+\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
-	!DAQ SHOWPKGS
+	?DAQ PKG 
 	:[...]
 \end{verbatim}
 
+
+\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
-	!DAQ SHOWPKG 1
+	?DAQ PKG 1
 	:[...]
 \end{verbatim}
 
+
+\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
-	!DAQ RMPKG 2
+	!DAQ PKG 1 
 	:ok
 \end{verbatim}
 
 
-\begin{verbatim}
-	!DAQ ACTPKG 1
-	:ok
-\end{verbatim}
-
+\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
 	!DAQ DEACTPKG 1
 	:ok
 \end{verbatim}
 
+
+
 \begin{verbatim}
 	!DAQ START
 	:ok
 \end{verbatim}
+
 
 \begin{verbatim}
 	!DAQ STOP
