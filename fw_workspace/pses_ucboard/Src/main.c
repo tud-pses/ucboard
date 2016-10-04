@@ -174,8 +174,10 @@ int main(void)
   spimgr_init();
   i2cmgr_init();
 
+  stopwatch_wait_ms(250);
   imu_init();
   us_init();
+
 
   car_init();
   hal503_init();
