@@ -16,14 +16,40 @@
 
 #include "ucboard_hwfcts.h"
 
+#include "common_fcts.h"
+
+#include "daq.h"
+#include "systick.h"
+
+static uint32_t f_uCurDeltaT[2] = {0, 0};
+static bool f_bCurState[2] = {false, false};
+static uint8_t f_uCurReadDS = 1;
+
+static uint8_t f_daqchDT = 0xFF;
+static uint8_t f_daqchVal = 0xFF;
+static uint8_t f_daqchDT8 = 0xFF;
+
+
 void hal503_init()
 {
 	GPIO_InitTypeDef GPIO_InitStruct;
 
 	GPIO_InitStruct.Pin = GPIO_PIN_0;
-	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
 	GPIO_InitStruct.Pull = GPIO_PULLUP;
 	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+	HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
+	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+	SYSCFG->EXTICR[0] = SYSCFG_EXTICR1_EXTI0_PD;
+
+	EXTI->PR = 1;
+	EXTI->IMR |= 1;
+
+	daq_provideChannel("HALL_DT", "delta time", "0.1 ms", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqchDT);
+	daq_provideChannel("HALL_VAL", "delta time", "bool", DAQVALUETYPE_UINT8, DAQSAMPLINGTIME_UNDEF, & f_daqchVal);
+	daq_provideChannel("HALL_DT8", "delta time full rev.", "1 ms", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqchDT8);
 
 	return;
 }
@@ -31,37 +57,64 @@ void hal503_init()
 
 void hal503_do_systick()
 {
-	static int8_t s_iState = -1;
-	static uint32_t s_tic = 0;
+	static uint8_t s_uLastReadDS = 1;
 
-	int8_t iNewState;
+	static uint32_t s_uCumDT = 0;
+	static uint8_t s_uCumCnt = 0;
 
-
-	if (GPIOD->IDR & GPIO_PIN_0)
+	if (s_uLastReadDS != f_uCurReadDS)
 	{
-		iNewState = 1;
-	}
-	else
-	{
-		iNewState = 0;
-	}
+		uint8_t ds = f_uCurReadDS;
 
-	if (s_iState != iNewState)
-	{
-		s_iState = iNewState;
+		uint32_t dt = f_uCurDeltaT[ds];
 
-		//display_println_int("hal: ", s_iState);
+		daq_setChannelValue_uint16(f_daqchDT, DAQVALUEMOD_OK, GETSYSTICS(), SATURATION_U(dt / 100, 0xFFFF));
+		daq_setChannelValue_uint8(f_daqchVal, DAQVALUEMOD_OK, GETSYSTICS(), f_bCurState[ds]);
 
-		if (s_iState == 1)
+		s_uCumDT += f_uCurDeltaT[ds];
+		s_uCumCnt++;
+
+		if (s_uCumCnt == 8)
 		{
-			if (s_tic != 0)
-			{
-				//display_println_uint("hal toc [ms]: ", stopwatch_getDeltaTime_us(s_tic) / 1000);
-			}
+			daq_setChannelValue_uint16(f_daqchDT8, DAQVALUEMOD_OK, GETSYSTICS(), SATURATION_U(s_uCumDT / 100, 0xFFFF));
 
-			s_tic = stopwatch_getTic();
+			s_uCumDT = 0;
+			s_uCumCnt = 0;
+		}
+
+		s_uLastReadDS = f_uCurReadDS;
+	}
+
+	return;
+}
+
+
+void EXTI0_IRQHandler(void)
+{
+	static uint32_t s_tic = 0;
+	uint32_t toc;
+
+	toc = stopwatch_getTic();
+
+	if (s_tic > 0)
+	{
+		if (f_uCurReadDS == 1)
+		{
+			f_uCurDeltaT[0] = toc - s_tic;
+			f_bCurState[0] = ((GPIOD->IDR & 1) == 1);
+			f_uCurReadDS = 0;
+		}
+		else
+		{
+			f_uCurDeltaT[1] = toc - s_tic;
+			f_bCurState[1] = ((GPIOD->IDR & 1) == 1);
+			f_uCurReadDS = 1;
 		}
 	}
+
+	s_tic = toc;
+
+	EXTI->PR = 1;
 
 	return;
 }
