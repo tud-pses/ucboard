@@ -124,6 +124,7 @@ static Buffer_t f_bufRx = {f_acRxBuf,
 static CommStreamFctPtr f_streams[MAXSTREAMS] = {NULL};
 static CommStreamFctPtr f_priorityStream = NULL;
 
+CommStreamFctPtr f_pRespStream = NULL;
 
 typedef enum EnUART_
 {
@@ -345,8 +346,9 @@ void comm_init()
 void comm_do()
 {
 	static bool s_bIncompleteStreamMsg = false;
-	static uint8_t s_uCurStreamID = 0;
 	static bool s_bIncompletePriorityStreamMsg = false;
+	static bool s_bIncompleteRespStreamMsg = false;
+	static uint8_t s_uCurStreamID = 0;
 
 	if (f_ePrimaryUART == UART_NONE)
 	{
@@ -380,12 +382,22 @@ void comm_do()
 	{
 		Buffer_t* pbufPrimary = NULL;
 
-		if (s_bIncompletePriorityStreamMsg || s_bIncompleteStreamMsg)
+		if (s_bIncompleteRespStreamMsg || s_bIncompletePriorityStreamMsg || s_bIncompleteStreamMsg)
 		{
 			uint16_t nCnt;
 			bool bMsgComplete;
 
-			if (s_bIncompletePriorityStreamMsg)
+			if (s_bIncompleteRespStreamMsg)
+			{
+				f_pRespStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				s_bIncompleteRespStreamMsg = !bMsgComplete;
+
+				if (bMsgComplete)
+				{
+					f_pRespStream = NULL;
+				}
+			}
+			else if (s_bIncompletePriorityStreamMsg)
 			{
 				f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
 				s_bIncompletePriorityStreamMsg = !bMsgComplete;
@@ -418,13 +430,20 @@ void comm_do()
 			}
 			else
 			{
-				if (f_priorityStream != NULL)
+				res = false;
+
+				if (f_pRespStream != NULL)
+				{
+					res = f_pRespStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				}
+
+				if (res)
+				{
+					s_bIncompleteRespStreamMsg = !bMsgComplete;
+				}
+				else if (f_priorityStream != NULL)
 				{
 					res = f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
-				}
-				else
-				{
-					res = false;
 				}
 
 				if (res)
@@ -783,11 +802,15 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 						uint16_t nRespLen = 0;
 
 						callback(eCmdSpec, (char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx),
-								(char*)f_bufTxResp.start, &nRespLen, &s_pDirectCallback);
+								(char*)f_bufTxResp.start, &nRespLen, &f_pRespStream, &s_pDirectCallback);
 
-						f_bufTxResp.start[nRespLen] = EOT_TX;
-						f_bufTxResp.head = f_bufTxResp.start + nRespLen + 1;
-						f_bufTxResp.tail = f_bufTxResp.start;
+						if (nRespLen < 0xFFFF)
+						{
+							f_bufTxResp.start[nRespLen] = EOT_TX;
+							f_bufTxResp.head = f_bufTxResp.start + nRespLen + 1;
+							f_bufTxResp.tail = f_bufTxResp.start;
+						}
+						// else: f_pRespStream should be not NULL and the response will be managed over it.
 					}
 				}
 
@@ -825,11 +848,14 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 				BUFFER_PUSH(f_bufRx, '\0');
 
 				((CommDirectFctPtr)s_pDirectCallback)((char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx),
-						(char*)f_bufTxResp.start, &nRespLen, &s_pDirectCallback);
+						(char*)f_bufTxResp.start, &nRespLen, &f_pRespStream, &s_pDirectCallback);
 
-				f_bufTxResp.start[nRespLen] = EOT_TX;
-				f_bufTxResp.head = f_bufTxResp.start + nRespLen + 1;
-				f_bufTxResp.tail = f_bufTxResp.start;
+				if (nRespLen < 0xFFFF)
+				{
+					f_bufTxResp.start[nRespLen] = EOT_TX;
+					f_bufTxResp.head = f_bufTxResp.start + nRespLen + 1;
+					f_bufTxResp.tail = f_bufTxResp.start;
+				}
 
 
 				if (s_pDirectCallback == NULL)

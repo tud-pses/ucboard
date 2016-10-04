@@ -14,10 +14,12 @@ static uint32_t f_sid = 0;
 
 bool cmd_sessionid(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
 					void* pDirectCallback)
 {
 	SplittedStr_t sstr;
 
+	*(CommStreamFctPtr*)pRespStream = 0;
 	*(CommDirectFctPtr*)pDirectCallback = 0;
 
 	strsplit(&sstr, acData, ' ', '"', 10);

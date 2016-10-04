@@ -53,8 +53,8 @@ void car_init()
 	initPWM();
 	initBats();
 
-	daq_provideChannel("VSBAT", "Voltage drive battery", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqDrvBatVoltage);
-	daq_provideChannel("VDBAT", "Voltage car battery", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqCarBatVoltage);
+	daq_provideChannel("VDBAT", "drive battery voltage", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqDrvBatVoltage);
+	daq_provideChannel("VSBAT", "system battery voltage", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqCarBatVoltage);
 
 	return;
 }
@@ -249,11 +249,13 @@ static void initBats()
 
 bool cmd_vout12v(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
 					void* pDirectCallback)
 {
 	SplittedStr_t sstr;
 
-	*(CommDirectFctPtr*)pDirectCallback = 0;
+	*(CommStreamFctPtr*)pRespStream = NULL;
+	*(CommDirectFctPtr*)pDirectCallback = NULL;
 
 	strsplit(&sstr, acData, ' ', '"', 10);
 
@@ -344,11 +346,13 @@ bool cmd_vout12v(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 
 //bool cmd_drvbat(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 //					char* acRespData, uint16_t* pnRespLen,
+//					void* pRespStream,
 //					void* pDirectCallback)
 //{
 //	SplittedStr_t sstr;
 //
-//	*(CommDirectFctPtr*)pDirectCallback = 0;
+//	*(CommStreamFctPtr*)pRespStream = NULL;
+//	*(CommDirectFctPtr*)pDirectCallback = NULL;
 //
 //	strsplit(&sstr, acData, ' ', '"', 10);
 //
@@ -439,11 +443,13 @@ bool cmd_vout12v(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 
 bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
 					void* pDirectCallback)
 {
 	SplittedStr_t sstr;
 
-	*(CommDirectFctPtr*)pDirectCallback = 0;
+	*(CommStreamFctPtr*)pRespStream = NULL;
+	*(CommDirectFctPtr*)pDirectCallback = NULL;
 
 	strsplit(&sstr, acData, ' ', '"', 10);
 
@@ -560,11 +566,13 @@ bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 
 bool cmd_steer(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
 					void* pDirectCallback)
 {
 	SplittedStr_t sstr;
 
-	*(CommDirectFctPtr*)pDirectCallback = 0;
+	*(CommStreamFctPtr*)pRespStream = NULL;
+	*(CommDirectFctPtr*)pDirectCallback = NULL;
 
 	strsplit(&sstr, acData, ' ', '"', 10);
 

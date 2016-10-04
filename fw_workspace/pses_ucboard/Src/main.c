@@ -977,11 +977,13 @@ void Error_Handler(void)
 
 bool cmd_reset(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
 					void* pDirectCallback)
 {
 	SplittedStr_t sstr;
 
-	*(CommDirectFctPtr*)pDirectCallback = 0;
+	*(CommStreamFctPtr*)pRespStream = NULL;
+	*(CommDirectFctPtr*)pDirectCallback = NULL;
 
 	strsplit(&sstr, acData, ' ', '"', 10);
 

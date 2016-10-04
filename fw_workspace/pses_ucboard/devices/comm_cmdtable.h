@@ -15,10 +15,12 @@
 #define COMMCMDFCT_ARGS 			EnCmdSpec_t eSpec, \
 										char* acData, uint16_t nLen,\
 										char* acRespData, uint16_t* pnRespLen,\
+										void* pRespStream,\
 										void* pDirectCallback
 
 #define COMMDIRECTFCT_ARGS 			char* acData, uint16_t nLen, \
 										char* acRespData, uint16_t* pnRespLen,\
+										void* pRespStream,\
 										void* pDirectCallback
 
 

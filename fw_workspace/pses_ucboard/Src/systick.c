@@ -43,6 +43,8 @@ void HAL_SYSTICK_Callback(void)
 
 	++f_uTic;
 
+	// uint32_t tic = stopwatch_getTic();
+
 	if (BUTTON_A_ISPRESSED())
 	{
 	}
@@ -71,9 +73,7 @@ void HAL_SYSTICK_Callback(void)
 
 	if ( (f_uTic % 1000) == 0)
 	{
-		//us_do_systick();
-		//display_println_uint("us: ", 1);
-		//display_println_uint("us: ", us_getVal());
+		//display_println_uint("systick [us]: ", stopwatch_getDeltaTime_us(tic));
 	}
 
 	if ( (f_uTic % 500) == 0 )
@@ -87,11 +87,13 @@ void HAL_SYSTICK_Callback(void)
 
 bool cmd_tics(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
 					void* pDirectCallback)
 {
 	SplittedStr_t sstr;
 
-	*(CommDirectFctPtr*)pDirectCallback = 0;
+	*(CommStreamFctPtr*)pRespStream = NULL;
+	*(CommDirectFctPtr*)pDirectCallback = NULL;
 
 	strsplit(&sstr, acData, ' ', '"', 10);
 

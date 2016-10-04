@@ -54,9 +54,9 @@ void comm_displayArgs(CommCmdArgs_t* args);
 
 
 
-typedef bool (*CommCmdFctPtr) (EnCmdSpec_t, char*, uint16_t, char*, uint16_t*, void*);
+typedef bool (*CommCmdFctPtr) (EnCmdSpec_t, char*, uint16_t, char*, uint16_t*, void*, void*);
 
-typedef bool (*CommDirectFctPtr) (char*, uint16_t, char*, uint16_t*, void*);
+typedef bool (*CommDirectFctPtr) (char*, uint16_t, char*, uint16_t*, void*, void*);
 
 typedef bool (*CommStreamFctPtr) (char*, uint16_t*, bool*, uint16_t);
 

@@ -736,9 +736,9 @@ char* getChString_returnend(char* buf, char* const bufend, DAQChannel_t* ch)
 
 	buf = strcpyfixedwidth_returnend(buf, bufend, ch->name, 10);
 	buf = strcpy_returnend(buf, bufend, " | ");
-	buf = strcpyfixedwidth_returnend(buf, bufend, ch->desc, 20);
+	buf = strcpyfixedwidth_returnend(buf, bufend, ch->desc, 30);
 	buf = strcpy_returnend(buf, bufend, " | ");
-	buf = strcpyfixedwidth_returnend(buf, bufend, ch->unit, 10);
+	buf = strcpyfixedwidth_returnend(buf, bufend, ch->unit, 15);
 	buf = strcpy_returnend(buf, bufend, " | ");
 	buf = strcpyfixedwidth_returnend(buf, bufend, type, 4);
 
@@ -1416,6 +1416,55 @@ uint8_t* getGetPkgDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 	return (buf == bufstart) ? buf : buf - 1;
 }
 
+static uint8_t f_uChListOutputCurCh = 0;
+
+static bool chlist_streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
+{
+	char* const bufend = buf + nMaxCnt - 1;
+	char* const bufstart = buf;
+
+	if (nMaxCnt < 12)
+	{
+		*pbMsgComplete = false;
+		*pnCnt = 0;
+		return true;
+	}
+
+	if (f_uChListOutputCurCh == 0)
+	{
+		*buf++ = SOT_RXRESP;
+
+		utoa(f_nChs, buf, 10);
+
+		while (*++buf != '\0')
+		{
+			// find end of string
+		}
+		*buf++ = '\n';  // replace \0 with \n
+	}
+
+	if (f_uChListOutputCurCh < f_nChs)
+	{
+		buf = getChString_returnend(buf, bufend, &f_chs[f_uChListOutputCurCh]);
+		*buf++ = '\n';	// replace \0 with \n
+
+		f_uChListOutputCurCh++;
+	}
+
+	*pnCnt = buf - bufstart;
+
+	if (f_uChListOutputCurCh == f_nChs)
+	{
+		*pbMsgComplete = true;
+	}
+	else
+	{
+		*pbMsgComplete = false;
+	}
+
+	return true;
+}
+
 
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
 {
@@ -1493,9 +1542,11 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 
 bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
 					void* pDirectCallback)
 {
-	*(CommDirectFctPtr*)pDirectCallback = 0;
+	*(CommStreamFctPtr*)pRespStream = NULL;
+	*(CommDirectFctPtr*)pDirectCallback = NULL;
 
 	CommCmdArgs_t args;
 	char* subcmd;
@@ -1530,10 +1581,11 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 		}
 		else
 		{
-			char* strend;
+			f_uChListOutputCurCh = 0;
 
-			strend = createChsList_returnend(acRespData, acRespData + TXMAXMSGLEN, SOT_RXRESP);
-			*pnRespLen = strend - acRespData;
+			*(CommStreamFctPtr*)pRespStream = chlist_streamout;
+
+			*pnRespLen = 0xFFFF;
 		}
 	}
 	else if (strcmpi(subcmd, "GET") == STRCMPRES_EQUAL)
