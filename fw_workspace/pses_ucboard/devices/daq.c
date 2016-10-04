@@ -1125,8 +1125,8 @@ char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
 				case SPECIALCHANNEL_TIC8: val = mintics & 0xFF ; break;
 
 				case SPECIALCHANNEL_DTICS: break;
-				case SPECIALCHANNEL_DTICS16: val &= 0xFFFF ; break;
-				case SPECIALCHANNEL_DTICS8: val &= 0xFF ; break;
+				case SPECIALCHANNEL_DTICS16: val = SATURATION_U(val, 0xFFFF); break;
+				case SPECIALCHANNEL_DTICS8: val = SATURATION_U(val, 0xFF); break;
 			}
 
 			buf = strcpy_returnend(buf, bufend, utoa(val, tmp, 10));
@@ -1208,10 +1208,12 @@ uint8_t* getGetPkgDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 					break;
 
 				case SPECIALCHANNEL_DTICS16:
+					val = SATURATION_U(val, 0xFFFF);
 					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&val) + 1;
 					break;
 
 				case SPECIALCHANNEL_DTICS8:
+					val = SATURATION_U(val, 0xFF);
 					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&val) + 1;
 					break;
 			}
