@@ -33,8 +33,18 @@ static USdevice_t f_usdevices[NDEVICES];
 static USbroadcaster_t f_usbroadcaster;
 
 
+// Conversion sound run time T into distance d:
+// c = 343,2 m/s
+// s = c * T
+// d = 0.5 * s = 171.6 m/s * T
+//
+// d [0.1 mm] = 1.716 * T [us]
+//
+// 56230 / 32768 = 1.716003
 
-#define CONV_VALUE(raw) ((uint16_t)( ((uint32_t)(raw) * 11246) / 65536 ))
+
+
+#define CONV_VALUE(raw) ( (raw > 38190) ? 0xFFFF : (uint16_t)( ((uint32_t)(raw) * 56230) / 32768 ) )
 
 
 
@@ -49,9 +59,9 @@ void us_init()
 		usonic_init(&f_usdevices[i], USPORT, f_uADDRESSES[i]);
 	}
 
-	daq_provideChannel("USL", "ultrasonic left distance", "mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[0]);
-	daq_provideChannel("USF", "ultrasonic front distance", "mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[1]);
-	daq_provideChannel("USR", "ultrasonic right distance", "mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[2]);
+	daq_provideChannel("USL", "ultrasonic left distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[0]);
+	daq_provideChannel("USF", "ultrasonic front distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[1]);
+	daq_provideChannel("USR", "ultrasonic right distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[2]);
 
 	return;
 }
