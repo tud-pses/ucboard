@@ -271,9 +271,9 @@ Zum Abschalten der Sicherheitsschaltung dient der Wert \texttt{OFF}.}
 		\verb|GX| & Drehrate um $x$-Achse & & \verb|int16_t| & 2 \\
 		\verb|GY| & Drehrate um $y$-Achse & & \verb|int16_t| & 2 \\
 		\verb|GZ| & Drehrate um $z$-Achse & & \verb|int16_t| & 2 \\
-		\verb|USF| & Abstand vorne & mm & \verb|uint16_t| & \\
-		\verb|USL| & Abstand links & mm & \verb|uint16_t| & \\
-		\verb|USR| & Abstand rechts & mm & \verb|uint16_t| & \\
+		\verb|USF| & Abstand vorne & \valunit{0,1}{mm} & \verb|uint16_t| & 2 \\
+		\verb|USL| & Abstand links & \valunit{0,1}{mm} & \verb|uint16_t| & 2 \\
+		\verb|USR| & Abstand rechts & \valunit{0,1}{mm} & \verb|uint16_t| & 2 \\
 		\verb|VSBAT| & Spannung Systemakku & mV & \verb|uint16_t| & 2\\
 		\verb|VDBAT| & Spannung Fahrakku & mV & \verb|uint16_t| & 2\\
 		\mybottomrule
@@ -315,9 +315,8 @@ Zum Abschalten der Sicherheitsschaltung dient der Wert \texttt{OFF}.}
 \end{table}
 
 
-\textcolor[rgb]{1,0,0}{ToDo: Befehl anpassen (CHS -> CH)}
 \begin{verbatim}
-	?DAQ CH
+	?DAQ CHS
 	:[...]
 \end{verbatim}
 
@@ -362,17 +361,17 @@ Es stehen zehn parametrierbare Messgruppen zur Verfügung. In diesen können ver
 
 Paket 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{10}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
 \begin{verbatim}
-	!DAQ MKPKG 1 ~ALL=100 ~B64 ~CRC _TIC USF USL USR 
+	!DAQ GRP 1 ~ALL=100 ~ENC=B64 ~CRC _TIC USF USL USR 
 \end{verbatim}
 
 Paket 2 enthält die Spannungen der beiden Akkus, wobei immer eine Nachricht verschickt wird, sobald eine neue Spannung gemessen ist.
 \begin{verbatim}
-	!DAQ MKPKG 2 ~ANY VSBAT VDBAT 
+	!DAQ GRP 2 ~ANY VSBAT VDBAT 
 \end{verbatim}
 
 Paket 3 enthält die Beschleunigungswerte in der Ebene und die Gierrate. Die Daten werden alle \valunit{10}{ms} verschickt. Dabei werden alle innerhalb der \valunit{10}{ms} erfassten Daten gemittelt.
 \begin{verbatim}
-	!DAQ MKPKG 3 ~TS=10 ~AVG ~B64 ~CRC16 AX AY GZ 
+	!DAQ GRP 3 ~TS=10 ~AVG ~ENC=B64 ~CRC AX AY GZ 
 \end{verbatim}
 
 
@@ -403,37 +402,42 @@ Optionen:
 		\verb|_DTICS8| & Delta der ucboard-Zeit zwischen ersten und letztem Datum, Maximalwert 255 (sättigend) & ms & \verb|uint8_t| & 1 \\
 		\mybottomrule
 	\end{tabular}
-	\textcolor[rgb]{1,0,0}{ToDo: Implementierung DTICS16/8 an Tabelle anpassen.}
 \end{table}
 
 
 \textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
-	?DAQ PKG 
+	?DAQ GRPS 
 	:[...]
 \end{verbatim}
 
 
 \textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
-	?DAQ PKG 1
+	?DAQ GRP 1
 	:[...]
 \end{verbatim}
 
 
 \textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
-	!DAQ PKG 1 
+	!DAQ GRP 1 ~DELETE
 	:ok
 \end{verbatim}
 
 
 \textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
-	!DAQ DEACTPKG 1
+	!DAQ GRP 1 ~DEACTIVATE
 	:ok
 \end{verbatim}
 
+
+\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
+\begin{verbatim}
+	!DAQ GRP 1 ~ACTIVATE
+	:ok
+\end{verbatim}
 
 
 \begin{verbatim}
