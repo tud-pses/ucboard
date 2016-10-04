@@ -9,7 +9,11 @@
 #include "encoding.h"
 
 
-#define ENCODE_HALFBYTE_HEX(hb) ( ((hb) <= 9) ? ((hb) + '0') : ((hb) - 10 + 'A') )
+static const char HEXCODETABLE[] = "0123456789ABCDEF";
+
+#define ENCODE_HALFBYTE_HEX(hb) (HEXCODETABLE[hb])
+
+//#define ENCODE_HALFBYTE_HEX(hb) ( ((hb) <= 9) ? ((hb) + '0') : ((hb) - 10 + 'A') )
 
 
 char* encodeHEX_returnend(char* target, char * const targetend, const uint8_t* source, uint16_t sourcecnt)
@@ -33,11 +37,15 @@ char* encodeHEX_returnend(char* target, char * const targetend, const uint8_t* s
 }
 
 
-#define ENCODE_6BITS_B64(b) ( ((b) <= 25) ? ((b) + 'A') : \
-									( ((b) <= 51) ? ((b) - 26 + 'a') : \
-									( ((b) <= 61) ? ((b) - 52 + '0') : \
-									( ((b) == 62) ? '+' : \
-									'/' ))) )
+static const char B64CODETABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+//#define ENCODE_6BITS_B64(b) ( ((b) <= 25) ? ((b) + 'A') : \_
+//									( ((b) <= 51) ? ((b) - 26 + 'a') : \_
+//									( ((b) <= 61) ? ((b) - 52 + '0') : \_
+//									( ((b) == 62) ? '+' : \_
+//									'/' ))) )
+
+#define ENCODE_6BITS_B64(b) (B64CODETABLE[b])
 
 
 char* encodeB64woPadding_returnend(char* target, char * const targetend, const uint8_t* source, uint16_t sourcecnt)
@@ -48,7 +56,6 @@ char* encodeB64woPadding_returnend(char* target, char * const targetend, const u
 
 	if ( (targetend - target + 1) < (4 * sourcecnt_3_ceil + 1) )
 	{
-		display_println("oops");
 		return target;
 	}
 
@@ -108,4 +115,3 @@ char* encodeB64woPadding_returnend(char* target, char * const targetend, const u
 
 	return target;
 }
-
