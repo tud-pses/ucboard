@@ -38,8 +38,8 @@ typedef struct DAQChannel_
 } DAQChannel_t;
 
 
-#define NMAXPKGCHS	10
-#define NMAXPKGS	10
+#define NMAXGRPCHS	10
+#define NMAXGRPS	10
 
 typedef enum DAQSampling_
 {
@@ -61,8 +61,8 @@ typedef struct DAQPkg_
 {
 	bool bActive;
 	uint8_t nchs;
-	uint8_t chs[NMAXPKGCHS];
-	uint32_t prevupdatetics[NMAXPKGCHS];
+	uint8_t chs[NMAXGRPCHS];
+	uint32_t prevupdatetics[NMAXGRPCHS];
 	DAQSampling_t eSampling;
 	uint32_t uTs;
 	uint32_t uSkip;
@@ -78,7 +78,7 @@ typedef struct DAQPkg_
 
 
 static bool f_bStarted = false;
-static DAQPkg_t f_pkgs[NMAXPKGS];
+static DAQPkg_t f_pkgs[NMAXGRPS];
 
 
 #include "ARingbuffer.h"
@@ -317,7 +317,7 @@ void daq_init()
 	}
 
 
-	for (uint8_t i = 0; i < NMAXPKGS; ++i)
+	for (uint8_t i = 0; i < NMAXGRPS; ++i)
 	{
 		f_pkgs[i].bActive = false;
 	}
@@ -347,7 +347,7 @@ void daq_do_systick()
 {
 	if (f_bStarted)
 	{
-		for (uint8_t p = 0; p < NMAXPKGS; ++p)
+		for (uint8_t p = 0; p < NMAXGRPS; ++p)
 		{
 			if (f_pkgs[p].bActive == false)
 			{
@@ -434,7 +434,7 @@ void daq_do_systick()
 
 				uint32_t maxtic = 0;
 				uint32_t mintic = 0xFFFFFFFF;
-				bool abSendChValue[NMAXPKGCHS];
+				bool abSendChValue[NMAXGRPCHS];
 
 				for (uint8_t c = 0; c < pkg->nchs; ++c)
 				{
@@ -803,7 +803,7 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 	if (args->nArgs < 2)
 	{
 		*pErrCode = ERRCODE_COMM_WRONGUSAGE;
-		*pszError = "Usage: !DAQ PKG pkgid args";
+		*pszError = "Usage: !DAQ GRP pkgid args";
 
 		return;
 	}
@@ -818,7 +818,7 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 
 	int readPkgID = atoi(args->args[0]);
 
-	if ( (readPkgID < 1) || (readPkgID > NMAXPKGS) )
+	if ( (readPkgID < 1) || (readPkgID > NMAXGRPS) )
 	{
 		*pErrCode = ERRCODE_DAQ_INVALIDPACKAGE;
 		*pszError = "Invalid package-ID!";
@@ -1559,14 +1559,14 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			}
 		}
 	}
-	else if (strcmpi(subcmd, "PKG") == STRCMPRES_EQUAL)
+	else if (strcmpi(subcmd, "GRP") == STRCMPRES_EQUAL)
 	{
 		if (eSpec == CMDSPEC_SET)
 		{
 			if (args.nArgs < 2)
 			{
 				eError = ERRCODE_COMM_WRONGUSAGE;
-				szError = "Usage: !DAQ PKG pkgid args";
+				szError = "Usage: !DAQ GRP pkgid args";
 			}
 			else
 			{
@@ -1587,7 +1587,7 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			if (args.nArgs != 1)
 			{
 				eError = ERRCODE_COMM_WRONGUSAGE;
-				szError = "Usage: ?DAQ PKG pkgid";
+				szError = "Usage: ?DAQ GRP pkgid";
 			}
 			else
 			{
@@ -1645,7 +1645,7 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 	else
 	{
 		eError = ERRCODE_COMM_WRONGUSAGE;
-		szError = "Usage: Possible subcommands: GET (?), START (!), STOP (!), CHS (?), PKG (!/?)!";
+		szError = "Usage: Possible subcommands: GET (?), START (!), STOP (!), CHS (?), GRP (!/?)!";
 	}
 
 	if (eError != ERRCODE_NOERR)
