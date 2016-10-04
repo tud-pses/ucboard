@@ -53,8 +53,8 @@ void car_init()
 	initPWM();
 	initBats();
 
-	daq_provideChannel("VDRV", "Voltage drive battery", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqDrvBatVoltage);
-	daq_provideChannel("VCAR", "Voltage car battery", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqCarBatVoltage);
+	daq_provideChannel("VSBAT", "Voltage drive battery", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqDrvBatVoltage);
+	daq_provideChannel("VDBAT", "Voltage car battery", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqCarBatVoltage);
 
 	return;
 }
