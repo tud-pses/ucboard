@@ -104,7 +104,7 @@ void car_do_systick()
 				//display_println_uint("VDrv: ", f_uDrvBatVoltage);
 
 				s_eVoltageMeasState = BATVOLTAGEMEASSTATE_CARBATCONNECTED;
-				s_uVoltageStateDownCnt = 1900;
+				s_uVoltageStateDownCnt = 400;
 				break;
 
 			case BATVOLTAGEMEASSTATE_CARBATCONNECTED:
@@ -120,7 +120,7 @@ void car_do_systick()
 				raw = HAL_ADC_GetValue(&hadc4);
 
 				//raw = (raw * 321600) / 65536;
-				raw = (raw * 9287) / 2048;
+				raw = (raw * 20100) / 4096;
 
 				f_uCarBatVoltage = (uint16_t)raw;
 
@@ -129,7 +129,7 @@ void car_do_systick()
 				DRVBATVMEASCTRL_PORT->BSRR = DRVBATVMEASCTRL_PIN;
 
 				s_eVoltageMeasState = BATVOLTAGEMEASSTATE_DRVBATCONNECTED;
-				s_uVoltageStateDownCnt = 1900;
+				s_uVoltageStateDownCnt = 400;
 				break;
 
 			case BATVOLTAGEMEASSTATE_DRVBATCONNECTED:
@@ -145,14 +145,14 @@ void car_do_systick()
 				raw = HAL_ADC_GetValue(&hadc4);
 
 				//raw = (raw * 321600) / 65536;
-				raw = (raw * 9287) / 2048;
+				raw = (raw * 20100) / 4096;
 
 				f_uDrvBatVoltage = (uint16_t)raw;
 
 				daq_setChannelValue_uint16(f_daqDrvBatVoltage, DAQVALUEMOD_OK, GETSYSTICS(), f_uDrvBatVoltage);
 
 				s_eVoltageMeasState = BATVOLTAGEMEASSTATE_IDLE;
-				s_uVoltageStateDownCnt = 5000 - 5 - (1900 + 1 + 1900 + 1);
+				s_uVoltageStateDownCnt = 1000 - 5 - (400 + 1 + 400 + 1);
 				break;
 		}
 	}
