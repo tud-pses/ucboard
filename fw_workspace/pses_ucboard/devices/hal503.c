@@ -34,18 +34,18 @@ void hal503_init()
 {
 	GPIO_InitTypeDef GPIO_InitStruct;
 
-	GPIO_InitStruct.Pin = GPIO_PIN_0;
+	GPIO_InitStruct.Pin = GPIO_PIN_15;
 	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
 	GPIO_InitStruct.Pull = GPIO_PULLUP;
-	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-	HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
-	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
-	SYSCFG->EXTICR[0] = SYSCFG_EXTICR1_EXTI0_PD;
+	SYSCFG->EXTICR[3] = SYSCFG_EXTICR4_EXTI15_PE;
 
-	EXTI->PR = 1;
-	EXTI->IMR |= 1;
+	EXTI->PR = (1 << 15);
+	EXTI->IMR |= (1 << 15);
 
 	daq_provideChannel("HALL_DT", "delta time", "0.1 ms", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqchDT);
 	daq_provideChannel("HALL_VAL", "delta time", "bool", DAQVALUETYPE_UINT8, DAQSAMPLINGTIME_UNDEF, & f_daqchVal);
@@ -89,7 +89,7 @@ void hal503_do_systick()
 }
 
 
-void EXTI0_IRQHandler(void)
+void EXTI15_10_IRQHandler(void)
 {
 	static uint32_t s_tic = 0;
 	uint32_t toc;
@@ -101,20 +101,20 @@ void EXTI0_IRQHandler(void)
 		if (f_uCurReadDS == 1)
 		{
 			f_uCurDeltaT[0] = toc - s_tic;
-			f_bCurState[0] = ((GPIOD->IDR & 1) == 1);
+			f_bCurState[0] = ((GPIOE->IDR & (1 << 15)) != 0);
 			f_uCurReadDS = 0;
 		}
 		else
 		{
 			f_uCurDeltaT[1] = toc - s_tic;
-			f_bCurState[1] = ((GPIOD->IDR & 1) == 1);
+			f_bCurState[1] = ((GPIOE->IDR & (1 << 15)) != 0);
 			f_uCurReadDS = 1;
 		}
 	}
 
 	s_tic = toc;
 
-	EXTI->PR = 1;
+	EXTI->PR = (1 << 15);
 
 	return;
 }

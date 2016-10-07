@@ -46,6 +46,8 @@ static USbroadcaster_t f_usbroadcaster;
 
 #define CONV_VALUE(raw) ( (raw > 38190) ? 0xFFFF : (uint16_t)( ((uint32_t)(raw) * 56230) / 32768 ) )
 
+//#define CONV_VALUE(raw) ( raw )
+
 
 
 void us_init()
