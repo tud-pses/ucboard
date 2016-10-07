@@ -48,7 +48,7 @@ void hal503_init()
 	EXTI->IMR |= (1 << 15);
 
 	daq_provideChannel("HALL_DT", "delta time", "0.1 ms", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqchDT);
-	daq_provideChannel("HALL_VAL", "delta time", "bool", DAQVALUETYPE_UINT8, DAQSAMPLINGTIME_UNDEF, & f_daqchVal);
+	daq_provideChannel("HALL_CNT", "hall impulse cnt (% 256)", "-", DAQVALUETYPE_UINT8, DAQSAMPLINGTIME_UNDEF, &f_daqchVal);
 	daq_provideChannel("HALL_DT8", "delta time full rev.", "1 ms", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqchDT8);
 
 	return;
@@ -59,8 +59,16 @@ void hal503_do_systick()
 {
 	static uint8_t s_uLastReadDS = 1;
 
-	static uint32_t s_uCumDT = 0;
+	static uint32_t s_uRevDT = 0;
 	static uint8_t s_uCumCnt = 0;
+
+	static uint8_t s_uCnt = 0xFF;
+
+	static uint32_t s_auBuffer[8] = {0};
+	uint32_t* const bBegin = s_auBuffer;
+	uint32_t* const bEnd = s_auBuffer + 7;
+	static uint32_t* s_pHeadTail = s_auBuffer;
+
 
 	if (s_uLastReadDS != f_uCurReadDS)
 	{
@@ -68,18 +76,46 @@ void hal503_do_systick()
 
 		uint32_t dt = f_uCurDeltaT[ds];
 
-		daq_setChannelValue_uint16(f_daqchDT, DAQVALUEMOD_OK, GETSYSTICS(), SATURATION_U(dt / 100, 0xFFFF));
-		daq_setChannelValue_uint8(f_daqchVal, DAQVALUEMOD_OK, GETSYSTICS(), f_bCurState[ds]);
+		s_uCnt++;
 
-		s_uCumDT += f_uCurDeltaT[ds];
+		if (f_bCurState[ds])
+		{
+			if ((s_uCnt & 1) == 0)
+			{
+				s_uCnt++;
+			}
+		}
+		else
+		{
+			if (s_uCnt & 1)
+			{
+				s_uCnt++;
+			}
+		}
+
+		daq_setChannelValue_uint16(f_daqchDT, DAQVALUEMOD_OK, GETSYSTICS(), SATURATION_U(dt / 100, 0xFFFF));
+		daq_setChannelValue_uint8(f_daqchVal, DAQVALUEMOD_OK, GETSYSTICS(), s_uCnt);
+
+
+		bool bRevComplete = (*s_pHeadTail > 0);
+
+		s_uRevDT -= *s_pHeadTail;
+
+		s_uRevDT += f_uCurDeltaT[ds];
+
+
+		*s_pHeadTail++ = f_uCurDeltaT[ds];
+
+		if (s_pHeadTail > bEnd)
+		{
+			s_pHeadTail = bBegin;
+		}
+
 		s_uCumCnt++;
 
-		if (s_uCumCnt == 8)
+		if (bRevComplete)
 		{
-			daq_setChannelValue_uint16(f_daqchDT8, DAQVALUEMOD_OK, GETSYSTICS(), SATURATION_U(s_uCumDT / 100, 0xFFFF));
-
-			s_uCumDT = 0;
-			s_uCumCnt = 0;
+			daq_setChannelValue_uint16(f_daqchDT8, DAQVALUEMOD_OK, GETSYSTICS(), SATURATION_U(s_uRevDT / 1000, 0xFFFF));
 		}
 
 		s_uLastReadDS = f_uCurReadDS;
