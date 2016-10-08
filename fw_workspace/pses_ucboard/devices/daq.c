@@ -39,7 +39,7 @@ typedef struct DAQChannel_
 
 
 #define NMAXGRPCHS	10
-#define NMAXGRPS	10
+#define NMAXGRPS	20
 
 typedef enum DAQSampling_
 {
@@ -57,7 +57,7 @@ typedef enum DAQEncoding_
 } DAQEncoding_t;
 
 
-typedef struct DAQPkg_
+typedef struct DAQGrp_
 {
 	bool bActive;
 	uint8_t nchs;
@@ -74,11 +74,11 @@ typedef struct DAQPkg_
 	bool bCRC;
 	bool bAvg;
 	DAQEncoding_t eEncoding;
-} DAQPkg_t;
+} DAQGrp_t;
 
 
 static bool f_bStarted = false;
-static DAQPkg_t f_pkgs[NMAXGRPS];
+static DAQGrp_t f_grps[NMAXGRPS];
 
 
 #include "ARingbuffer.h"
@@ -106,7 +106,7 @@ static uint16_t f_nErrMsgLen = 0;
 
 //#define NULL (void*)0
 
-#define NMAXCHS 20
+#define NMAXCHS 30
 
 #define CHID_NOCHANNEL 0xFF
 
@@ -145,11 +145,11 @@ static DAQValueDS_t f_vals[NMAXCHS];
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMax);
 
 
-char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
-											DAQPkg_t* pkg, bool* abSendChValue,
+char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
+											DAQGrp_t* grp, bool* abSendChValue,
 											uint32_t maxtics, uint32_t mintics);
-uint8_t* getGetPkgDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
-											DAQPkg_t* pkg, bool* abSendChValue,
+uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
+											DAQGrp_t* grp, bool* abSendChValue,
 											uint32_t maxtics, uint32_t mintics);
 
 
@@ -319,7 +319,7 @@ void daq_init()
 
 	for (uint8_t i = 0; i < NMAXGRPS; ++i)
 	{
-		f_pkgs[i].bActive = false;
+		f_grps[i].bActive = false;
 	}
 
 
@@ -349,27 +349,27 @@ void daq_do_systick()
 	{
 		for (uint8_t p = 0; p < NMAXGRPS; ++p)
 		{
-			if (f_pkgs[p].bActive == false)
+			if (f_grps[p].bActive == false)
 			{
 				continue;
 			}
 
-			DAQPkg_t* pkg = &f_pkgs[p];
+			DAQGrp_t* grp = &f_grps[p];
 
-			bool bSendPkg = false;
+			bool bSendGrp = false;
 
-			switch (pkg->eSampling)
+			switch (grp->eSampling)
 			{
 				case DAQSAMPLING_ANY:
-					for (uint8_t c = 0; c < pkg->nchs; ++c)
+					for (uint8_t c = 0; c < grp->nchs; ++c)
 					{
-						if ((pkg->chs[c] & SPECIALCHANNELSFLAG) == 0)
+						if ((grp->chs[c] & SPECIALCHANNELSFLAG) == 0)
 						{
-							uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->updatetic;
+							uint32_t curtic = f_vals[grp->chs[c]].curValToRead->updatetic;
 
-							if (curtic > pkg->prevupdatetics[c])
+							if (curtic > grp->prevupdatetics[c])
 							{
-								bSendPkg = true;
+								bSendGrp = true;
 								break;
 							}
 						}
@@ -382,13 +382,13 @@ void daq_do_systick()
 					uint32_t uOldestNewValueTic = 0xFFFFFFFF;
 					bool bAllValuesNew = true;
 
-					for (uint8_t c = 0; c < pkg->nchs; ++c)
+					for (uint8_t c = 0; c < grp->nchs; ++c)
 					{
-						if ((pkg->chs[c] & SPECIALCHANNELSFLAG) == 0)
+						if ((grp->chs[c] & SPECIALCHANNELSFLAG) == 0)
 						{
-							uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->updatetic;
+							uint32_t curtic = f_vals[grp->chs[c]].curValToRead->updatetic;
 
-							if (curtic > pkg->prevupdatetics[c])
+							if (curtic > grp->prevupdatetics[c])
 							{
 								if (curtic < uOldestNewValueTic)
 								{
@@ -405,9 +405,9 @@ void daq_do_systick()
 					if (uOldestNewValueTic != 0xFFFFFFFF)
 					{
 						// >= instead of == because of the possibility that one channels invalidates its data
-						if (bAllValuesNew || (GETSYSTICS() - uOldestNewValueTic) >= pkg->uAllMaxTime)
+						if (bAllValuesNew || (GETSYSTICS() - uOldestNewValueTic) >= grp->uAllMaxTime)
 						{
-							bSendPkg = true;
+							bSendGrp = true;
 						}
 					}
 
@@ -416,7 +416,7 @@ void daq_do_systick()
 				case DAQSAMPLING_TS:
 					// todo: fixed sampling time
 
-					if (pkg->bSynced == false)
+					if (grp->bSynced == false)
 					{
 
 					}
@@ -425,7 +425,7 @@ void daq_do_systick()
 			}
 
 
-			if (bSendPkg)
+			if (bSendGrp)
 			{
 				char tmp[10];
 				char bufstart[200];
@@ -436,15 +436,15 @@ void daq_do_systick()
 				uint32_t mintic = 0xFFFFFFFF;
 				bool abSendChValue[NMAXGRPCHS];
 
-				for (uint8_t c = 0; c < pkg->nchs; ++c)
+				for (uint8_t c = 0; c < grp->nchs; ++c)
 				{
-					if ((pkg->chs[c] & SPECIALCHANNELSFLAG) == 0)
+					if ((grp->chs[c] & SPECIALCHANNELSFLAG) == 0)
 					{
-						uint32_t curtic = f_vals[pkg->chs[c]].curValToRead->updatetic;
+						uint32_t curtic = f_vals[grp->chs[c]].curValToRead->updatetic;
 
-						if (curtic > pkg->prevupdatetics[c])
+						if (curtic > grp->prevupdatetics[c])
 						{
-							pkg->prevupdatetics[c] = curtic;
+							grp->prevupdatetics[c] = curtic;
 							abSendChValue[c] = true;
 
 							if (curtic > maxtic)
@@ -465,24 +465,24 @@ void daq_do_systick()
 				}
 
 
-				if (pkg->uCurSkipCnt != 0)
+				if (grp->uCurSkipCnt != 0)
 				{
-					pkg->uCurSkipCnt--;
-					bSendPkg = false;
+					grp->uCurSkipCnt--;
+					bSendGrp = false;
 				}
 				else
 				{
-					pkg->uCurSkipCnt = pkg->uSkip;
+					grp->uCurSkipCnt = grp->uSkip;
 
 
-					if (pkg->eEncoding == DAQENCODING_ASCII)
+					if (grp->eEncoding == DAQENCODING_ASCII)
 					{
 						*buf++ = '#';
 						*buf++ = '#';
 
 						buf = strcpy_returnend(buf, bufend - 1, utoa(p, tmp, 10));
 						*buf++ = ':';	// overwrite '\0' with ':'
-						buf = getGetPkgDataStringAscii_returnend(buf, bufend - 1, pkg, abSendChValue, maxtic, mintic);
+						buf = getGetGrpDataStringAscii_returnend(buf, bufend - 1, grp, abSendChValue, maxtic, mintic);
 						*buf++ = '\n';
 						*buf = '\0';
 					}
@@ -494,15 +494,15 @@ void daq_do_systick()
 						uint8_t * const btmpend = btmpstart + 199;
 
 						*btmp++ = p;
-						btmp = getGetPkgDataBinary_returnend(btmp, btmpend, pkg, abSendChValue, maxtic, mintic);
+						btmp = getGetGrpDataBinary_returnend(btmp, btmpend, grp, abSendChValue, maxtic, mintic);
 
-						if (pkg->bCRC)
+						if (grp->bCRC)
 						{
 							uint16_t crc = crc16(btmpstart, btmp - btmpstart + 1);
 							btmp = memcpy16_returnend(btmp+1, btmpend, (uint8_t*)&crc);
 						}
 
-						if (pkg->eEncoding == DAQENCODING_HEX)
+						if (grp->eEncoding == DAQENCODING_HEX)
 						{
 							*buf++ = '#';
 							buf = encodeHEX_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
@@ -777,7 +777,7 @@ char* createChsList_returnend(char* buf, char* const bufend, char sotchar)
 //} EnTristate_t;
 
 
-void clearDAQPkgStruct(DAQPkg_t* pkg)
+void clearDAQGrpStruct(DAQGrp_t* pkg)
 {
 	pkg->bActive = false;
 	pkg->eSampling = DAQSAMPLING_ANY;
@@ -795,7 +795,7 @@ void clearDAQPkgStruct(DAQPkg_t* pkg)
 }
 
 
-void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszError)
+void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszError)
 {
 	*pErrCode = ERRCODE_NOERR;
 	*pszError = "";
@@ -816,9 +816,9 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 		return;
 	}
 
-	int readPkgID = atoi(args->args[0]);
+	int readGrpID = atoi(args->args[0]);
 
-	if ( (readPkgID < 1) || (readPkgID > NMAXGRPS) )
+	if ( (readGrpID < 1) || (readGrpID > NMAXGRPS) )
 	{
 		*pErrCode = ERRCODE_DAQ_INVALIDPACKAGE;
 		*pszError = "Invalid package-ID!";
@@ -826,52 +826,52 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 		return;
 	}
 
-	uint8_t pkgid = (uint8_t)readPkgID;
+	uint8_t grpid = (uint8_t)readGrpID;
 
-	DAQPkg_t pkg;
+	DAQGrp_t grp;
 
-	clearDAQPkgStruct(&pkg);
+	clearDAQGrpStruct(&grp);
 
 	uint8_t nSamplingOptions = 0;
 
-	pkg.bAge = false;
-	pkg.bTics = false;
-	pkg.bCRC = false;
-	pkg.bAvg = false;
-	pkg.nchs = 0;
+	grp.bAge = false;
+	grp.bTics = false;
+	grp.bCRC = false;
+	grp.bAvg = false;
+	grp.nchs = 0;
 
 	for (uint8_t p = 0; p < args->nParams; ++p)
 	{
 		if (strcmpi(args->paramnames[p], "AGE") == STRCMPRES_EQUAL)
 		{
-			pkg.bAge = true;
+			grp.bAge = true;
 		}
 		else if (strcmpi(args->paramnames[p], "TICS") == STRCMPRES_EQUAL)
 		{
-			pkg.bTics = true;
+			grp.bTics = true;
 		}
 		else if (strcmpi(args->paramnames[p], "ANY") == STRCMPRES_EQUAL)
 		{
-			pkg.eSampling = DAQSAMPLING_ANY;
+			grp.eSampling = DAQSAMPLING_ANY;
 			nSamplingOptions++;
 		}
 		else if (strcmpi(args->paramnames[p], "ALL") == STRCMPRES_EQUAL)
 		{
-			pkg.eSampling = DAQSAMPLING_ALL;
+			grp.eSampling = DAQSAMPLING_ALL;
 			nSamplingOptions++;
 
 			if (args->paramvals[p] != NULL)
 			{
-				pkg.uAllMaxTime = (uint32_t)atoi(args->paramvals[p]);
+				grp.uAllMaxTime = (uint32_t)atoi(args->paramvals[p]);
 			}
 			else
 			{
-				pkg.uAllMaxTime = 0xFFFFFFFF;
+				grp.uAllMaxTime = 0xFFFFFFFF;
 			}
 		}
 		else if (strcmpi(args->paramnames[p], "TS") == STRCMPRES_EQUAL)
 		{
-			pkg.eSampling = DAQSAMPLING_TS;
+			grp.eSampling = DAQSAMPLING_TS;
 			nSamplingOptions++;
 
 			if ( (args->paramvals[p] == NULL) || (!isInteger(args->paramvals[p])) )
@@ -882,7 +882,7 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 			}
 			else
 			{
-				pkg.uTs = (uint32_t)atoi(args->paramvals[p]);
+				grp.uTs = (uint32_t)atoi(args->paramvals[p]);
 			}
 		}
 		else if (strcmpi(args->paramnames[p], "SKIP") == STRCMPRES_EQUAL)
@@ -895,7 +895,7 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 			}
 			else
 			{
-				pkg.uSkip = (uint32_t)atoi(args->paramvals[p]);
+				grp.uSkip = (uint32_t)atoi(args->paramvals[p]);
 			}
 		}
 		else if (strcmpi(args->paramnames[p], "ENC") == STRCMPRES_EQUAL)
@@ -908,15 +908,15 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 			}
 			else if (strcmpi(args->paramvals[p], "HEX") == STRCMPRES_EQUAL)
 			{
-				pkg.eEncoding = DAQENCODING_HEX;
+				grp.eEncoding = DAQENCODING_HEX;
 			}
 			else if (strcmpi(args->paramvals[p], "B64") == STRCMPRES_EQUAL)
 			{
-				pkg.eEncoding = DAQENCODING_B64;
+				grp.eEncoding = DAQENCODING_B64;
 			}
 			else if (strcmpi(args->paramvals[p], "ASCII") == STRCMPRES_EQUAL)
 			{
-				pkg.eEncoding = DAQENCODING_ASCII;
+				grp.eEncoding = DAQENCODING_ASCII;
 			}
 			else
 			{
@@ -927,7 +927,7 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 		}
 		else if (strcmpi(args->paramnames[p], "CRC") == STRCMPRES_EQUAL)
 		{
-			pkg.bCRC = true;
+			grp.bCRC = true;
 		}
 		else
 		{
@@ -969,13 +969,13 @@ void parsePkgDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 			}
 		}
 
-		pkg.chs[pkg.nchs] = chid;
-		pkg.prevupdatetics[pkg.nchs] = GETSYSTICS();
-		pkg.nchs++;
+		grp.chs[grp.nchs] = chid;
+		grp.prevupdatetics[grp.nchs] = GETSYSTICS();
+		grp.nchs++;
 	}
 
-	f_pkgs[pkgid] = pkg;
-	f_pkgs[pkgid].bActive = true;
+	f_grps[grpid] = grp;
+	f_grps[grpid].bActive = true;
 
 	return;
 }
@@ -1020,7 +1020,9 @@ char* getValueString_bufend(char* buf, char* const bufend, DAQValue_t* pdaqval)
 }
 
 
-char* getGetDataString_returnend(char* buf, char* const bufend, CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszError)
+char* getGetDataString_returnend(char* buf, char* const bufend,
+										CommCmdArgs_t* args,
+										EnErrCode_t* pErrCode, const char** pszError)
 {
 	bool bAge = false;
 	bool bTics = false;
@@ -1092,14 +1094,14 @@ char* getGetDataString_returnend(char* buf, char* const bufend, CommCmdArgs_t* a
 }
 
 
-char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
-												DAQPkg_t* pkg,
+char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
+												DAQGrp_t* grp,
 												bool* abSendChValue,
 												uint32_t maxtics, uint32_t mintics)
 {
 	uint32_t tics = GETSYSTICS();
 
-	for (uint8_t c = 0; c < pkg->nchs; ++c)
+	for (uint8_t c = 0; c < grp->nchs; ++c)
 	{
 		if (c != 0)
 		{
@@ -1107,7 +1109,7 @@ char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
 			*buf++ = ' ';
 		}
 
-		uint8_t id = pkg->chs[c];
+		uint8_t id = grp->chs[c];
 
 		char tmp[10];
 
@@ -1152,13 +1154,13 @@ char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
 			*buf++ = ' ';
 
 
-			if (pkg->bAge)
+			if (grp->bAge)
 			{
 				buf = strcpy_returnend(buf, bufend, utoa(tics - pVal->tic, tmp, 10));
 				*buf++ = ' ';
 			}
 
-			if (pkg->bTics)
+			if (grp->bTics)
 			{
 				buf = strcpy_returnend(buf, bufend, utoa(pVal->tic, tmp, 10));
 				*buf++ = ' ';
@@ -1172,16 +1174,16 @@ char* getGetPkgDataStringAscii_returnend(char* buf, char* const bufend,
 }
 
 
-uint8_t* getGetPkgDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
-											DAQPkg_t* pkg, bool* abSendChValue,
+uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
+											DAQGrp_t* grp, bool* abSendChValue,
 											uint32_t maxtics, uint32_t mintics)
 {
 	uint8_t * const bufstart = buf;
 	uint32_t tics = GETSYSTICS();
 
-	for (uint8_t c = 0; c < pkg->nchs; ++c)
+	for (uint8_t c = 0; c < grp->nchs; ++c)
 	{
-		uint8_t id = pkg->chs[c];
+		uint8_t id = grp->chs[c];
 
 		if (id & SPECIALCHANNELSFLAG)
 		{
@@ -1399,14 +1401,14 @@ uint8_t* getGetPkgDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 				}
 			}
 
-			if (pkg->bAge)
+			if (grp->bAge)
 			{
 				uint32_t age = tics - pVal->tic;
 
 				buf = memcpy32_returnend(buf, bufend, (uint8_t*)&age) + 1;
 			}
 
-			if (pkg->bTics)
+			if (grp->bTics)
 			{
 				buf = memcpy32_returnend(buf, bufend, (uint8_t*)&pVal->tic) + 1;
 			}
@@ -1564,8 +1566,17 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 	}
 	else if (subcmd == NULL)
 	{
-		eError = ERRCODE_COMM_WRONGUSAGE;
-		szError = "Usage: ?|!DAQ subcommands [...]\nPossible subcommands: GET (?), START (!), STOP (!), CHS (?), DS (!/?)!";
+		if (eSpec == CMDSPEC_GET)
+		{
+			acRespData[0] = SOT_RXRESP;
+			char * const strend = strcpy_returnend(acRespData + 1, acRespData + TXMAXMSGLEN - 1, (f_bStarted ? "started\n" : "stopped\n"));
+			*pnRespLen = strend - acRespData;
+		}
+		else
+		{
+			eError = ERRCODE_COMM_WRONGUSAGE;
+			szError = "Usage: ?|!DAQ subcommand [...]\nPossible subcommands: GET (?), START (!), STOP (!), CHS (?), GRP (!/?)!";
+		}
 	}
 	else if (strcmpi(subcmd, "CHS") == STRCMPRES_EQUAL)
 	{
@@ -1620,11 +1631,11 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			if (args.nArgs < 2)
 			{
 				eError = ERRCODE_COMM_WRONGUSAGE;
-				szError = "Usage: !DAQ GRP pkgid args";
+				szError = "Usage: !DAQ GRP groupid args";
 			}
 			else
 			{
-				parsePkgDef(&args, &eError, &szError);
+				parseGrpDef(&args, &eError, &szError);
 
 				if (eError == ERRCODE_NOERR)
 				{
@@ -1641,7 +1652,7 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			if (args.nArgs != 1)
 			{
 				eError = ERRCODE_COMM_WRONGUSAGE;
-				szError = "Usage: ?DAQ GRP pkgid";
+				szError = "Usage: ?DAQ GRP groupid";
 			}
 			else
 			{
