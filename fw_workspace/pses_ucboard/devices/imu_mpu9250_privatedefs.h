@@ -9,11 +9,11 @@
 #define IMU_MPU9250_PRIVATEDEFS_H_
 
 
-#define READFLAG	(1 << 15)
-#define WRITEFLAG	(0 << 15)
+#define READFLAG	(1 << 7)
+#define WRITEFLAG	(0 << 7)
 
-#define READCMD(reg) ( READFLAG | ((uint16_t)reg << 8) )
-#define WRITECMD(reg) ( WRITEFLAG | ((uint16_t)reg << 8) )
+#define READCMD(reg) ( READFLAG | (reg) )
+#define WRITECMD(reg) ( WRITEFLAG | (reg) )
 
 
 typedef enum EnRegister_

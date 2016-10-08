@@ -10,7 +10,7 @@
 #include "imu_mpu9250_privatedefs.h"
 
 #include "spimgr.h"
-
+#include "display.h"
 
 uint8_t readRegister(IMUDevice_t* this, EnRegister_t reg);
 void writeRegister(IMUDevice_t* this, EnRegister_t reg, uint8_t val);
@@ -27,7 +27,7 @@ bool imuMPU9250_init(IMUDevice_t* this, EnSPI_PORT_t ePort, char cCSPort, uint8_
 
 	cfg.Mode = SPI_MODE_MASTER;
 	cfg.Direction = SPI_DIRECTION_2LINES;
-	cfg.DataSize = SPI_DATASIZE_16BIT;
+	cfg.DataSize = SPI_DATASIZE_8BIT;
 	cfg.CLKPolarity = SPI_POLARITY_HIGH;
 	cfg.CLKPhase = SPI_PHASE_2EDGE;
 	cfg.NSS = SPI_NSS_SOFT;
@@ -57,7 +57,6 @@ bool imuMPU9250_init(IMUDevice_t* this, EnSPI_PORT_t ePort, char cCSPort, uint8_
 	// deactivate i2c
 	writeRegister_masked(this, REG_USER_CTRL, USERCTRL_I2CMSTIF_MASK, USERCTRL_I2CMSTIF_DISABLEI2CSLV);
 
-
 //	writeRegister_masked(this, REG_CONFIG, CONFIG_DLPFCFG_GYROBW184_FS1k, CONFIG_DLPFCFG_MASK);
 //	writeRegister_masked(this, REG_GYRO_CONFIG, GYROCONFIG_FCHOICEB_GYROBW184_FS1k, GYROCONFIG_FCHOICEB_MASK);
 //
@@ -71,19 +70,25 @@ bool imuMPU9250_init(IMUDevice_t* this, EnSPI_PORT_t ePort, char cCSPort, uint8_
 
 uint8_t readRegister(IMUDevice_t* this, EnRegister_t reg)
 {
-	uint16_t rx;
+	uint8_t tx;
+	uint8_t rx;
 
-	spimgr_send16(this->f_uDeviceID, READCMD(reg), &rx);
+	tx = READCMD(reg);
 
-	return (uint8_t)(rx & 0xFF);
+	spimgr_send8Mult(this->f_uDeviceID, 1, &tx, 2, 1, &rx);
+
+	return rx;
 }
 
 
 void writeRegister(IMUDevice_t* this, EnRegister_t reg, uint8_t val)
 {
-	uint16_t rx;
+	uint8_t tx[2];
 
-	spimgr_send16(this->f_uDeviceID, WRITECMD(reg) | val, &rx);
+	tx[0] = WRITECMD(reg);
+	tx[1] = val;
+
+	spimgr_send8Mult(this->f_uDeviceID, 2, tx, 0, 0, NULL);
 
 	return;
 }
@@ -104,32 +109,24 @@ void writeRegister_masked(IMUDevice_t* this, EnRegister_t reg, uint8_t val, uint
 
 void readRegisters_burst(IMUDevice_t* this, EnRegister_t startreg, uint8_t cnt, uint8_t* auData)
 {
-	uint8_t words_to_read = cnt / 2 + 1;
+	uint8_t tx;
 
-	uint16_t tx[words_to_read];
-	uint16_t rx[words_to_read];
+	tx = READCMD(startreg);
 
-	tx[0] = READCMD(startreg);
+	spimgr_send8Mult(this->f_uDeviceID, 1, &tx, cnt + 1, 1, auData);
 
-	for (uint8_t i = 1; i < words_to_read; ++i)
-	{
-		tx[i] = 0;
-	}
-
-	spimgr_send16Mult(this->f_uDeviceID, words_to_read, tx, rx);
-
-	uint8_t* tmp = auData;
-
-	for (uint8_t i = 0; i < cnt/2; ++i)
-	{
-		*tmp++ = (uint8_t)(rx[i] & 0xFF);
-		*tmp++ = (uint8_t)((rx[i+1] >> 8) & 0xFF);
-	}
-
-	if (cnt & 1)
-	{
-		*tmp++ = (uint8_t)(rx[words_to_read] & 0xFF);
-	}
+//	uint8_t* tmp = auData;
+//
+//	for (uint8_t i = 0; i < cnt/2; ++i)
+//	{
+//		*tmp++ = (uint8_t)(rx[i] & 0xFF);
+//		*tmp++ = (uint8_t)((rx[i+1] >> 8) & 0xFF);
+//	}
+//
+//	if (cnt & 1)
+//	{
+//		*tmp++ = (uint8_t)(rx[words_to_read] & 0xFF);
+//	}
 
 	return;
 }

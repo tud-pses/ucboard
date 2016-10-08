@@ -50,6 +50,16 @@ EnSPIMgrRes_t spimgr_send16Mult(uint8_t uDeviceID,
 											uint16_t* paRxdata);
 
 
+EnSPIMgrRes_t spimgr_send8(uint8_t uDeviceID,
+											uint8_t txdata, uint8_t* pRxdata);
+
+EnSPIMgrRes_t spimgr_send8Mult(uint8_t uDeviceID,
+											uint16_t nTxWords,
+											const uint8_t* paTxdata,
+											uint16_t nRxWords,
+											uint16_t nRxSkipFirstWords,
+											uint8_t* paRxdata);
+
 
 
 #endif /* SPIMGR_H_ */

@@ -82,7 +82,7 @@ void spimgr_init()
   	SPI_InitStructure.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
 	SPI_InitStructure.CLKPhase = SPI_PHASE_2EDGE;
 	SPI_InitStructure.CLKPolarity = SPI_POLARITY_HIGH;
-	SPI_InitStructure.DataSize = SPI_DATASIZE_16BIT;
+	SPI_InitStructure.DataSize = SPI_DATASIZE_8BIT;
 	SPI_InitStructure.Direction = SPI_DIRECTION_2LINES;
 	SPI_InitStructure.FirstBit = SPI_FIRSTBIT_MSB;
 	SPI_InitStructure.Mode = SPI_MODE_MASTER;
@@ -398,6 +398,143 @@ EnSPIMgrRes_t spimgr_send16Mult(uint8_t uDeviceID,
 		else
 		{
 			__SPI_RECEIVE_DATA( pSPI );
+		}
+	}
+
+
+	if (pDevice->eIdlePol == SPICSIDLEPOL_HIGH)
+	{
+		__GPIO_SET_BITS(pDevice->pCSPort, pDevice->uCSPin);
+	}
+	else
+	{
+		__GPIO_RESET_BITS(pDevice->pCSPort, pDevice->uCSPin);
+	}
+
+	return SPIMGRRES_OK;
+}
+
+
+EnSPIMgrRes_t spimgr_send8(uint8_t device, uint8_t txdata, uint8_t* pRxdata)
+{
+	SPI_TypeDef* pSPI;
+	SPIMGR_Device_t* pDevice;
+
+	pDevice = &f_aDevices[device];
+
+	if ( (device >= SPIMGR_MAXDEVICES) || (!pDevice->bInit) )
+	{
+		return SPIMGRRES_INVALIDDEVICE;
+	}
+
+	pSPI = f_aSPI[pDevice->eSPIPort].pSPI;
+
+	if ( f_aSPI[pDevice->eSPIPort].uCurConfig != pDevice->uSPIConfig )
+	{
+		changeConfig(pDevice->eSPIPort, pDevice->uSPIConfig);
+	}
+
+	if (pDevice->eIdlePol == SPICSIDLEPOL_HIGH)
+	{
+		__GPIO_RESET_BITS(pDevice->pCSPort, pDevice->uCSPin);
+	}
+	else
+	{
+		__GPIO_SET_BITS(pDevice->pCSPort, pDevice->uCSPin);
+	}
+
+	__SPI_SEND_DATA8BIT(pSPI, txdata);
+
+	// auf Daten warten
+	while ( __SPI_GET_FLAG(pSPI, SPI_FLAG_RXNE) == RESET )
+	{
+		// * do nothing *
+	}
+
+	if (pRxdata)
+	{
+		*pRxdata = __SPI_RECEIVE_DATA8BIT(pSPI);
+	}
+	else
+	{
+		__SPI_RECEIVEIGNORE_DATA8BIT(pSPI);
+	}
+
+	if (pDevice->eIdlePol == SPICSIDLEPOL_HIGH)
+	{
+		__GPIO_SET_BITS(pDevice->pCSPort, pDevice->uCSPin);
+	}
+	else
+	{
+		__GPIO_RESET_BITS(pDevice->pCSPort, pDevice->uCSPin);
+	}
+
+	return SPIMGRRES_OK;
+}
+#include "display.h"
+
+EnSPIMgrRes_t spimgr_send8Mult(uint8_t uDeviceID,
+											uint16_t nTxWords,
+											const uint8_t* paTxdata,
+											uint16_t nRxWords,
+											uint16_t nRxSkipFirstWords,
+											uint8_t* paRxdata)
+{
+	uint16_t u;
+	SPI_TypeDef* pSPI;
+	SPIMGR_Device_t* pDevice;
+
+	pDevice = &f_aDevices[uDeviceID];
+
+	if ( (uDeviceID >= SPIMGR_MAXDEVICES) || (!pDevice->bInit) )
+	{
+		return SPIMGRRES_INVALIDDEVICE;
+	}
+
+
+	pSPI = f_aSPI[pDevice->eSPIPort].pSPI;
+
+	if ( f_aSPI[pDevice->eSPIPort].uCurConfig != pDevice->uSPIConfig )
+	{
+		changeConfig(pDevice->eSPIPort, pDevice->uSPIConfig);
+	}
+
+
+	if (pDevice->eIdlePol == SPICSIDLEPOL_HIGH)
+	{
+		__GPIO_RESET_BITS(pDevice->pCSPort, pDevice->uCSPin);
+	}
+	else
+	{
+		__GPIO_SET_BITS(pDevice->pCSPort, pDevice->uCSPin);
+	}
+
+	uint16_t nWords = (nTxWords >= nRxWords) ? nTxWords : nRxWords;
+
+	for (u = 0; u < nWords; u++)
+	{
+		if (u < nTxWords)
+		{
+			__SPI_SEND_DATA8BIT(pSPI, *paTxdata++);
+		}
+		else
+		{
+			__SPI_SEND_DATA8BIT(pSPI, 0);
+		}
+
+		// auf Daten warten
+		while ( __SPI_GET_FLAG_STATUS( pSPI, SPI_FLAG_RXNE ) == RESET )
+		{
+			/* do nothing */
+		}
+
+		if ( (paRxdata) && ((u >= nRxSkipFirstWords) && (u < nRxWords)) )
+		{
+			*paRxdata++ = __SPI_RECEIVE_DATA8BIT(pSPI);
+		}
+		else
+		{
+			__SPI_RECEIVEIGNORE_DATA8BIT(pSPI);
 		}
 	}
 
