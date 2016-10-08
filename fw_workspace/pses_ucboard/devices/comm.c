@@ -26,6 +26,7 @@
 #include "ucboard_hwfcts.h"
 
 #include "display.h"
+#include "stopwatch.h"
 
 #include <string.h>
 
@@ -665,6 +666,9 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 	static EnCommError_t s_eCommError = COMMERROR_NONE;
 	static void* s_pDirectCallback = NULL;
 
+//	static uint32_t s_longestduration = 0;
+//	uint32_t tic = stopwatch_getTic();
+
 	if (f_ePrimaryUART == UART_NONE)
 	{
 		f_ePrimaryUART = eUART;
@@ -923,6 +927,14 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 			break;
 	}
+
+//	uint32_t duration = stopwatch_getDeltaTime_us(tic);
+//
+//	if (duration > s_longestduration)
+//	{
+//		s_longestduration = duration;
+//		display_println_uint("comm time [us]: ", s_longestduration);
+//	}
 
 	return;
 }

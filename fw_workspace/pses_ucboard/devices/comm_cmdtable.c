@@ -12,6 +12,7 @@
 extern bool cmd_daq(COMMCMDFCT_ARGS);
 extern bool cmd_drv(COMMCMDFCT_ARGS);
 extern bool cmd_carid(COMMCMDFCT_ARGS);
+extern bool cmd_eeprom(COMMCMDFCT_ARGS);
 extern bool cmd_sessionid(COMMCMDFCT_ARGS);
 extern bool cmd_steer(COMMCMDFCT_ARGS);
 extern bool cmd_tics(COMMCMDFCT_ARGS);
@@ -27,6 +28,7 @@ CommCmdTableEntry_t g_commCmdFctTable[] =
 {
 		{"DAQ",  &cmd_daq},
 		{"DRV",  &cmd_drv},
+		{"EEPROM",  &cmd_eeprom},
 		{"ID",  &cmd_carid},
 		{"RESET",  &cmd_reset},
 		{"SID",  &cmd_sessionid},

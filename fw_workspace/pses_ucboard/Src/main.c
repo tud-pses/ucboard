@@ -42,6 +42,8 @@
 #include "spimgr.h"
 #include "i2cmgr.h"
 
+#include "eeprom.h"
+
 #include "carbasicfcts.h"
 #include "hal503.h"
 #include "imu.h"
@@ -173,6 +175,8 @@ int main(void)
 
   spimgr_init();
   i2cmgr_init();
+
+  eeprom_init();
 
   stopwatch_wait_ms(250);
   imu_init();

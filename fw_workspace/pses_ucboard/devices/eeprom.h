@@ -8,6 +8,8 @@
 #ifndef EEPROM_H_
 #define EEPROM_H_
 
+#include "stdtypes.h"
 
+bool eeprom_init();
 
 #endif /* EEPROM_H_ */
