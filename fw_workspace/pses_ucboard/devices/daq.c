@@ -77,13 +77,14 @@ typedef struct DAQGrp_
 } DAQGrp_t;
 
 
+static bool f_bRequestedStarted = false;
 static bool f_bStarted = false;
 static DAQGrp_t f_grps[NMAXGRPS];
 
 
 #include "ARingbuffer.h"
 
-#define DAQBUFFERLEN 1000
+#define DAQBUFFERLEN 200
 
 static ARingbuffer_t f_buffer;
 static uint8_t f_acBuffer[DAQBUFFERLEN];
@@ -343,8 +344,40 @@ void daq_init()
 }
 
 
+static void resetGrpChData()
+{
+	for (uint8_t g = 0; g < NMAXGRPS; ++g)
+	{
+		if (!f_grps[g].bActive)
+		{
+			continue;
+		}
+
+		DAQGrp_t* grp = &f_grps[g];
+
+		for (uint8_t c = 0; c < grp->nchs; ++c)
+		{
+			grp->prevupdatetics[c] = GETSYSTICS() - 1;
+		}
+	}
+
+	return;
+}
+
+
 void daq_do_systick()
 {
+	if (f_bRequestedStarted && !f_bStarted)
+	{
+		resetGrpChData();
+
+		f_bStarted = true;
+	}
+	else if (!f_bRequestedStarted && f_bStarted)
+	{
+		f_bStarted = false;
+	}
+
 	if (f_bStarted)
 	{
 		for (uint8_t p = 0; p < NMAXGRPS; ++p)
@@ -1675,7 +1708,7 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 		}
 		else
 		{
-			f_bStarted = true;
+			f_bRequestedStarted = true;
 
 			char* strend;
 
@@ -1698,7 +1731,7 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 		}
 		else
 		{
-			f_bStarted = false;
+			f_bRequestedStarted = false;
 
 			char* strend;
 
