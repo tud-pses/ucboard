@@ -417,7 +417,7 @@ static void voltagemeas_do_systick()
 
 				raw = HAL_ADC_GetValue(&hadc4);
 
-				raw = (raw * 20100) / 4096;
+				raw = (raw * 20959) / 4096;
 
 				f_uCarBatVoltage = (uint16_t)raw;
 
@@ -441,7 +441,7 @@ static void voltagemeas_do_systick()
 
 				raw = HAL_ADC_GetValue(&hadc4);
 
-				raw = (raw * 20100) / 4096;
+				raw = (raw * 20959) / 4096;
 
 				f_uDrvBatVoltage = (uint16_t)raw;
 
