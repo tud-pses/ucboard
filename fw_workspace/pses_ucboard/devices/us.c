@@ -120,7 +120,7 @@ void us_do_systick()
 
 			s_eState = USQUERYSTATE_TRIGGERED;
 
-			s_uNextStep_ms = 50;
+			s_uNextStep_ms = 30;
 
 			break;
 

@@ -144,6 +144,7 @@ inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance)
 #define US_GAIN_500		14
 #define US_GAIN_600		15
 #define US_GAIN_700		16
+//#define US_GAIN			US_GAIN_700
 #define US_GAIN			US_GAIN_700
 
 #define US_NO_RESPONSE	0xFF
@@ -408,7 +409,9 @@ inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance)
 #define US_RANGE_10965MM			254
 #define US_RANGE_11008MM			255
 
-#define US_RANGE				US_RANGE_8041MM
+//#define US_RANGE				US_RANGE_8041MM
+#define US_RANGE				US_RANGE_6020MM
+
 //#define US_RANGE				US_RANGE_2021MM
 
 
