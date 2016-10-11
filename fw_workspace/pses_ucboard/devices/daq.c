@@ -146,10 +146,10 @@ static DAQValueDS_t f_vals[NMAXCHS];
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMax);
 
 
-char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
+static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 											DAQGrp_t* grp, bool* abSendChValue,
 											uint32_t maxtics, uint32_t mintics);
-uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
+static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 											DAQGrp_t* grp, bool* abSendChValue,
 											uint32_t maxtics, uint32_t mintics);
 
@@ -752,7 +752,65 @@ EnDAQRes_t daq_setChannelValue_int8(uint8_t ch, EnDAQValueMod_t mod, uint32_t ti
 }
 
 
-char* getChString_returnend(char* buf, char* const bufend, DAQChannel_t* ch)
+static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid)
+{
+	char tmp[10];
+
+	DAQGrp_t* grp = &f_grps[grpid];
+
+	buf = strcpyfixedwidth_returnend(buf, bufend, utoa(grpid, tmp, 10), 3);
+	buf = strcpy_returnend(buf, bufend, ": ");
+
+	for (uint8_t c = 0; c < grp->nchs; ++c)
+	{
+		if (c > 0)
+		{
+			buf = strcpy_returnend(buf, bufend, " ");
+		}
+
+		buf = strcpy_returnend(buf, bufend, f_chs[grp->chs[c]].name);
+	}
+
+	buf = strcpy_returnend(buf, bufend, "   ");
+
+	if (grp->eEncoding == DAQENCODING_ASCII)
+	{
+		buf = strcpy_returnend(buf, bufend, "~ENC=ASCII ");
+	}
+	else if (grp->eEncoding == DAQENCODING_B64)
+	{
+		buf = strcpy_returnend(buf, bufend, "~ENC=B64 ");
+	}
+	else
+	{
+		buf = strcpy_returnend(buf, bufend, "~ENC=HEX ");
+	}
+
+	if (grp->eSampling == DAQSAMPLING_ALL)
+	{
+		buf = strcpy_returnend(buf, bufend, "~ALL");
+
+		if (grp->uAllMaxTime < 0xFFFFFFFF)
+		{
+			buf = strcpy_returnend(buf, bufend, "=");
+			buf = strcpy_returnend(buf, bufend, utoa(grp->uAllMaxTime, tmp, 10));
+		}
+		buf = strcpy_returnend(buf, bufend, " ");
+	}
+	else if (grp->eSampling == DAQSAMPLING_ANY)
+	{
+		buf = strcpy_returnend(buf, bufend, "~ANY ");
+	}
+	else
+	{
+		//buf = strcpy_returnend(buf, bufend, "~AL");
+	}
+
+	return buf;
+}
+
+
+static char* getChString_returnend(char* buf, char* const bufend, DAQChannel_t* ch)
 {
 	const char* type;
 
@@ -777,37 +835,6 @@ char* getChString_returnend(char* buf, char* const bufend, DAQChannel_t* ch)
 
 	return buf;
 }
-
-
-char* createChsList_returnend(char* buf, char* const bufend, char sotchar)
-{
-	*buf++ = sotchar;
-
-	utoa(f_nChs, buf, 10);
-
-	while (*++buf != '\0')
-	{
-		// find end of string
-	}
-	*buf++ = '\n';
-
-	for (uint8_t i = 0; i < f_nChs; ++i)
-	{
-		buf = getChString_returnend(buf, bufend, &f_chs[i]);
-		*buf++ = '\n';	// replace \0 with \n
-	}
-
-	buf--;
-
-	return buf;
-}
-
-//typedef enum EnTristate_
-//{
-//	TRISTATE_FALSE = 0,
-//	TRISTATE_TRUE = 1,
-//	TRISTATE_UNDEF = 2
-//} EnTristate_t;
 
 
 void clearDAQGrpStruct(DAQGrp_t* pkg)
@@ -1127,7 +1154,7 @@ char* getGetDataString_returnend(char* buf, char* const bufend,
 }
 
 
-char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
+static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 												DAQGrp_t* grp,
 												bool* abSendChValue,
 												uint32_t maxtics, uint32_t mintics)
@@ -1207,7 +1234,7 @@ char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 }
 
 
-uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
+static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 											DAQGrp_t* grp, bool* abSendChValue,
 											uint32_t maxtics, uint32_t mintics)
 {
@@ -1501,6 +1528,62 @@ static bool chlist_streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, ui
 }
 
 
+static uint8_t f_uGrpListOutputCurGrp = 0;
+
+static bool grplist_streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
+{
+	char* const bufend = buf + nMaxCnt - 1;
+	char* const bufstart = buf;
+
+	if (nMaxCnt < 12)
+	{
+		*pbMsgComplete = false;
+		*pnCnt = 0;
+		return true;
+	}
+
+	if (f_uGrpListOutputCurGrp == 0)
+	{
+		*buf++ = SOT_RXRESP;
+
+//		utoa(f_nChs, buf, 10);
+//
+//		while (*++buf != '\0')
+//		{
+//			// find end of string
+//		}
+		*buf++ = '\n';  // replace \0 with \n
+	}
+
+	while (f_uGrpListOutputCurGrp < NMAXGRPS)
+	{
+		if (f_grps[f_uGrpListOutputCurGrp].bActive)
+		{
+			buf = getGrpString_returnend(buf, bufend, f_uGrpListOutputCurGrp);
+			*buf++ = '\n';	// replace \0 with \n
+
+			f_uGrpListOutputCurGrp++;
+			break;
+		}
+
+		f_uGrpListOutputCurGrp++;
+	}
+
+	*pnCnt = buf - bufstart;
+
+	if (f_uGrpListOutputCurGrp == NMAXGRPS)
+	{
+		*pbMsgComplete = true;
+	}
+	else
+	{
+		*pbMsgComplete = false;
+	}
+
+	return true;
+}
+
+
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
 {
 	static uint16_t s_nBytesLeft = 0;
@@ -1682,15 +1765,18 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 		}
 		else
 		{
-			if (args.nArgs != 1)
+			if (args.nArgs != 0)
 			{
 				eError = ERRCODE_COMM_WRONGUSAGE;
-				szError = "Usage: ?DAQ GRP groupid";
+				szError = "Usage: ?DAQ GRP";
 			}
 			else
 			{
-				eError = ERRCODE_COMM_NOTYETIMPLEMENTED;
-				szError = "Not yet implemented!";
+				f_uGrpListOutputCurGrp = 0;
+
+				*(CommStreamFctPtr*)pRespStream = grplist_streamout;
+
+				*pnRespLen = 0xFFFF;
 			}
 		}
 	}
