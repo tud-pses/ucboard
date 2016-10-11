@@ -14,9 +14,9 @@
 
 
 #define EOT_RX	'\n'
-//#define EOT_TX 3
+#define EOT_TX 3
 //// Nur zum Debuggen zu Beginn:
-#define EOT_TX '\n'
+//#define EOT_TX '\n'
 
 #define SOT_SETCMD	'!'
 #define SOT_GETCMD	'?'

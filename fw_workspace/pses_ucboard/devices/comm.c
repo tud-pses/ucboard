@@ -57,6 +57,7 @@ static EnCommTxState_t f_eTxSecState = COMMTXSTATE_IDLE;
 static EnCommTxState_t* f_pUART2TxState = NULL;
 static EnCommTxState_t* f_pUART3TxState = NULL;
 
+static bool f_bAppendExtraNewline = true;
 
 typedef enum EnCommError_
 {
@@ -114,7 +115,7 @@ static Buffer_t f_bufTxSec = {f_acTxSecondaryBuf,
 									f_acTxSecondaryBuf};
 
 
-static uint8_t f_acRxBuf[RXMAXMSGLEN];
+static uint8_t f_acRxBuf[RXMAXMSGLEN+2];
 static Buffer_t f_bufRx = {f_acRxBuf,
 									f_acRxBuf + RXMAXMSGLEN - 1,
 									f_acRxBuf,
@@ -135,8 +136,8 @@ typedef enum EnUART_
 } EnUART_t;
 
 
-static volatile EnUART_t f_ePrimaryUART = UART_2;
-//static volatile EnUART_t f_ePrimaryUART = UART_NONE;
+//static volatile EnUART_t f_ePrimaryUART = UART_2;
+static volatile EnUART_t f_ePrimaryUART = UART_NONE;
 
 
 char* createErrStr_returnend(char* buf, char* const bufend, char sotchar, EnErrCode_t eErr, const char* msg)
@@ -415,6 +416,11 @@ void comm_do()
 			if (bMsgComplete)
 			{
 				BUFFER_PUSH(f_bufTxOutstream, EOT_TX);
+
+				if (f_bAppendExtraNewline)
+				{
+					BUFFER_PUSH(f_bufTxOutstream, '\n');
+				}
 			}
 
 			pbufPrimary = &f_bufTxOutstream;
@@ -436,22 +442,24 @@ void comm_do()
 				if (f_pRespStream != NULL)
 				{
 					res = f_pRespStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+
+					if (res)
+					{
+						s_bIncompleteRespStreamMsg = !bMsgComplete;
+					}
 				}
 
-				if (res)
-				{
-					s_bIncompleteRespStreamMsg = !bMsgComplete;
-				}
-				else if (f_priorityStream != NULL)
+				if ( (!res) && (f_priorityStream != NULL) )
 				{
 					res = f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+
+					if (res)
+					{
+						s_bIncompletePriorityStreamMsg = !bMsgComplete;
+					}
 				}
 
-				if (res)
-				{
-					s_bIncompletePriorityStreamMsg = !bMsgComplete;
-				}
-				else if (f_streams[0] != NULL)
+				if ( (!res) && (f_streams[0] != NULL) )
 				{
 					uint8_t i = s_uCurStreamID;
 
@@ -490,6 +498,11 @@ void comm_do()
 					if (bMsgComplete)
 					{
 						BUFFER_PUSH(f_bufTxOutstream, EOT_TX);
+
+						if (f_bAppendExtraNewline)
+						{
+							BUFFER_PUSH(f_bufTxOutstream, '\n');
+						}
 					}
 
 					pbufPrimary = &f_bufTxOutstream;
@@ -671,6 +684,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 	if (f_ePrimaryUART == UART_NONE)
 	{
+//		if ((rxdata != SOT_SETCMD) && (rxdata != SOT_GETCMD) && (rxdata != '\n'))
+//		{
+//			return;
+//		}
+
 		f_ePrimaryUART = eUART;
 	}
 
@@ -692,6 +710,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 			*f_bufTxSec.head = '\n';		// overwrite \0 with \n
 			*++f_bufTxSec.head = EOT_TX;	// append EOT-byte
+
+			if (f_bAppendExtraNewline)
+			{
+				*++f_bufTxSec.head = '\n';
+			}
 
 			f_bufTxSec.tail = f_bufTxSec.start;
 
@@ -718,7 +741,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 				s_eRxState = COMMRXSTATE_INPROGRESS;
 			}
-			else
+			else if (rxdata != '\n')	// ignore single newlines (empty messages)
 			{
 				s_eCommError = COMMERROR_WRONGSOT;
 				s_eRxState = COMMRXSTATE_ERROR;
@@ -774,6 +797,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					*f_bufTxResp.head = '\n';		// overwrite \0 with \n
 					*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
 
+					if (f_bAppendExtraNewline)
+					{
+						*++f_bufTxResp.head = '\n';
+					}
+
 					f_bufTxResp.tail = f_bufTxResp.start;
 
 					bErr = true;
@@ -799,6 +827,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 						*f_bufTxResp.head = '\n';		// overwrite \0 with \n
 						*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
 
+						if (f_bAppendExtraNewline)
+						{
+							*++f_bufTxResp.head = '\n';
+						}
+
 						f_bufTxResp.tail = f_bufTxResp.start;
 					}
 					else
@@ -811,7 +844,13 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 						if (nRespLen < 0xFFFF)
 						{
 							f_bufTxResp.start[nRespLen] = EOT_TX;
-							f_bufTxResp.head = f_bufTxResp.start + nRespLen + 1;
+
+							if (f_bAppendExtraNewline)
+							{
+								f_bufTxResp.start[nRespLen+1] = '\n';
+							}
+
+							f_bufTxResp.head = f_bufTxResp.start + nRespLen + (f_bAppendExtraNewline ? 2 : 1);
 							f_bufTxResp.tail = f_bufTxResp.start;
 						}
 						// else: f_pRespStream should be not NULL and the response will be managed over it.
@@ -857,7 +896,13 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 				if (nRespLen < 0xFFFF)
 				{
 					f_bufTxResp.start[nRespLen] = EOT_TX;
-					f_bufTxResp.head = f_bufTxResp.start + nRespLen + 1;
+
+					if (f_bAppendExtraNewline)
+					{
+						f_bufTxResp.start[nRespLen+1] = '\n';
+					}
+
+					f_bufTxResp.head = f_bufTxResp.start + nRespLen + (f_bAppendExtraNewline ? 2 : 1);
 					f_bufTxResp.tail = f_bufTxResp.start;
 				}
 
@@ -916,6 +961,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 					*f_bufTxResp.head = '\n';		// overwrite \0 with \n
 					*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
+
+					if (f_bAppendExtraNewline)
+					{
+						*++f_bufTxResp.head = EOT_TX;
+					}
 
 					f_bufTxResp.tail = f_bufTxResp.start;
 				}
@@ -1007,7 +1057,7 @@ void USART3_IRQHandler(void)
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
 	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_RXNE) != RESET )
-	{
+	{LED_A_ON();
 		// read byte from receive register (which also resets USART_IT_RXNE)
 		rxdata = USART3->RDR;
 		processRxdata(UART_3, rxdata);
