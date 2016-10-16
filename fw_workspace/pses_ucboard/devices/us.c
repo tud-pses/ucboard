@@ -75,7 +75,8 @@ typedef enum EnUSQueryState_
 	USQUERYSTATE_PENDING,
 	USQUERYSTATE_TRIGGERED,
 	USQUERYSTATE_DATAAVAILABLEQUERIED,
-	USQUERYSTATE_DATAQUERIED
+	USQUERYSTATE_DATAQUERIED,
+	USQUERYSTATE_RESETSENSORS,
 } EnUSQueryState_t;
 
 
@@ -85,7 +86,7 @@ typedef enum EnUSQueryState_
 void us_do_systick()
 {
 	static EnUSQueryState_t s_eState = USQUERYSTATE_IDLE;
-	static uint32_t s_uTicStart = 0;
+	//static uint32_t s_uTicStart = 0;
 	static uint32_t s_auTicEnd[NDEVICES] = {0};
 	static uint32_t s_auData[NDEVICES] = {0};
 
@@ -116,7 +117,7 @@ void us_do_systick()
 			}
 
 			usonicbc_trigger(&f_usbroadcaster);
-			s_uTicStart = GETSYSTICS();
+			//s_uTicStart = GETSYSTICS();
 
 			s_eState = USQUERYSTATE_TRIGGERED;
 
@@ -198,7 +199,7 @@ void us_do_systick()
 
 						daq_setChannelValue_uint16(f_auDAQChs[i],
 														DAQVALUEMOD_OK,
-														(s_auTicEnd[i] + s_uTicStart) / 2,
+														s_auTicEnd[i], //(s_auTicEnd[i] + s_uTicStart) / 2,
 														CONV_VALUE(val));
 					}
 					else if (res == USDATAQUERYRES_ERROR)
@@ -207,7 +208,7 @@ void us_do_systick()
 
 						daq_setChannelValue_uint16(f_auDAQChs[i],
 														DAQVALUEMOD_SENSORERROR,
-														(s_auTicEnd[i] + s_uTicStart) / 2,
+														s_auTicEnd[i], //(s_auTicEnd[i] + s_uTicStart) / 2,
 														0);
 					}
 					else
@@ -218,11 +219,50 @@ void us_do_systick()
 
 				if (bAllReceived)
 				{
-					s_eState = USQUERYSTATE_IDLE;
+					bool bResetConfig = false;
+
+					for (int i = 0; i < NDEVICES; ++i)
+					{
+						if (s_auData[i] == 0)
+						{
+							usonic_startConfig(&f_usdevices[i]);
+							bResetConfig = true;
+						}
+					}
+
+					if (bResetConfig)
+					{
+						s_eState = USQUERYSTATE_RESETSENSORS;
+					}
+					else
+					{
+						s_eState = USQUERYSTATE_IDLE;
+					}
 				}
 			}
 
 			break;
+
+		case USQUERYSTATE_RESETSENSORS:
+			{
+				bool bFinished = true;
+
+				for (int i = 0; i < NDEVICES; ++i)
+				{
+					if (usonic_getConfigResult(&f_usdevices[i]) == USCONFIGRES_INPROGRESS)
+					{
+						bFinished = false;
+						break;
+					}
+				}
+
+				if (bFinished)
+				{
+					s_eState = USQUERYSTATE_IDLE;
+				}
+			}
+			break;
+
 	}
 
 	return;

@@ -180,6 +180,61 @@ bool usonic_ping(USdevice_t* this)
 }
 
 
+bool usonic_startConfig(USdevice_t* this)
+{
+	EnI2CMgrRes_t res;
+
+	if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
+	{
+		display_println("usonic not idle (sc)");
+		return false;
+	}
+
+	this->acTxBuffer[0] = US_ADDR_GAIN;
+	this->acTxBuffer[1] = US_GAIN;
+
+	this->acTxBuffer[2] = US_ADDR_RANGE;
+	this->acTxBuffer[3] = US_RANGE;
+
+	i2cmgr_setupMsgStruct(&this->aMsgs[0], I2CMGRMSG_TX, 2, &this->acTxBuffer[0]);
+	i2cmgr_setupMsgStruct(&this->aMsgs[1], I2CMGRMSG_TX, 2, &this->acTxBuffer[2]);
+
+	res = i2cmgr_enqueueAsynchMsgs(this->uI2CDeviceID, 2, this->aMsgs);
+
+	if (res != I2CMGRRES_OK)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+
+EnUSConfigResult_t usonic_getConfigResult(USdevice_t* this)
+{
+	EnI2C_MsgState_t eState = i2cmgr_getMsgState(this->uI2CDeviceID);
+
+	if (eState == I2CMSGSTATE_COMPLETED)
+	{
+		i2cmgr_resetMsg(this->uI2CDeviceID);
+		return USCONFIGRES_OK;
+	}
+	else if (eState == I2CMSGSTATE_ERROR)
+	{
+		i2cmgr_resetMsg(this->uI2CDeviceID);
+		return USCONFIGRES_ERROR;
+	}
+	else if (eState == I2CMSGSTATE_IDLE)
+	{
+		return USCONFIGRES_OK;
+	}
+	else
+	{
+		return USCONFIGRES_INPROGRESS;
+	}
+}
+
+
 static bool setConfig(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;

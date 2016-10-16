@@ -34,6 +34,12 @@ typedef enum EnUSDataAvailableQueryResult_ {
 	USDATAAVAILABLEQUERYRES_ERROR
 } EnUSDataAvailableQueryResult_t;
 
+typedef enum EnUSConfigResult_ {
+	USCONFIGRES_INPROGRESS,
+	USCONFIGRES_OK,
+	USCONFIGRES_ERROR
+} EnUSConfigResult_t;
+
 
 typedef struct USdevice_
 {
@@ -69,6 +75,9 @@ bool usonicbc_trigger(USbroadcaster_t* this);
 
 bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address);
 bool usonic_ping(USdevice_t* this);
+
+bool usonic_startConfig(USdevice_t* this);
+EnUSConfigResult_t usonic_getConfigResult(USdevice_t* this);
 
 bool usonic_startDataAvailableQuery(USdevice_t* this);
 EnUSDataAvailableQueryResult_t usonic_getDataAvailableQueryResult(USdevice_t* this);
@@ -409,10 +418,8 @@ inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance)
 #define US_RANGE_10965MM			254
 #define US_RANGE_11008MM			255
 
-//#define US_RANGE				US_RANGE_8041MM
+//#define US_RANGE				US_RANGE_11008MM
 #define US_RANGE				US_RANGE_6020MM
-
-//#define US_RANGE				US_RANGE_2021MM
 
 
 
