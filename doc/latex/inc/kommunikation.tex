@@ -4,23 +4,13 @@
 
 \section{Prinzip}
 
+Die Kommunikation mit dem ucboard ist textbasiert, so dass eine Bedienung über ein einfaches Terminalprogramm möglich ist. Dies ermöglicht ein einfaches Testen und Debuggen. Um dennoch ein einfaches Parsen der Nachrichten zu ermöglichen, besitzen diese ein definiertes Format.
 
-\begin{itemize}
-	\item Die Kommunikation des ucboard ist so aufgebaut sein, dass eine Bedienung über ein einfaches Terminalprogramm möglich ist, um ein einfaches Testen und Debuggen zu ermöglichen.
-	\item Es ist eine einfache Interaktion möglich. (\ZB zum Kalibrieren der Sensoren.)
-	\item Ein einfaches Parsen der vom ucboard gesendeten Daten soll aber ebenso möglich sein.
-\end{itemize}
+In der Regel sind alle Nachrichten auch einfach lesbar. Um bezüglich der Messdatenerfassung etwas platzeffizienter zu sein, können diese jedoch optional als hex- oder base64-codierte Binärdaten versendet werden.
 
+Ebenso wird in der Regel auf Prüfsummen verzichtet. Lediglich bei Messdaten, die als Binärdaten verschickt werden, kann optional eine CRC16-Prüfsumme angehängt werden. (Bei manchen Befehlen zum ucboard besteht die Möglichkeit, die wesentliche Zahl doppelt zu senden.)
 
-\begin{itemize}
-	\item Textbasiert
-		\begin{itemize}
-			\item Um bei den Messdaten etwas platzeffizienter zu sein, können diese optional als base64 versendet werden.
-		\end{itemize}
-	\item Keine \bzw nur bei manchen Befehlen optionale Prüfsummen.
-	\item Messdaten und Textnachrichten können vom ucboard ohne Aufforderung versendet werden.
-	\item Ansonsten reagiert das ucboard auf Befehle.
-\end{itemize}
+Messdaten und Textnachrichten können vom ucboard ohne Auf"|forderung versendet werden. Ansonsten reagiert das ucboard auf Befehle, die an dieses geschickt werden. Dabei wird jeder Befehl durch eine Antwort quitiert.
 
 \begin{itemize}
 	\item Die Nachrichten zum ucboard sollen sich möglichst einfach Parsen lassen. Die Nachrichten bestehen aus einem oder mehreren, durch Leerzeichen getrennte Wörter. Der Typ eines Wortes ergibt sich aus dem ersten Zeichen:
@@ -29,17 +19,16 @@
 			\item \verb+~+: Optionsname
 			\item \texttt{0} - \texttt{9} und \texttt{-}: Zahl
 		\end{itemize}
-\end{itemize}
-
-
-
-\section{Prinzpielles}
-
-\begin{itemize}
-	\item Alle besonderen Startzeichen dürfen auch innerhalb der Nachrichten verwendet werden. Dort haben sie keine besondere Bedeutung.
 	\item Besteht eine Nachricht aus mehreren Wörtern, so spielt die Anzahl der Leerzeichen zwischen den Wörtern keine Rolle. (Mindestens eines!)
-	\item Nach dem Startzeichen kann, muss aber kein Leerzeichen folgen.
 \end{itemize}
+
+Prinzipiell wird nicht zwischen Groß- und Kleinschreibung unterschieden.
+
+Ein Nachricht beginnt mit einem Startzeichen und endet mit einem Endezeichen. Das Startzeichen kann variieren. Bei Nachrichten zum ucboard ist dieses \texttt{!} oder \texttt{?}, bei Nachrichten vom ucboard \texttt{:}, \texttt{'} und \texttt{\#}. Nach dem Startzeichen kann, muss aber kein Leerzeichen folgen. Alle Startzeichen dürfen auch innerhalb der Nachrichten verwendet werden. Dort haben sie keine besondere Bedeutung. (Eine "`Aufsynchronisierung"' sollte also anhand des Endezeichens erfolgen.)
+
+Das Endezeichen ist \texttt{\textbackslash n} (newline) bei Nachrichten zum ucboard und \texttt{\textbackslash 03} (ETX) bei Nachrichten vom ucboard. Die Motivation dahinter ist, dass damit bei Nachrichten zum ucboard eine einfaches Terminalprogramm verwendet werden kann, bei Nachrichten vom ucboard jedoch auch mehrzeiliger Text sinnvoll dargestellt werden kann.
+
+Einzelne Zeilenumbrüche (leere Nachrichten) sind zu ignorieren. (Diese werden optional nach ETX vom ucboard verwendet, um die Darstellung im Terminprogramm zu verbessern.)
 
 
 \subsubsection{Zu ucboard}
@@ -49,6 +38,7 @@
 	\item Antworten auf Fragen des ucboard (im interaktiven Modus) besitzen keinen speziellen Beginn. (Sie dürfen aber auch mit \texttt{!} oder \texttt{?} beginnen.
 	\item Das Ende einer Nachricht wird ausschließlich durch \texttt{\textbackslash n} (newline) markiert
 	\item Optionen beginnen mit \verb+~+. Wenn der Option ein Wert zugeordnet wird, dann wird dieser nach einem \texttt{=} angeschlossen. Dabei dürfen um das Gleichheitszeichen herum keine Leerzeichen stehen!
+	\item Die Reihenfolge der Argumente spielt eine Rolle. Die Position der Optionen spielt keine Rolle. (Bei Verarbeiten im ucboard wird zunächst eine Liste der Argumente und eine Liste der Optionen erstellt. Die Information, ob eine Option am Anfang, zwischen zwei Argumenten oder am Ende stand geht dabei verloren.)
 \end{itemize}
 
 
@@ -76,7 +66,7 @@ Das ucboard verfügt über zwei Schnittstellen für die Kommunikation mit dem PC
 Der dritte, "`reine"' UART-Anschluss ist für den Anschluss möglicher Erweiterungen und nicht die Kommunikation mit dem PC vorgesehen.\footnote{Man könnte auch noch darüber nachdenken, die dritte UART auch für die Kommunikation mit einem PC zu verwenden, da an dieser einfach ein Bluetooth-Adapter angeschlossen werden könnte. Damit wäre es möglich, auch ohne den Onboard-PC das Fahrzeug ferngesteuert zu betreiben.}
 
 
-Die Parameter der Schnittstellen
+Die Parameter der Schnittstellen sind in \tabref{tab:Comm:UARTParam} zusammengefasst.
 
 \begin{table}%
 	\centering
@@ -86,7 +76,7 @@ Die Parameter der Schnittstellen
 			\mytoprule
 			 & USB & RS232 \\
 			\mymidrule
-			Baudrate & 57\,600 & 57\,600 \\
+			Baudrate & 230\,400 & 115\,200 \\
 			Datenbits & 8 & 8 \\
 			Stopbits & 1 & 1 \\
 			Parity & keine & keine \\
@@ -108,12 +98,14 @@ Die Parameter der Schnittstellen
 	\begin{tabular}{ll}
 		\mytoprule
 		\verb|RESET| & Neustart ucboard \\
+		\verb|VER| & Abfrage Softwareversion \\
 		\verb|ID|	& Abfragen der Fahrzeug-ID \\
 		\verb|SID| & Setzen und Abfragen der Session-ID \\
 		\verb|TICS| & Abfrage ucboard-Zeit (Millisekunden nach (Neu)start) \\
 		\verb|STEER| & Setzen und Abfragen des (Soll-)Lenkwinkels \\
 		\verb|DRV| & Setzen und Abfragen der Fahrgeschwindigkeit \\
 		\verb|DAQ| & Datenerfassung \\
+		\verb|VOUT| & Ein- und Ausschalten \valunit{12}{V}-Ausgang (Kinect) \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{IMU}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der IMU} \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{US}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der US-Sensoren}\\
 		\mybottomrule
@@ -131,6 +123,19 @@ Führt einen Neustart des ucboards durch.
 \begin{verbatim}
 	!RESET NOW
 \end{verbatim}
+
+
+
+\subsubsection{VER}
+
+Fragt Versionsstring der ucboard-Software ab.
+
+
+\begin{verbatim}
+	?VER
+	:0.1.x
+\end{verbatim}
+
 
 
 \subsubsection{ID}
@@ -177,7 +182,7 @@ Setzen:
 	:-200
 \end{verbatim}
 
-\textcolor[rgb]{0.75,0.75,0.75}{Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren:}
+{\color[rgb]{0.75,0.75,0.75} Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren:
 \begin{verbatim}
 	!STEER -200 -200
 	:-200
@@ -187,6 +192,8 @@ Setzen:
 	!STEER -200 -201
 	:ERR(1001):Msg corrupted
 \end{verbatim}
+}
+
 
 Abfragen:
 \begin{verbatim}
@@ -198,20 +205,46 @@ Abfragen:
 
 \subsubsection{DRV}
 
-Zum Setzen und Abfragen der Fahrgeschwindigkeit. Der Wert muss eine Ganzzahl zwischen $-1\,000$ und 1\,000 oder \verb|OFF| sein.
+Zum Setzen und Abfragen der Fahrgeschwindigkeit. (\Bzw Motorspannung.)
 
-Setzen:
+Es gibt zwei Modi: Die "`gemanagte"' und die "`direkte"' Ansteuerung.
+
+
+\paragraph{Gemanagte Ansteuerung}
+
+Bei der gemanagten Ansteuerung erfolgt die Umschaltung von Vorwärts- und Rückwärtsfahrt automatisch. Zudem wird der gesetzte Wert in den Arbeitsbereich umgerechnet.
+
+Vorwärtsfahrt:
 \begin{verbatim}
-	!DRV 300
-	:300
+	!DRV F 300
+	:F 300
+\end{verbatim}
+Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren:
+\begin{verbatim}
+	!DRV F 300 300
+	:F 300
 \end{verbatim}
 
+Es sind Werte von -500 bis 1000 zulässig. Dabei entsprechen negative Werte Bremsen (aber nicht einer Rückwärtsfahrt!).
 
-\textcolor[rgb]{0.75,0.75,0.75}{Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren:}
+Die effektive Auf"|lösung ist geringer als der Stellbereich von 1000 es annehmen lässt. Tatsächlich können etwas weniger als 450 unterscheidbare Impulsbreiten, \dah Sollwerte, vorgegeben werden.
+
+Bremsen
 \begin{verbatim}
-	!DRV 300 300
-	:300
+	!DRV F -500
+	:F -500
 \end{verbatim}
+Gebremst wird vom Fahrtenregler automatisch nur bis zum Stillstand. Es erfolgt keine Rückwärtsfahrt.
+
+
+Rückwärtsfahrt
+\begin{verbatim}
+	!DRV B 300
+	:B 300
+\end{verbatim}
+Es sind Werte von 0 bis 500 zulässig. (Der Stellbereich des Fahrtenreglers ist rückwärts nur halb so groß wie vorwärts.)
+
+
 
 
 Ausschalten des Fahrtenreglers:
@@ -219,33 +252,43 @@ Ausschalten des Fahrtenreglers:
 	!DRV OFF
 	:OFF
 \end{verbatim}
-Der Unterschied zwischen den Werten 0 und \verb|OFF| liegt darin, dass bei \verb|OFF| der Fahrtenregler vom Fahrakku getrennt wird, also tatsächlich ausgeschaltet ist. Der Fahrtenregler wird bei Übermittlung des nächsten Sollwertes ungleich \verb|OFF| wieder eingeschaltet, jedoch dauert dies einen Moment. (Das Einschalten wird auch mit einem Piepston des Fahrtenreglers begleitet.)
+Der Unterschied zwischen den Werten 0 und \verb|OFF| liegt darin, dass bei \verb|OFF| der Fahrtenregler vom Fahrakku getrennt wird, also tatsächlich ausgeschaltet ist. Der Fahrtenregler wird bei Übermittlung des nächsten Sollwertes ungleich \verb|OFF| automatisch wieder eingeschaltet, jedoch dauert dies einen Moment. (Das Einschalten wird auch mit einem Piepston des Fahrtenreglers begleitet.)
 
 
 Abfragen:
 \begin{verbatim}
 	?DRV
-	:300
+	:F 300
 \end{verbatim}
 
 
-\textcolor[rgb]{0.75,0.75,0.75}{DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeitzählung der Totmannschaltung (\bzw Tot-PC-Schaltung) neu zu starten.
-}
+Abfragen der tatsächlichen Impulsbreite (vergleiche "`Direkte Ansteuerung"'):
 \begin{verbatim}
-	!DRV
-	:ok
+	?DRV D
+	:D -186
 \end{verbatim}
+
+
+\paragraph{Direkte Ansteuerung}
+Bei der direkten Ansteuerung wird direkt die Impulsbreite vorgegeben, die an den Fahrtenregler übertragen wird. Dabei wird die Impulsbreite als die Abweichung in Mikrosekunden vom Neutralwert \valunit{1,5}{ms} angegeben. \Dah ein Wert von $-500$ entspricht der minimalen Impulsbreite (\dah Maximalwerte \emph{vorwärts}) von \valunit{1}{ms} und ein Wert von 500 der maximalen Impulsbreite von \valunit{2}{ms}.
+
+
+\begin{verbatim}
+	!DRV D 200
+	:D 200
+\end{verbatim}
+
 
 
 
 
 \paragraph{DMS}
 
-\textcolor[rgb]{0.75,0.75,0.75}{
+{\color[rgb]{0.75,0.75,0.75}
 "`Totmannschaltung"' (Dead-man switch)\\
 \\
 Dieser Parameter gibt die Zeit in Millisekunden an, innerhalb derer eine neue DRV-Nachricht erhalten sein muss. Wird diese Zeit ohne DRV-Nachricht überschritten, so wird der Motor gestoppt, \dah der Sollwert auf 0 (aber nicht \texttt{OFF} gesetzt.) (Bei der nächsten \texttt{DRV}-Nachricht wird der Motor dann wieder angesteuert.)
-}
+
 \begin{verbatim}
 	!DRV ~DMS=1000
 	:ok
@@ -253,6 +296,14 @@ Dieser Parameter gibt die Zeit in Millisekunden an, innerhalb derer eine neue DR
 \textcolor[rgb]{0.75,0.75,0.75}{
 Zum Abschalten der Sicherheitsschaltung dient der Wert \texttt{OFF}.}
 
+
+DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeitzählung der Totmannschaltung (\bzw Tot-PC-Schaltung) neu zu starten.
+
+\begin{verbatim}
+	!DRV
+	:ok
+\end{verbatim}
+}
 
 
 \subsubsection{DAQ}
@@ -320,11 +371,13 @@ Zum Abschalten der Sicherheitsschaltung dient der Wert \texttt{OFF}.}
 	:[...]
 \end{verbatim}
 
-\textcolor[rgb]{1,0,0}{ToDo:}
+
+{\color[rgb]{0.75,0.75,0.75}
 \begin{verbatim}
-	?DAQ CH AX
+	?DAQ CH 1
 	:[...]
 \end{verbatim}
+}
 
 
 
@@ -357,7 +410,7 @@ Erster Rückgabewert ist Wert (Einheit siehe Tabelle), zweiter Wert ist Alter in
 
 \paragraph{Automatische Messgruppen}
 
-Es stehen zehn parametrierbare Messgruppen zur Verfügung. In diesen können verschiedene Sensorwerte zusammengefasst werden.
+Es stehen zwanzig parametrierbare Messgruppen zur Verfügung, die zum automatischen Verschicken von Messdaten verwendet werden. In diesen können verschiedene Sensorwerte zusammengefasst werden.
 
 Paket 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{10}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
 \begin{verbatim}
@@ -377,12 +430,16 @@ Paket 3 enthält die Beschleunigungswerte in der Ebene und die Gierrate. Die Dat
 
 Optionen:
 \begin{itemize}
-	\item \verb+~ALL[=maxwait]+: Sendet, wenn alle Daten vorhanden sind. Wenn maxwait gegeben ist, dann wird nach dem ersten neuen Wert maximal diese Zeit in Millisekunden gewartet, bis die Daten verschickt werden.\footnote{Dies ist \zB für die US-Sensoren gedacht, deren Daten meist an nacheinander liegenden Zeitschritten ankommen.}
-	\item \verb+~ANY+: Sendet, wenn ein neues Datum vorhanden ist.
+	\item Modus Abtastung
+		\begin{itemize}
+			\item \verb+~ALL[=maxwait]+: Sendet, wenn alle Daten vorhanden sind. Wenn maxwait gegeben ist, dann wird nach dem ersten neuen Wert maximal diese Zeit in Millisekunden gewartet, bis die Daten verschickt werden.\footnote{Dies ist \zB für die US-Sensoren gedacht, deren Daten meist an nacheinander liegenden Zeitschritten ankommen.}
+			\item \verb+~ANY+: Sendet, wenn ein neues Datum vorhanden ist.
+			\item \verb+~TS=Ts+: \textcolor[rgb]{0.75,0.75,0.75}{Abtastzeit in Millisekunden. (Muss ein ganzes Vielfaches aller Kanäle des Paketes sein.)}
+			\item \verb+~AVG[=Ta]+: \textcolor[rgb]{0.75,0.75,0.75}{Mittelung über Ta. Ta darf dabei maximal TS sein. Wenn kein Ta angegeben ist, dann wird Ta = Ts gesetzt.}
+		\end{itemize}
+	\item \verb+~SKIP=n+: Überspringt \texttt{n} Werte. \Dah bei einem Wert von neun wird jeder zehnte Wert verwendet.
 	\item \verb+~ENC=B64|HEX|ASCII+: Nachricht wird base64-codiert (ohne Padding), Hex-codiert oder Ascii-codiert. ASCII meint hierbei "`lesbaren Text"'. Standardwert ist ASCII.
-	\item \verb+~CRC+: CRC16-Prüfsumme
-	\item \verb+~TS=Ts+: \textcolor[rgb]{0.75,0.75,0.75}{Abtastzeit in Millisekunden. (Muss ein ganzes Vielfaches aller Kanäle des Paketes sein.)}
-	\item \verb+~AVG[=Ta]+: \textcolor[rgb]{0.75,0.75,0.75}{Mittelung über Ta. Ta darf dabei maximal TS sein. Wenn kein Ta angegeben ist, dann wird Ta = Ts gesetzt.}
+	\item \verb+~CRC+: CRC16-Prüfsumme (Nur wenn ENC = B64 oder HEX)
 \end{itemize}
 
 
@@ -405,40 +462,32 @@ Optionen:
 \end{table}
 
 
-\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
+Anzeige aller Gruppeninfos
 \begin{verbatim}
-	?DAQ GRPS 
+	?DAQ GRP
 	:[...]
 \end{verbatim}
+\textcolor[rgb]{1,0,0}{Es werden noch nicht alle Informationen angezeigt. Bug, wenn noch keine Gruppe definiert!}
 
 
-\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
-\begin{verbatim}
-	?DAQ GRP 1
-	:[...]
-\end{verbatim}
-
-
-\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
+{\color[rgb]{0.75,0.75,0.75}
 \begin{verbatim}
 	!DAQ GRP 1 ~DELETE
 	:ok
 \end{verbatim}
 
 
-\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
 	!DAQ GRP 1 ~DEACTIVATE
 	:ok
 \end{verbatim}
 
 
-\textcolor[rgb]{0.75,0.75,0.75}{ToDo:}
 \begin{verbatim}
 	!DAQ GRP 1 ~ACTIVATE
 	:ok
 \end{verbatim}
-
+}
 
 \begin{verbatim}
 	!DAQ START
@@ -450,6 +499,58 @@ Optionen:
 	!DAQ STOP
 	:ok
 \end{verbatim}
+
+
+
+\paragraph{Binärdaten}
+Bei ENC = B64 und HEX werden die Daten als Binärdaten verschickt.
+
+Dabei ist das erste Byte des dekodierten Binärdatensatzes die Messgruppe. Darauf folgen ohne Leer- oder Trennzeichen die einzelnen Messdaten mit der jeweils für den Kanal gültigen Breite.
+
+
+\begin{verbatim}
+	!daq grp 1 usl usf usr ~all=20
+	:ok
+	!daq grp 2 usl usf usr ~all=20 ~enc=hex
+	:ok
+	!daq grp 3 usl usf usr ~all=20 ~enc=hex ~crc
+	:ok
+	!daq grp 4 usl usf usr ~all=20 ~enc=b64 ~crc
+	:ok
+	!daq start
+	:started
+\end{verbatim}
+
+\begin{verbatim}
+	##1:7306 | 1887 | 3655
+	#028A1C5F07470E
+	#038A1C5F07470ECFA5
+	#BIocXwdHDou8
+\end{verbatim}
+
+
+
+\subsubsection{VOUT}
+
+Einschalten der Kinect-Spannung
+\begin{verbatim}
+	!VOUT ON
+	:ON
+\end{verbatim}
+
+Abschalten der Kinect-Spannung
+\begin{verbatim}
+	!VOUT OFF
+	:OFF
+\end{verbatim}
+
+
+Abfragen Zustand
+\begin{verbatim}
+	?VOUT
+	:OFF
+\end{verbatim}
+
 
 
 
