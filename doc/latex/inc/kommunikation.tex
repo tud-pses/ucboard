@@ -225,6 +225,12 @@ Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren:
 	:F 300
 \end{verbatim}
 
+\begin{verbatim}
+	!drv f 300 301
+	:Err(269): Message corrupted! (The two values have to be equal!)
+\end{verbatim}
+
+
 Es sind Werte von -500 bis 1000 zulässig. Dabei entsprechen negative Werte Bremsen (aber nicht einer Rückwärtsfahrt!).
 
 Die effektive Auf"|lösung ist geringer als der Stellbereich von 1000 es annehmen lässt. Tatsächlich können etwas weniger als 450 unterscheidbare Impulsbreiten, \dah Sollwerte, vorgegeben werden.
@@ -308,11 +314,15 @@ DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeit
 
 \subsubsection{DAQ}
 
+Das Datenerfassungsmodul (DAQ -- Data Aquisition) dient als allgemeine Schnittstelle zur Übermittlung aller Sensorsignale. Dabei können Einzelabfragen vorgenommen werden (die angefragten Sensorwerte werden direkt als Antwort auf einen entsprechenden Befehl verschickt) als auch Gruppen von Sensorsignale eingerichtet werden, die dann automatisch vom ucboard an den PC geschickt werden.
+
+Die Sensorsignale werden dabei hier als "`Kanäle"' bezeichnet. Die aktuell definierten Kanäle sind in \tabref{tab:Comm:DAQ:Signals} zusammengefasst.
+
 \begin{table}[htbp]%
 	\centering
 	\caption{Signale}
 	\label{tab:Comm:DAQ:Signals}
-	\begin{tabular}{lllll}
+	\begin{tabular}{lp{8cm}lll}
 		\mytoprule
 		Signal & Beschreibung & Einheit & Datentyp & Länge \\
 		\mymidrule
@@ -327,15 +337,20 @@ DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeit
 		\verb|USR| & Abstand rechts & \valunit{0,1}{mm} & \verb|uint16_t| & 2 \\
 		\verb|VSBAT| & Spannung Systemakku & mV & \verb|uint16_t| & 2\\
 		\verb|VDBAT| & Spannung Fahrakku & mV & \verb|uint16_t| & 2\\
+		\verb|HALL_DT| & Zeit zwischen den letzten beiden Impulsen des Hallsensors (eine Achtel Radumdrehung) & \valunit{0,1}{ms} & \verb|uint16_t| & 2\\
+		\verb|HALL_DT8| & Zeit zwischen den letzten acht Impulsen des Hallsensors (eine Radumdrehung) & \valunit{1}{ms} & \verb|uint16_t| & 2\\
+		\verb|HALL_CNT| & Anzahl der Sensorimpulse, Modulo 256 (Ein Sensorwert von "`1"' entspricht dabei immer eine ungeraden Zahl) &  & \verb|uint8_t| & 1\\
 		\mybottomrule
 	\end{tabular}
 \end{table}
 
 
+Zur Übermittlung von Fehlerwerten sind bestimmte Zahlenwerte oder Textausgaben vorgesehen, die in \tabref{tab:Comm:DAQ:SpecialValues} aufgeführt sind. Dabei ist "`keine Daten vorhanden"' ein Wert, der vom DAQ-Modul selber gesetzt werden, wenn keine gültigen Daten vorliegen. Die einzelnen Sensormodule geben im Fehlerfall entweder "`Messfehler"' (bei einzelnen Messfehlern oder Messaussetzern) oder "`Sensorfehler"' (ein größeres Sensorproblem, \dah es ist in diesem Fall mit dem Ausfall aller (weiteren) Messwerten zu rechnen) zurück.
+
 
 \begin{table}[htbp]%
 	\centering
-	\caption{}
+	\caption{Fehlerwerte}
 	\label{tab:Comm:DAQ:SpecialValues}
 	\subfloat[Binärcodierung]{%
 		\begin{tabular}{lcccccc}
@@ -366,63 +381,95 @@ DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeit
 \end{table}
 
 
+
+\paragraph{Allgemeines}
+
+Alle aktuell definierten Kanäle können mit \verb|?DAQ CHS| abgefragt werden:
 \begin{verbatim}
 	?DAQ CHS
-	:[...]
+	:14
+	AX         | acc. ahead                     | opt-dep.!       | 1     | I16 
+	AY         | acc. left                      | opt-dep.!       | 1     | I16 
+	[...]
+	HALL_DT8   | delta time full rev.           | 1 ms            | undef | U16 
 \end{verbatim}
+Dabei beinhalten die Spalten die folgenden Informationen
+\begin{itemize}
+	\item Name
+	\item Beschreibung
+	\item Einheit (\verb|opt-dep.!| bedeutet, dass die Einheit von den jeweiligen Sensoreinstellungen abhängt.)
+	\item Abtastzeit in Millisekunden (\verb|undef| bedeutet, dass das entsprechende Sensormodul keine feste Abtastzeit der Messwerte garantiert.)
+	\item Datentyp
+\end{itemize}
 
-
-{\color[rgb]{0.75,0.75,0.75}
+Die Informationen zu einem speziellen Kanal können über
 \begin{verbatim}
-	?DAQ CH 1
-	:[...]
+	?DAQ CH name
 \end{verbatim}
-}
-
-
-
-Einzelabfrage von Werten:
+abgefragt werden:
 \begin{verbatim}
-	!DAQ GET USF
-	:453 20
+	?DAQ CH USF
+	:USF        | ultrasonic front distance      | 0.1 mm          | undef | U16
 \end{verbatim}
 
 
+
+\paragraph{Einzelabfrage von Werten}
+
+Zur Abfrage von Einzelwerten dient der Subbefehl \verb|GET|:
+\begin{verbatim}
+	!DAQ GET chname1 [chname2 [chname3 [...]]] [~AGE] [~TICS]
+\end{verbatim}
+Diesem muss mindestens der Name eines Kanals übergeben werden. Es können aber auch mehrere Kanäle auf einmal abgefragt werden. Die Option \verb|~AGE| gibt zu \emph{jedem} Wert das Alter in Tics (\dah ms) zwischen dem Zeitpunkt der Datenerfassung und der Datenabfrage zurück. Die Option \verb|~TICS| gibt zu \emph{jedem} Wert den Erfassungszeitpunkt in Tics zurück. Sind beide Optionen gewählt, dann wird immer AGE vor TICS zurückgegeben, unabhängig von der Reihenfolge der Optionen.
+
+Beispiele:
+
+Einzelabfrage des Sensorwertes des vorderen Ultraschallsensors
+\begin{verbatim}
+	?DAQ GET USF
+	:1860
+\end{verbatim}
+
+Ausgabe des Alters des Messwertes
 \begin{verbatim}
 	!DAQ GET ~AGE USF
-	:453 20
+	:1860 68
 \end{verbatim}
 
-Erster Rückgabewert ist Wert (Einheit siehe Tabelle), zweiter Wert ist Alter in Tics
-
+Abfrage aller Ultraschallwerte, jeweils mit Alter
 \begin{verbatim}
-	!DAQ GET ~AGE USF USL USR
-	:453 20 1004 30 323 15
+	?DAQ GET ~AGE USL USF USR
+	:487 72 | 1860 75 | 4293 85
 \end{verbatim}
 
 
 
 \begin{verbatim}
 	!DAQ GET ~TICS USF
-	:453 14533
+	:1860 3059246
 \end{verbatim}
+
+
+
+
+
 
 
 \paragraph{Automatische Messgruppen}
 
-Es stehen zwanzig parametrierbare Messgruppen zur Verfügung, die zum automatischen Verschicken von Messdaten verwendet werden. In diesen können verschiedene Sensorwerte zusammengefasst werden.
+Es stehen zwanzig parametrierbare Messgruppen zur Verfügung, die zum automatischen Verschicken von Messdaten verwendet werden. In diesen können verschiedene Kanäle (Sensorwerte) zusammengefasst werden. Neben den "`normalen"' Kanälen stehen noch die in \tabref{tab:Comm:DAQ:SpecialChannels} aufgeführten "`Sonderkanäle"' zur Verfügung, die Metadaten zu den Datensätzen enthalten.
 
-Paket 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{10}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
+Gruppe 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{10}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
 \begin{verbatim}
 	!DAQ GRP 1 ~ALL=100 ~ENC=B64 ~CRC _TIC USF USL USR 
 \end{verbatim}
 
-Paket 2 enthält die Spannungen der beiden Akkus, wobei immer eine Nachricht verschickt wird, sobald eine neue Spannung gemessen ist.
+Gruppe 2 enthält die Spannungen der beiden Akkus, wobei immer eine Nachricht verschickt wird, sobald eine neue Spannung gemessen ist.
 \begin{verbatim}
 	!DAQ GRP 2 ~ANY VSBAT VDBAT 
 \end{verbatim}
 
-Paket 3 enthält die Beschleunigungswerte in der Ebene und die Gierrate. Die Daten werden alle \valunit{10}{ms} verschickt. Dabei werden alle innerhalb der \valunit{10}{ms} erfassten Daten gemittelt.
+Gruppe 3 enthält die Beschleunigungswerte in der Ebene und die Gierrate. Die Daten werden alle \valunit{10}{ms} verschickt. Dabei werden alle innerhalb der \valunit{10}{ms} erfassten Daten gemittelt.
 \begin{verbatim}
 	!DAQ GRP 3 ~TS=10 ~AVG ~ENC=B64 ~CRC AX AY GZ 
 \end{verbatim}
@@ -432,31 +479,38 @@ Optionen:
 \begin{itemize}
 	\item Modus Abtastung
 		\begin{itemize}
-			\item \verb+~ALL[=maxwait]+: Sendet, wenn alle Daten vorhanden sind. Wenn maxwait gegeben ist, dann wird nach dem ersten neuen Wert maximal diese Zeit in Millisekunden gewartet, bis die Daten verschickt werden.\footnote{Dies ist \zB für die US-Sensoren gedacht, deren Daten meist an nacheinander liegenden Zeitschritten ankommen.}
-			\item \verb+~ANY+: Sendet, wenn ein neues Datum vorhanden ist.
-			\item \verb+~TS=Ts+: \textcolor[rgb]{0.75,0.75,0.75}{Abtastzeit in Millisekunden. (Muss ein ganzes Vielfaches aller Kanäle des Paketes sein.)}
+			\item \verb+~ALL[=maxwait]+: Sendet, wenn zu allen Gruppenkanäle neue Daten vorhanden sind. Wenn \verb+maxwait+ gegeben ist, dann wird nach dem ersten neuen Wert maximal diese Zeit in Millisekunden gewartet, bis die Daten verschickt werden.\footnote{Dies ist \zB für die US-Sensoren gedacht, deren Daten meist an nacheinander liegenden Zeitschritten ankommen.}
+			\item \verb+~ANY+: Sendet, wenn zu einem der Gruppenkanäle ein neues Datum vorhanden ist.
+			\item \verb+~TS=Ts+: Abtastzeit in Millisekunden. (Muss ein ganzes Vielfaches der Abtastzeiten aller Kanäle des Paketes sein.)
 			\item \verb+~AVG[=Ta]+: \textcolor[rgb]{0.75,0.75,0.75}{Mittelung über Ta. Ta darf dabei maximal TS sein. Wenn kein Ta angegeben ist, dann wird Ta = Ts gesetzt.}
 		\end{itemize}
 	\item \verb+~SKIP=n+: Überspringt \texttt{n} Werte. \Dah bei einem Wert von neun wird jeder zehnte Wert verwendet.
 	\item \verb+~ENC=B64|HEX|ASCII+: Nachricht wird base64-codiert (ohne Padding), Hex-codiert oder Ascii-codiert. ASCII meint hierbei "`lesbaren Text"'. Standardwert ist ASCII.
 	\item \verb+~CRC+: CRC16-Prüfsumme (Nur wenn ENC = B64 oder HEX)
+	\item \verb+~AGE+ und \verb+~TICS+: Wie bei Einzelwertabfrage. Damit wird \emph{jedem} Wert das Alter sowie der Erfassungszeitpunkt hinzugefügt. (Wenn beide Optionen gewählt sind, dann immer in der Reihenfolge "`Age -- Tics"'.) Die Werte werden bei der Ascii-Codierung immer innerhalb der senkrechten Striche des Kanals geschrieben. Bei Binärcodierungen werden diese Werte jeweils als \valunit{32}{bit}-Werte jeweils hinter den betreffenden Messwert eingefügt. Diese Optionen dienen lediglich zum Debuggen. Im "`Normalbetrieb"' sollten diese aufgrund des großen Platzbedarfs nicht verwendet werden!
 \end{itemize}
 
 
 \begin{table}[htbp]%
 	\centering
-	\caption{}
+	\caption{"`Sonderkanäle"' mit Metadaten}
 	\label{tab:Comm:DAQ:SpecialChannels}
 	\begin{tabular}{lp{10cm}lll}
 		\mytoprule
 		Signal & Beschreibung & & Datentyp & Länge \\
 		\mymidrule
-		\verb|_TIC| & ucboard-Zeit (tics) der Erfassung des ersten Datums & ms & \verb|uint32_t| & 4 \\
-		\verb|_TIC16| & die niederwertigen \valunit{16}{bits} von \verb|_TIC| & ms & \verb|uint16_t| & 2 \\
-		\verb|_TIC8| & die niederwertigen \valunit{8}{bits} von \verb|_TIC| & ms & \verb|uint8_t| & 1 \\
+		\verb|_CNT| & Anzahl der verschickten Datensätze der Gruppe &  & \verb|uint32_t| & 4 \\
+		\verb|_CNT16| & die niederwertigen \valunit{16}{bits} von \verb|_CNT| &  & \verb|uint16_t| & 2 \\
+		\verb|_CNT8| & die niederwertigen \valunit{8}{bits} von \verb|_CNT| &  & \verb|uint8_t| & 1 \\[2mm]
+		\verb|_TICS| & ucboard-Zeit (tics) der Erfassung des ersten Datums & ms & \verb|uint32_t| & 4 \\
+		\verb|_TICS16| & die niederwertigen \valunit{16}{bits} von \verb|_TIC| & ms & \verb|uint16_t| & 2 \\
+		\verb|_TICS8| & die niederwertigen \valunit{8}{bits} von \verb|_TIC| & ms & \verb|uint8_t| & 1 \\[2mm]
 		\verb|_DTICS| & Delta der ucboard-Zeit zwischen ersten und letztem Datum & ms & \verb|uint32_t| & 4 \\
-		\verb|_DTICS16| & Delta der ucboard-Zeit zwischen ersten und letztem Datum, Maximalwert 65\,535 & ms & \verb|uint16_t| & 2 \\
-		\verb|_DTICS8| & Delta der ucboard-Zeit zwischen ersten und letztem Datum, Maximalwert 255 (sättigend) & ms & \verb|uint8_t| & 1 \\
+		\verb|_DTICS16| & min(\verb|_DTICS|, 65\,535) & ms & \verb|uint16_t| & 2 \\
+		\verb|_DTICS8| & min(\verb|_DTICS|, 255) & ms & \verb|uint8_t| & 1 \\[2mm]
+		{\color[rgb]{0.75,0.75,0.75}\verb|_DLY|} & Zeit zwischen Datensatzerstellung und Versenden & ms & \verb|uint32_t| & 4 \\
+		{\color[rgb]{0.75,0.75,0.75}\verb|_DLY16|} & min(\verb|_DLY|, 65\,535) & ms  & \verb|uint16_t| & 2 \\
+		{\color[rgb]{0.75,0.75,0.75}\verb|_DLY8|} & min(\verb|_DLY|, 255) & ms & \verb|uint8_t| & 1 \\
 		\mybottomrule
 	\end{tabular}
 \end{table}
@@ -464,42 +518,50 @@ Optionen:
 
 Anzeige aller Gruppeninfos
 \begin{verbatim}
-	?DAQ GRP
+	?DAQ GRPS
 	:[...]
 \end{verbatim}
-\textcolor[rgb]{1,0,0}{Es werden noch nicht alle Informationen angezeigt. Bug, wenn noch keine Gruppe definiert!}
 
 
-{\color[rgb]{0.75,0.75,0.75}
+Anzeigen Info zur Gruppe 1
+\begin{verbatim}
+	?DAQ GRP 1
+	:[...]
+\end{verbatim}
+
+Löschen von Gruppe 1
 \begin{verbatim}
 	!DAQ GRP 1 ~DELETE
 	:ok
 \end{verbatim}
 
-
+Deaktivieren von Gruppe 1
 \begin{verbatim}
 	!DAQ GRP 1 ~DEACTIVATE
 	:ok
 \end{verbatim}
 
-
+Aktivieren von Gruppe 1
 \begin{verbatim}
 	!DAQ GRP 1 ~ACTIVATE
 	:ok
 \end{verbatim}
-}
 
+Starten der Datenerfassung
 \begin{verbatim}
 	!DAQ START
 	:ok
 \end{verbatim}
 
-
+Anhalten der Datenerfassung
 \begin{verbatim}
 	!DAQ STOP
 	:ok
 \end{verbatim}
 
+
+
+Die Neudefinition einer Gruppe erfolgt durch einfaches Überschreiben der Gruppendefinition. Dabei ist zu beachten, dass \emph{aktive} Gruppen nur dann überschrieben werden können, wenn die Datenerfassung angehalten ist (\texttt{!DAQ STOP}).
 
 
 \paragraph{Binärdaten}
