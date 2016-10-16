@@ -59,6 +59,7 @@ typedef enum DAQEncoding_
 
 typedef struct DAQGrp_
 {
+	bool bDefined;
 	bool bActive;
 	uint8_t nchs;
 	uint8_t chs[NMAXGRPCHS];
@@ -343,7 +344,7 @@ void daq_init()
 
 	for (uint8_t i = 0; i < NMAXGRPS; ++i)
 	{
-		f_grps[i].bActive = false;
+		f_grps[i].bDefined = false;
 	}
 
 
@@ -371,7 +372,7 @@ static void resetGrpChData()
 {
 	for (uint8_t g = 0; g < NMAXGRPS; ++g)
 	{
-		if (!f_grps[g].bActive)
+		if (!f_grps[g].bDefined)
 		{
 			continue;
 		}
@@ -784,10 +785,15 @@ static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid
 	buf = strcpyfixedwidth_returnend(buf, bufend, utoa(grpid, tmp, 10), 3);
 	buf = strcpy_returnend(buf, bufend, ": ");
 
-	if (!grp->bActive)
+	if (!grp->bDefined)
 	{
 		buf = strcpy_returnend(buf, bufend, "[undefined group]");
 		return buf;
+	}
+
+	if (!grp->bActive)
+	{
+		buf = strcpy_returnend(buf, bufend, "[inactive]   ");
 	}
 
 	for (uint8_t c = 0; c < grp->nchs; ++c)
@@ -877,6 +883,7 @@ static char* getChString_returnend(char* buf, char* const bufend, DAQChannel_t* 
 
 void clearDAQGrpStruct(DAQGrp_t* pkg)
 {
+	pkg->bDefined = false;
 	pkg->bActive = false;
 	pkg->eSampling = DAQSAMPLING_ANY;
 	pkg->eEncoding = DAQENCODING_ASCII;
@@ -898,10 +905,10 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 	*pErrCode = ERRCODE_NOERR;
 	*pszError = "";
 
-	if (args->nArgs < 2)
+	if (args->nArgs < 1)
 	{
 		*pErrCode = ERRCODE_COMM_WRONGUSAGE;
-		*pszError = "Usage: !DAQ GRP pkgid args";
+		*pszError = "Usage: !DAQ GRP groupid args";
 
 		return;
 	}
@@ -916,7 +923,7 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 
 	int readGrpID = atoi(args->args[0]);
 
-	if ( (readGrpID < 1) || (readGrpID > NMAXGRPS) )
+	if ( (readGrpID < 0) || (readGrpID > NMAXGRPS-1) )
 	{
 		*pErrCode = ERRCODE_DAQ_INVALIDPACKAGE;
 		*pszError = "Invalid package-ID!";
@@ -931,6 +938,10 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 	clearDAQGrpStruct(&grp);
 
 	uint8_t nSamplingOptions = 0;
+
+	bool bDeleteGrp = false;
+	bool bActivateGrp = false;
+	bool bDeactivateGrp = false;
 
 	grp.bAge = false;
 	grp.bTics = false;
@@ -1027,6 +1038,18 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 		{
 			grp.bCRC = true;
 		}
+		else if (strcmpi(args->paramnames[p], "DELETE") == STRCMPRES_EQUAL)
+		{
+			bDeleteGrp = true;
+		}
+		else if (strcmpi(args->paramnames[p], "ACTIVATE") == STRCMPRES_EQUAL)
+		{
+			bActivateGrp = true;
+		}
+		else if (strcmpi(args->paramnames[p], "DEACTIVATE") == STRCMPRES_EQUAL)
+		{
+			bDeactivateGrp = true;
+		}
 		else
 		{
 			*pErrCode = ERRCODE_DAQ_UNKNOWNPARAMETER;
@@ -1035,11 +1058,59 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 		}
 	}
 
-
 	if (nSamplingOptions > 1)
 	{
 		*pErrCode = ERRCODE_DAQ_CONTRADICTINGPARAMETERS;
 		*pszError = "Only one of the options ALL, ANY and TS can be set!";
+		return;
+	}
+
+
+	if (bDeleteGrp)
+	{
+		if (f_grps[grpid].bDefined)
+		{
+			clearDAQGrpStruct(&f_grps[grpid]);
+			return;
+		}
+		else
+		{
+			*pErrCode = ERRCODE_DAQ_UNKNOWNPACKAGE;
+			*pszError = "Group to delete not defined!";
+			return;
+		}
+	}
+
+
+	if (bActivateGrp && bDeactivateGrp)
+	{
+		*pErrCode = ERRCODE_COMM_WRONGUSAGE;
+		*pszError = "~ACTIVATE and ~DEACTIVATE cannot both be set!";
+		return;
+	}
+
+	if ((bActivateGrp || bDeactivateGrp) && (args->nArgs == 1))
+	{
+		if (f_grps[grpid].bDefined)
+		{
+			f_grps[grpid].bActive = bActivateGrp;
+		}
+		else
+		{
+			*pErrCode = ERRCODE_DAQ_UNKNOWNPACKAGE;
+			*pszError = "Group not defined!";
+			return;
+		}
+
+		return;
+	}
+
+
+	if (args->nArgs < 2)
+	{
+		*pErrCode = ERRCODE_COMM_WRONGUSAGE;
+		*pszError = "Usage: At least one channel has to be specified!";
+
 		return;
 	}
 
@@ -1073,7 +1144,12 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 	}
 
 	f_grps[grpid] = grp;
-	f_grps[grpid].bActive = true;
+	f_grps[grpid].bDefined = true;
+
+	if (!bDeactivateGrp)
+	{
+		f_grps[grpid].bActive = true;
+	}
 
 	return;
 }
@@ -1595,7 +1671,7 @@ static bool grplist_streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, u
 
 	while (f_uGrpListOutputCurGrp < NMAXGRPS)
 	{
-		if (f_grps[f_uGrpListOutputCurGrp].bActive)
+		if (f_grps[f_uGrpListOutputCurGrp].bDefined)
 		{
 			buf = getGrpString_returnend(buf, bufend, f_uGrpListOutputCurGrp);
 			*buf++ = '\n';	// replace \0 with \n
@@ -1732,6 +1808,37 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			szError = "Usage: ?|!DAQ subcommand [...]\nPossible subcommands: GET (?), START (!), STOP (!), CHS (?), GRP (!/?)!";
 		}
 	}
+	else if (strcmpi(subcmd, "CH") == STRCMPRES_EQUAL)
+	{
+		if (eSpec == CMDSPEC_SET)
+		{
+			eError = ERRCODE_COMM_READONLY;
+			szError = "Usage: ?DAQ CH name (Subcommand CH is read-only!)";
+		}
+		else if ((args.nArgs != 1) && (args.nParams != 0))
+		{
+			eError = ERRCODE_COMM_WRONGUSAGE;
+			szError = "Usage: ?DAQ CH name";
+		}
+		else
+		{
+			uint8_t id = 0;
+
+			if (findChannel(args.args[0], &id))
+			{
+				char* strend;
+				acRespData[0] = SOT_RXRESP;
+				strend = getChString_returnend(acRespData+1, acRespData + TXMAXMSGLEN, &f_chs[id]);
+
+				*pnRespLen = strend - acRespData;
+			}
+			else
+			{
+				eError = ERRCODE_DAQ_INVALIDCHANNEL;
+				szError = "Nonexisting channel!";
+			}
+		}
+	}
 	else if (strcmpi(subcmd, "CHS") == STRCMPRES_EQUAL)
 	{
 		if (eSpec == CMDSPEC_SET)
@@ -1782,7 +1889,7 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 	{
 		if (eSpec == CMDSPEC_SET)
 		{
-			if (args.nArgs < 2)
+			if (args.nArgs < 1)
 			{
 				eError = ERRCODE_COMM_WRONGUSAGE;
 				szError = "Usage: !DAQ GRP groupid args";
