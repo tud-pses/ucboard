@@ -66,6 +66,7 @@ typedef struct DAQGrp_
 	uint32_t prevupdatetics[NMAXGRPCHS];
 	DAQSampling_t eSampling;
 	uint32_t uTs;
+	uint32_t uNextSampleCnt;
 	uint32_t uSkip;
 	uint32_t uCurSkipCnt;
 	uint32_t uAllMaxTime;
@@ -214,7 +215,7 @@ static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufen
 
 
 
-inline uint8_t* memcpy8_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
+static inline uint8_t* memcpy8_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
 {
 	if (buf <= bufend)
 	{
@@ -225,7 +226,7 @@ inline uint8_t* memcpy8_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
 }
 
 
-inline uint8_t* memcpy16_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
+static inline uint8_t* memcpy16_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
 {
 	if (buf <= bufend - 1)
 	{
@@ -237,7 +238,7 @@ inline uint8_t* memcpy16_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
 }
 
 
-inline uint8_t* memcpy32_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
+static inline uint8_t* memcpy32_returnend(uint8_t* buf, uint8_t* bufend, uint8_t* data)
 {
 	if (buf <= bufend - 3)
 	{
@@ -471,11 +472,73 @@ void daq_do_systick()
 					break;
 				}
 				case DAQSAMPLING_TS:
-					// todo: fixed sampling time
 
 					if (grp->bSynced == false)
 					{
+						bool bSynced = true;
 
+						for (uint8_t c = 0; c < grp->nchs; ++c)
+						{
+							if ((grp->chs[c] & SPECIALCHANNELSFLAG) == 0)
+							{
+								uint32_t curtic = f_vals[grp->chs[c]].curValToRead->updatetic;
+
+								if (curtic != GETSYSTICS())
+								{
+									bSynced = false;
+									break;
+								}
+							}
+						}
+
+						if (!bSynced)
+						{
+							grp->uNextSampleCnt++;
+
+							if (grp->uNextSampleCnt >= grp->uTs)
+							{
+								grp->bActive = false;
+
+								char bufstart[100];
+								char* const bufend = bufstart + 99;
+								char* buf = bufstart;
+								char tmp[10];
+
+								buf = strcpy_returnend(buf, bufend - 1, "##ERR(");
+								buf = strcpy_returnend(buf, bufend - 1, utoa(ERRCODE_DAQ_UNSYNCHABLECHANNELS, tmp, 10));
+								buf = strcpy_returnend(buf, bufend - 1, "): Group ");
+								buf = strcpy_returnend(buf, bufend - 1, utoa(p, tmp, 10));
+								buf = strcpy_returnend(buf, bufend - 1, " is unsynchable!");
+								*buf++ = '\n';
+								*buf = '\0';
+
+								uint16_t fmark = 0;
+
+								ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
+								ARingbuffer_atomicput_putS(&f_buffer, bufstart, false);
+								ARingbuffer_atomicput_end(&f_buffer);
+							}
+						}
+						else
+						{
+							grp->bSynced = true;
+							grp->uNextSampleCnt = 0;
+						}
+
+					}
+
+					if (grp->bSynced)
+					{
+						if (grp->uNextSampleCnt == 0)
+						{
+							bSendGrp = true;
+
+							grp->uNextSampleCnt = grp->uTs - 1;
+						}
+						else
+						{
+							grp->uNextSampleCnt--;
+						}
 					}
 
 					break;
@@ -499,24 +562,34 @@ void daq_do_systick()
 					{
 						uint32_t curtic = f_vals[grp->chs[c]].curValToRead->updatetic;
 
-						if (curtic > grp->prevupdatetics[c])
+						if (grp->eSampling == DAQSAMPLING_TS)
 						{
-							grp->prevupdatetics[c] = curtic;
-							abSendChValue[c] = true;
+							mintic = GETSYSTICS();
+							maxtic = GETSYSTICS();
 
-							if (curtic > maxtic)
-							{
-								maxtic = curtic;
-							}
-
-							if (curtic < mintic)
-							{
-								mintic = curtic;
-							}
+							abSendChValue[c] = (curtic == GETSYSTICS());
 						}
 						else
 						{
-							abSendChValue[c] = false;
+							if (curtic > grp->prevupdatetics[c])
+							{
+								grp->prevupdatetics[c] = curtic;
+								abSendChValue[c] = true;
+
+								if (curtic > maxtic)
+								{
+									maxtic = curtic;
+								}
+
+								if (curtic < mintic)
+								{
+									mintic = curtic;
+								}
+							}
+							else
+							{
+								abSendChValue[c] = false;
+							}
 						}
 					}
 				}
@@ -618,7 +691,7 @@ EnDAQRes_t daq_provideChannel(const char* name, const char* desc, const char* un
 }
 
 
-void setChannelValue(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, int32_t value)
+static void setChannelValue(uint8_t ch, EnDAQValueMod_t mod, uint32_t tic, int32_t value)
 {
 	DAQValueDS_t* ds = &f_vals[ch];
 	DAQValue_t* pVal;
@@ -845,9 +918,11 @@ static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid
 	{
 		buf = strcpy_returnend(buf, bufend, "~ANY ");
 	}
-	else
+	else // if (grp->eSampling == DAQSAMPLING_TS)
 	{
-		//buf = strcpy_returnend(buf, bufend, "~TS");
+		buf = strcpy_returnend(buf, bufend, "~TS=");
+		buf = strcpy_returnend(buf, bufend, utoa(grp->uTs, tmp, 10));
+		buf = strcpy_returnend(buf, bufend, " ");
 	}
 
 	if (grp->uSkip > 0)
@@ -874,6 +949,7 @@ static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid
 static char* getChString_returnend(char* buf, char* const bufend, DAQChannel_t* ch)
 {
 	const char* type;
+	char tmp[10];
 
 	switch (ch->type)
 	{
@@ -892,13 +968,25 @@ static char* getChString_returnend(char* buf, char* const bufend, DAQChannel_t* 
 	buf = strcpy_returnend(buf, bufend, " | ");
 	buf = strcpyfixedwidth_returnend(buf, bufend, ch->unit, 15);
 	buf = strcpy_returnend(buf, bufend, " | ");
+
+	if (ch->samplingtime == DAQSAMPLINGTIME_UNDEF)
+	{
+		buf = strcpyfixedwidth_returnend(buf, bufend, "undef", 5);
+	}
+	else
+	{
+		buf = strcpyfixedwidth_returnend(buf, bufend, utoa(ch->samplingtime, tmp, 10), 5);
+	}
+
+	buf = strcpy_returnend(buf, bufend, " | ");
+
 	buf = strcpyfixedwidth_returnend(buf, bufend, type, 4);
 
 	return buf;
 }
 
 
-void clearDAQGrpStruct(DAQGrp_t* pkg)
+static void clearDAQGrpStruct(DAQGrp_t* pkg)
 {
 	pkg->bDefined = false;
 	pkg->bActive = false;
@@ -911,13 +999,15 @@ void clearDAQGrpStruct(DAQGrp_t* pkg)
 	pkg->nchs = 0;
 	pkg->uCurSkipCnt = 0;
 	pkg->uSkip = 0;
+	pkg->uTs = 0;
 	pkg->bSynced = false;
+	pkg->uNextSampleCnt = 0;
 
 	return;
 }
 
 
-void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszError)
+static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszError)
 {
 	*pErrCode = ERRCODE_NOERR;
 	*pszError = "";
@@ -1111,6 +1201,12 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 	{
 		if (f_grps[grpid].bDefined)
 		{
+			if (bActivateGrp)
+			{
+				f_grps[grpid].uNextSampleCnt = 0;
+				f_grps[grpid].bSynced = false;
+			}
+
 			f_grps[grpid].bActive = bActivateGrp;
 		}
 		else
@@ -1163,6 +1259,22 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 				*pszError = "Channel not found!";
 				return;
 			}
+
+			if (grp.eSampling == DAQSAMPLING_TS)
+			{
+				if (f_chs[chid].samplingtime == DAQSAMPLINGTIME_UNDEF)
+				{
+					*pErrCode = ERRCODE_DAQ_INCOMPATIBLESAMPLINGTIME;
+					*pszError = "All group channels must specify fixed sampling time!";
+					return;
+				}
+				else if ( (grp.uTs % f_chs[chid].samplingtime) != 0)
+				{
+					*pErrCode = ERRCODE_DAQ_INCOMPATIBLESAMPLINGTIME;
+					*pszError = "All group channels sampling times must be an integer divisor of group sampling time!";
+					return;
+				}
+			}
 		}
 
 		grp.chs[grp.nchs] = chid;
@@ -1182,7 +1294,7 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 }
 
 
-char* getValueString_bufend(char* buf, char* const bufend, DAQValue_t* pdaqval)
+static char* getValueString_bufend(char* buf, char* const bufend, DAQValue_t* pdaqval)
 {
 	char tmp[10];
 
@@ -1221,7 +1333,7 @@ char* getValueString_bufend(char* buf, char* const bufend, DAQValue_t* pdaqval)
 }
 
 
-char* getGetDataString_returnend(char* buf, char* const bufend,
+static char* getGetDataString_returnend(char* buf, char* const bufend,
 										CommCmdArgs_t* args,
 										EnErrCode_t* pErrCode, const char** pszError)
 {

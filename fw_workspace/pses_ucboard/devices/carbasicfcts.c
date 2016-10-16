@@ -108,8 +108,8 @@ void car_init()
 	initPWM();
 	initBats();
 
-	daq_provideChannel("VDBAT", "drive battery voltage", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqDrvBatVoltage);
-	daq_provideChannel("VSBAT", "system battery voltage", "mV", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_daqCarBatVoltage);
+	daq_provideChannel("VDBAT", "drive battery voltage", "mV", DAQVALUETYPE_UINT16, 1000, &f_daqDrvBatVoltage);
+	daq_provideChannel("VSBAT", "system battery voltage", "mV", DAQVALUETYPE_UINT16, 1000, &f_daqCarBatVoltage);
 
 	f_drvcal.fullforwards = -500;
 	f_drvcal.neutral_forward_ended = -52;
