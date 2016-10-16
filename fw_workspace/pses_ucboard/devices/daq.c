@@ -850,6 +850,23 @@ static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid
 		//buf = strcpy_returnend(buf, bufend, "~TS");
 	}
 
+	if (grp->uSkip > 0)
+	{
+		buf = strcpy_returnend(buf, bufend, "~SKIP=");
+		buf = strcpy_returnend(buf, bufend, utoa(grp->uSkip, tmp, 10));
+		buf = strcpy_returnend(buf, bufend, " ");
+	}
+
+	if (grp->bAge)
+	{
+		buf = strcpy_returnend(buf, bufend, "~AGE ");
+	}
+
+	if (grp->bTics)
+	{
+		buf = strcpy_returnend(buf, bufend, "~TICS ");
+	}
+
 	return buf;
 }
 
@@ -1070,7 +1087,8 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 	{
 		if (f_grps[grpid].bDefined)
 		{
-			clearDAQGrpStruct(&f_grps[grpid]);
+			f_grps[grpid].bActive = false;
+			f_grps[grpid].bDefined = false;
 			return;
 		}
 		else
@@ -1084,7 +1102,7 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 
 	if (bActivateGrp && bDeactivateGrp)
 	{
-		*pErrCode = ERRCODE_COMM_WRONGUSAGE;
+		*pErrCode = ERRCODE_DAQ_CONTRADICTINGPARAMETERS;
 		*pszError = "~ACTIVATE and ~DEACTIVATE cannot both be set!";
 		return;
 	}
@@ -1110,6 +1128,15 @@ void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char** pszErr
 	{
 		*pErrCode = ERRCODE_COMM_WRONGUSAGE;
 		*pszError = "Usage: At least one channel has to be specified!";
+
+		return;
+	}
+
+
+	if ((f_grps[grpid].bActive) && f_bStarted)
+	{
+		*pErrCode = ERRCODE_DAQ_ATTEMPTTOREDEFINEACTIVEGROUP;
+		*pszError = "An active group can only be redefined when daq is stopped!";
 
 		return;
 	}
