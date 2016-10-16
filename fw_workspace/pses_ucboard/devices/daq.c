@@ -1389,7 +1389,7 @@ static char* getGetDataString_returnend(char* buf, char* const bufend,
 			*buf++ = ' ';
 		}
 
-		uint32_t tics = GETSYSTICS();
+		const uint32_t tics = GETSYSTICS();
 		char tmp[10];
 
 		DAQValue_t* pVal;
@@ -1423,7 +1423,7 @@ static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 												bool* abSendChValue,
 												uint32_t maxtics, uint32_t mintics)
 {
-	uint32_t tics = GETSYSTICS();
+	const uint32_t tics = GETSYSTICS();
 
 	for (uint8_t c = 0; c < grp->nchs; ++c)
 	{
