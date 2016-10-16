@@ -720,12 +720,11 @@ bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					{
 						bOutOfRange = true;
 					}
-				}
-
-				if (!bOutOfRange)
-				{
-					f_eRequestedDrvMode = eReqDrvMode;
-					f_iRequestedDrvVal = val;
+					else
+					{
+						f_eRequestedDrvMode = eReqDrvMode;
+						f_iRequestedDrvVal = val;
+					}
 				}
 			}
 		}
