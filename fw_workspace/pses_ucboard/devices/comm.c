@@ -446,6 +446,11 @@ void comm_do()
 					if (res)
 					{
 						s_bIncompleteRespStreamMsg = !bMsgComplete;
+
+						if (bMsgComplete)
+						{
+							f_pRespStream = NULL;
+						}
 					}
 				}
 
