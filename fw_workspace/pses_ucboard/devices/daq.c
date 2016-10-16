@@ -298,6 +298,29 @@ static bool findSpecialChannel(const char* name, uint8_t* pID)
 }
 
 
+static bool reversefindSpecialChannel(uint8_t id, const char** pname)
+{
+	uint8_t i = 0;
+
+	while (f_aSpecialChannelDict[i].name != NULL)
+	{
+		if (f_aSpecialChannelDict[i].id == id)
+		{
+			if (pname != NULL)
+			{
+				*pname = f_aSpecialChannelDict[i].name;
+			}
+
+			return true;
+		}
+
+		i++;
+	}
+
+	return false;
+}
+
+
 void daq_init()
 {
 	f_nChs = 0;
@@ -761,6 +784,12 @@ static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid
 	buf = strcpyfixedwidth_returnend(buf, bufend, utoa(grpid, tmp, 10), 3);
 	buf = strcpy_returnend(buf, bufend, ": ");
 
+	if (!grp->bActive)
+	{
+		buf = strcpy_returnend(buf, bufend, "[undefined group]");
+		return buf;
+	}
+
 	for (uint8_t c = 0; c < grp->nchs; ++c)
 	{
 		if (c > 0)
@@ -768,7 +797,16 @@ static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid
 			buf = strcpy_returnend(buf, bufend, " ");
 		}
 
-		buf = strcpy_returnend(buf, bufend, f_chs[grp->chs[c]].name);
+		if (grp->chs[c] & SPECIALCHANNELSFLAG)
+		{
+			const char* cname = 0;
+			reversefindSpecialChannel(grp->chs[c], &cname);
+			buf = strcpy_returnend(buf, bufend, cname);
+		}
+		else
+		{
+			buf = strcpy_returnend(buf, bufend, f_chs[grp->chs[c]].name);
+		}
 	}
 
 	buf = strcpy_returnend(buf, bufend, "   ");
@@ -803,7 +841,7 @@ static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid
 	}
 	else
 	{
-		//buf = strcpy_returnend(buf, bufend, "~AL");
+		//buf = strcpy_returnend(buf, bufend, "~TS");
 	}
 
 	return buf;
@@ -1765,19 +1803,50 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 		}
 		else
 		{
-			if (args.nArgs != 0)
+			if (args.nArgs != 1)
 			{
 				eError = ERRCODE_COMM_WRONGUSAGE;
-				szError = "Usage: ?DAQ GRP";
+				szError = "Usage: ?DAQ GRP nb";
 			}
 			else
 			{
-				f_uGrpListOutputCurGrp = 0;
+				int32_t g = atoi(args.args[0]);
 
-				*(CommStreamFctPtr*)pRespStream = grplist_streamout;
+				if ((g < 0) || (g >= NMAXGRPS))
+				{
+					eError = ERRCODE_DAQ_INVALIDPACKAGE;
+					szError = "Invalid group number!";
+				}
+				else
+				{
+					char* strend;
 
-				*pnRespLen = 0xFFFF;
+					acRespData[0] = SOT_RXRESP;
+					strend = getGrpString_returnend(acRespData + 1, acRespData + TXMAXMSGLEN, g);
+					*pnRespLen = strend - acRespData;
+				}
 			}
+		}
+	}
+	else if (strcmpi(subcmd, "GRPS") == STRCMPRES_EQUAL)
+	{
+		if (eSpec == CMDSPEC_SET)
+		{
+			eError = ERRCODE_COMM_READONLY;
+			szError = "Usage: ?DAQ GRPS (Subcommand GRPS is read-only!)";
+		}
+		else if ((args.nParams + args.nArgs) != 0)
+		{
+			eError = ERRCODE_COMM_WRONGUSAGE;
+			szError = "Usage: ?DAQ GRPS takes no further arguments!)";
+		}
+		else
+		{
+			f_uGrpListOutputCurGrp = 0;
+
+			*(CommStreamFctPtr*)pRespStream = grplist_streamout;
+
+			*pnRespLen = 0xFFFF;
 		}
 	}
 	else if (strcmpi(subcmd, "START") == STRCMPRES_EQUAL)
