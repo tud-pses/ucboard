@@ -61,6 +61,7 @@ typedef struct DAQGrp_
 {
 	bool bDefined;
 	bool bActive;
+	uint32_t msgcnt;
 	uint8_t nchs;
 	uint8_t chs[NMAXGRPCHS];
 	uint32_t prevupdatetics[NMAXGRPCHS];
@@ -119,22 +120,28 @@ static uint8_t f_nChs = 0;
 
 
 #define SPECIALCHANNELSFLAG (1 << 7)
-#define SPECIALCHANNEL_TIC		(SPECIALCHANNELSFLAG | 1)
-#define SPECIALCHANNEL_TIC8		(SPECIALCHANNELSFLAG | 2)
-#define SPECIALCHANNEL_TIC16	(SPECIALCHANNELSFLAG | 3)
+#define SPECIALCHANNEL_TICS		(SPECIALCHANNELSFLAG | 1)
+#define SPECIALCHANNEL_TICS8	(SPECIALCHANNELSFLAG | 2)
+#define SPECIALCHANNEL_TICS16	(SPECIALCHANNELSFLAG | 3)
 #define SPECIALCHANNEL_DTICS	(SPECIALCHANNELSFLAG | 4)
 #define SPECIALCHANNEL_DTICS8	(SPECIALCHANNELSFLAG | 5)
 #define SPECIALCHANNEL_DTICS16	(SPECIALCHANNELSFLAG | 6)
+#define SPECIALCHANNEL_CNT		(SPECIALCHANNELSFLAG | 7)
+#define SPECIALCHANNEL_CNT8		(SPECIALCHANNELSFLAG | 8)
+#define SPECIALCHANNEL_CNT16	(SPECIALCHANNELSFLAG | 9)
 
 
 static const struct {const char* const name; const uint8_t id;} f_aSpecialChannelDict[] =
 {
-		{"_TIC", SPECIALCHANNEL_TIC},
-		{"_TIC16", SPECIALCHANNEL_TIC16},
-		{"_TIC8", SPECIALCHANNEL_TIC8},
+		{"_TIC", SPECIALCHANNEL_TICS},
+		{"_TIC16", SPECIALCHANNEL_TICS16},
+		{"_TIC8", SPECIALCHANNEL_TICS8},
 		{"_DTICS", SPECIALCHANNEL_DTICS},
 		{"_DTICS16", SPECIALCHANNEL_DTICS16},
 		{"_DTICS8", SPECIALCHANNEL_DTICS8},
+		{"_CNT", SPECIALCHANNEL_CNT},
+		{"_CNT16", SPECIALCHANNEL_CNT16},
+		{"_CNT8", SPECIALCHANNEL_CNT8},
 		{NULL, 0}
 };
 
@@ -604,6 +611,8 @@ void daq_do_systick()
 				{
 					grp->uCurSkipCnt = grp->uSkip;
 
+					grp->msgcnt++;
+
 
 					if (grp->eEncoding == DAQENCODING_ASCII)
 					{
@@ -986,22 +995,23 @@ static char* getChString_returnend(char* buf, char* const bufend, DAQChannel_t* 
 }
 
 
-static void clearDAQGrpStruct(DAQGrp_t* pkg)
+static void clearDAQGrpStruct(DAQGrp_t* grp)
 {
-	pkg->bDefined = false;
-	pkg->bActive = false;
-	pkg->eSampling = DAQSAMPLING_ANY;
-	pkg->eEncoding = DAQENCODING_ASCII;
-	pkg->bAge = false;
-	pkg->bTics = false;
-	pkg->bCRC = false;
-	pkg->bAvg = false;
-	pkg->nchs = 0;
-	pkg->uCurSkipCnt = 0;
-	pkg->uSkip = 0;
-	pkg->uTs = 0;
-	pkg->bSynced = false;
-	pkg->uNextSampleCnt = 0;
+	grp->bDefined = false;
+	grp->bActive = false;
+	grp->msgcnt = 0;
+	grp->eSampling = DAQSAMPLING_ANY;
+	grp->eEncoding = DAQENCODING_ASCII;
+	grp->bAge = false;
+	grp->bTics = false;
+	grp->bCRC = false;
+	grp->bAvg = false;
+	grp->nchs = 0;
+	grp->uCurSkipCnt = 0;
+	grp->uSkip = 0;
+	grp->uTs = 0;
+	grp->bSynced = false;
+	grp->uNextSampleCnt = 0;
 
 	return;
 }
@@ -1203,6 +1213,7 @@ static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char**
 		{
 			if (bActivateGrp)
 			{
+				f_grps[grpid].msgcnt = 0;
 				f_grps[grpid].uNextSampleCnt = 0;
 				f_grps[grpid].bSynced = false;
 			}
@@ -1435,13 +1446,17 @@ static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 
 			switch (id)
 			{
-				case SPECIALCHANNEL_TIC: val = mintics; break;
-				case SPECIALCHANNEL_TIC16: val = mintics & 0xFFFF ; break;
-				case SPECIALCHANNEL_TIC8: val = mintics & 0xFF ; break;
+				case SPECIALCHANNEL_TICS: val = mintics; break;
+				case SPECIALCHANNEL_TICS16: val = mintics & 0xFFFF; break;
+				case SPECIALCHANNEL_TICS8: val = mintics & 0xFF; break;
 
 				case SPECIALCHANNEL_DTICS: break;
 				case SPECIALCHANNEL_DTICS16: val = SATURATION_U(val, 0xFFFF); break;
 				case SPECIALCHANNEL_DTICS8: val = SATURATION_U(val, 0xFF); break;
+
+				case SPECIALCHANNEL_CNT: val = grp->msgcnt; break;
+				case SPECIALCHANNEL_CNT16: val = grp->msgcnt & 0xFFFF; break;
+				case SPECIALCHANNEL_CNT8: val = grp->msgcnt & 0xFF; break;
 			}
 
 			buf = strcpy_returnend(buf, bufend, utoa(val, tmp, 10));
@@ -1506,15 +1521,15 @@ static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufen
 
 			switch (id)
 			{
-				case SPECIALCHANNEL_TIC:
+				case SPECIALCHANNEL_TICS:
 					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&mintics) + 1;
 					break;
 
-				case SPECIALCHANNEL_TIC16:
+				case SPECIALCHANNEL_TICS16:
 					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&mintics) + 1;
 					break;
 
-				case SPECIALCHANNEL_TIC8:
+				case SPECIALCHANNEL_TICS8:
 					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&mintics) + 1;
 					break;
 
@@ -1530,6 +1545,18 @@ static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufen
 				case SPECIALCHANNEL_DTICS8:
 					val = SATURATION_U(val, 0xFF);
 					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&val) + 1;
+					break;
+
+				case SPECIALCHANNEL_CNT:
+					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&grp->msgcnt) + 1;
+					break;
+
+				case SPECIALCHANNEL_CNT16:
+					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&grp->msgcnt) + 1;
+					break;
+
+				case SPECIALCHANNEL_CNT8:
+					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&grp->msgcnt) + 1;
 					break;
 			}
 		}
