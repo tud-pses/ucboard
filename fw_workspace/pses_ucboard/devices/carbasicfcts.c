@@ -114,7 +114,7 @@ void car_init()
 	f_drvcal.fullforwards = -500;
 	f_drvcal.neutral_forward_ended = -52;
 	f_drvcal.fullbackwards = 250;
-	f_drvcal.neutral_backward_ended = 50;
+	f_drvcal.neutral_backward_ended = 53;
 
 	return;
 }
@@ -496,7 +496,7 @@ static void initPWM()
 	}
 
 
-	TIM2->CCR1 = 0;
+	TIM2->CCR1 = 1500;
 	TIM2->CCR2 = 0;
 
 	HAL_TIM_Base_Start(&htim2);
