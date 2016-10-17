@@ -133,9 +133,9 @@ static uint8_t f_nChs = 0;
 
 static const struct {const char* const name; const uint8_t id;} f_aSpecialChannelDict[] =
 {
-		{"_TIC", SPECIALCHANNEL_TICS},
-		{"_TIC16", SPECIALCHANNEL_TICS16},
-		{"_TIC8", SPECIALCHANNEL_TICS8},
+		{"_TICS", SPECIALCHANNEL_TICS},
+		{"_TICS16", SPECIALCHANNEL_TICS16},
+		{"_TICS8", SPECIALCHANNEL_TICS8},
 		{"_DTICS", SPECIALCHANNEL_DTICS},
 		{"_DTICS16", SPECIALCHANNEL_DTICS16},
 		{"_DTICS8", SPECIALCHANNEL_DTICS8},
