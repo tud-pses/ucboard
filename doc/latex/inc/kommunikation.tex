@@ -50,10 +50,11 @@ Einzelne Zeilenumbrüche (leere Nachrichten) sind zu ignorieren. (Diese werden o
 	\item Textausgaben (Display-Funktion) beginnen mit \texttt{'}
 	\item Fehlermeldungen sind Textausgaben. Diese beginnen mit \texttt{'ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{'ERR(code):Beschreibung} 
 	\item Ohne Auf"|forderung versendete Messdaten beginnen mit \texttt{\#} (base64- oder hex-codiert) \bzw \texttt{\#\#} (lesbarer Text).
-	\item Wenn eine Nutzerinteraktion notwendig ist, dann sollte das letzte Zeichen vor dem Nachrichtendezeichen ein \texttt{?} sein.
+	\item Wenn eine Nutzerinteraktion notwendig ist, dann sollte das letzte Zeichen vor dem Nachrichtendezeichen ein \texttt{?} oder \texttt{:} sein.
 	\item Alle Nachrichten vom ucboard haben ETX (0x03) als Endzeichen. (Dadurch ist es möglich, eine mehrzeilige Ausgabe auf dem Terminalprogramm zu erzeugen.)
 		\begin{itemize}
-			\item Für die bessere Lesbarkeit ist es empfehlenswert, alle Textnachrichten mit einem Zeilenumbruch (vor ETX) abzuschließen. Lediglich bei hex- oder base64-basierten Messdatennachrichten wird dies nicht gemacht, da diese gerade für eine sparsame Kommunikation gedacht sind.
+			\item Über eine -- aktuell noch fest eingestellte Option -- wird nach jedem ETX automatisch ein Zeilenumbruch geschickt. Dies dient der besseren Lesbarkeit. Es wäre jedoch besser, ein Terminalprogramm zu verwenden (\bzw zu schreiben), welches ETX durch einen Zeilenumbruch ersetzt. Damit wäre sowohl der Text besser lesbar als auch der Sparsamkeit Rechnung getragen.
+			%\item Für die bessere Lesbarkeit ist es empfehlenswert, alle Textnachrichten mit einem Zeilenumbruch (vor ETX) abzuschließen. Lediglich bei hex- oder base64-basierten Messdatennachrichten wird dies nicht gemacht, da diese gerade für eine sparsame Kommunikation gedacht sind.
 		\end{itemize}
 \end{itemize}
 
@@ -111,6 +112,10 @@ Die Parameter der Schnittstellen sind in \tabref{tab:Comm:UARTParam} zusammengef
 		\mybottomrule
 	\end{tabular}
 \end{table}
+
+
+
+\textbf{Wichtig:} Momentan werden numerische Eingaben noch nicht an allen Stellen daraufhin überprüft, ob es tatsächlich eine (Ganz)Zahl ist. Dies bedeutet, dass \zB Eingaben wie \verb|1000.|, \verb|1000.0| oder auch \verb|+1000| für Tausend eine unerwartete Zahl ergibt.
 
 
 \subsection{Beschreibung}
@@ -190,7 +195,7 @@ Setzen:
 
 \begin{verbatim}
 	!STEER -200 -201
-	:ERR(1001):Msg corrupted
+	:Err(269): Message corrupted! (The two values have to be equal!)
 \end{verbatim}
 }
 
@@ -207,7 +212,7 @@ Abfragen:
 
 Zum Setzen und Abfragen der Fahrgeschwindigkeit. (\Bzw Motorspannung.)
 
-Es gibt zwei Modi: Die "`gemanagte"' und die "`direkte"' Ansteuerung.
+Es gibt zwei Modi: Die "`gemanagte"' und die "`direkte"' Ansteuerung. Siehe dazu \secref{sec:hw:drivectrl}.
 
 
 \paragraph{Gemanagte Ansteuerung}
@@ -276,7 +281,7 @@ Abfragen der tatsächlichen Impulsbreite (vergleiche "`Direkte Ansteuerung"'):
 
 
 \paragraph{Direkte Ansteuerung}
-Bei der direkten Ansteuerung wird direkt die Impulsbreite vorgegeben, die an den Fahrtenregler übertragen wird. Dabei wird die Impulsbreite als die Abweichung in Mikrosekunden vom Neutralwert \valunit{1,5}{ms} angegeben. \Dah ein Wert von $-500$ entspricht der minimalen Impulsbreite (\dah Maximalwerte \emph{vorwärts}) von \valunit{1}{ms} und ein Wert von 500 der maximalen Impulsbreite von \valunit{2}{ms}.
+Bei der direkten Ansteuerung wird direkt die Impulsbreite vorgegeben, die an den Fahrtenregler übertragen wird. Dabei wird die Impulsbreite als die Abweichung in Mikrosekunden vom Neutralwert \valunit{1,5}{ms} angegeben. \Dah ein Wert von $-500$ entspricht der minimalen Impulsbreite (\dah Maximalwert \emph{vorwärts}) von \valunit{1}{ms} und ein Wert von 500 der maximalen Impulsbreite von \valunit{2}{ms}.
 
 
 \begin{verbatim}
@@ -457,7 +462,10 @@ Abfrage aller Ultraschallwerte, jeweils mit Alter
 
 \paragraph{Automatische Messgruppen}
 
-Es stehen zwanzig parametrierbare Messgruppen zur Verfügung, die zum automatischen Verschicken von Messdaten verwendet werden. In diesen können verschiedene Kanäle (Sensorwerte) zusammengefasst werden. Neben den "`normalen"' Kanälen stehen noch die in \tabref{tab:Comm:DAQ:SpecialChannels} aufgeführten "`Sonderkanäle"' zur Verfügung, die Metadaten zu den Datensätzen enthalten.
+Es stehen zwanzig parametrierbare Messgruppen zur Verfügung, die zum automatischen Verschicken von Messdaten verwendet werden. In diesen können bis zu zehn verschiedene Kanäle (Sensorwerte) zusammengefasst werden. Neben den normalen Kanälen stehen noch die in \tabref{tab:Comm:DAQ:SpecialChannels} aufgeführten "`Sonderkanäle"' zur Verfügung, die Metadaten zu den Datensätzen enthalten. (Diese stehen bei der Einzelabfrage über \verb|?DAQ GET chname| nicht zur Verfügung.)
+
+Es wird je Gruppe immer nur ein Messdatensatz gepuffert. Kann dieser nicht verschickt werden, bis die nächste Abtastung der Gruppe erfolgt ist, so wird dieser verworfen. Dabei werden alle Gruppen gleichberechtigt behandelt, \dah es erfolgt keine Bevorzugung von Messgruppen mit kleiner Abtastzeit. Damit ist die Wahrscheinlichkeit gering, dass bei langsam abgetasteten Messgruppen Daten verlorengehen, auch wenn viel Bandbreite für Messgruppen mit kleiner Abtastzeit belegt wird. Ein Verlust von Messdatensätzen aufgrund einer zu geringen Bandbreite \footnote{An dieser Stelle muss noch angemerkt werden, dass das Management der zu versendenden Daten im Idle-Task des ucboards erfolgt. \Dah während der Datenerfassung im SysTick-Task werden keine neuen Daten zum Verschicken bereit gemacht, auch wenn der letzte Datensatz abgearbeitet ist. Damit ist der erreichbare Datendurchsatz kleiner als der sich theoretisch aus der Baudrate ergebenden Wert. Dies kann \bzw sollte in Zukunft noch geändert werden. Bisher benötigt der SysTick-Task weniger als \valunit{200}{\upmu s}. Damit würde im ungünstigsten Fall die Datenrate ein Fünftel "`verlieren"'.}
+
 
 Gruppe 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{10}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
 \begin{verbatim}
@@ -482,12 +490,21 @@ Optionen:
 			\item \verb+~ALL[=maxwait]+: Sendet, wenn zu allen Gruppenkanäle neue Daten vorhanden sind. Wenn \verb+maxwait+ gegeben ist, dann wird nach dem ersten neuen Wert maximal diese Zeit in Millisekunden gewartet, bis die Daten verschickt werden.\footnote{Dies ist \zB für die US-Sensoren gedacht, deren Daten meist an nacheinander liegenden Zeitschritten ankommen.}
 			\item \verb+~ANY+: Sendet, wenn zu einem der Gruppenkanäle ein neues Datum vorhanden ist.
 			\item \verb+~TS=Ts+: Abtastzeit in Millisekunden. (Muss ein ganzes Vielfaches der Abtastzeiten aller Kanäle des Paketes sein.)
-			\item \verb+~AVG[=Ta]+: \textcolor[rgb]{0.75,0.75,0.75}{Mittelung über Ta. Ta darf dabei maximal TS sein. Wenn kein Ta angegeben ist, dann wird Ta = Ts gesetzt.}
+			\begin{itemize}
+				\item \verb+~AVG[=Ta]+: Mittelung über Zeitraum \verb|Ta|. (Nur im Abtastmodus \verb|TS| verfügbar.) Wenn die Option \verb|AVG| verwendet wird, dann müssen alle Gruppenkanäle die gleiche Abtastzeit besitzen. \verb|Ta| darf dabei maximal \verb|Ts| sein und muss ein ganzes Vielfaches der Abtastzeit der Gruppenkanäle sein. Wenn kein \verb|Ta| angegeben ist, dann wird \verb|Ta| = \verb|Ts| gesetzt.\\
+				Diese Mittelung kann damit bezüglich der Sensorabtastzeit $T_\mrm{s,sig}$ über die Übertragungsfunktion
+				\begin{align*}
+					G_\mrm{avg}(z) = \frac{\frac{1}{n_\mrm{avg}} \cdot ( z^{n_\mrm{avg}-1} + z^{n_\mrm{avg}-2} + \cdots + 1)}{z^{n_\mrm{avg}-1}}
+				\end{align*}
+				mit $n_\mrm{avg} = \mathtt{Ta}/T_\mrm{s,sig}$ ausgedrückt werden. Über \verb+~TS=Ts+ wird dann eine Unterabtastung mit dem Faktor $\mathtt{Ts}/T_\mrm{s,sig}$ vorgenommen.
+			\end{itemize}
+			
+				
 		\end{itemize}
-	\item \verb+~SKIP=n+: Überspringt \texttt{n} Werte. \Dah bei einem Wert von neun wird jeder zehnte Wert verwendet.
+	\item \verb+~SKIP=n+: Überspringt \texttt{n} Werte. \Dah bei einem Wert von neun wird jeder zehnte Wert verwendet. Dieses Überspringen wird nach allen anderen Berechnungen und Abfragen durchgeführt. Diese Option dient primär zum Debuggen (um die Menge an ausgegebenem Text zu reduzieren), kann aber auch zur Unterabtastung für Kanäle ohne feste Abtastzeit verwendet werden. (Dabei ist dann aber keine Mittelung möglich.)
 	\item \verb+~ENC=B64|HEX|ASCII+: Nachricht wird base64-codiert (ohne Padding), Hex-codiert oder Ascii-codiert. ASCII meint hierbei "`lesbaren Text"'. Standardwert ist ASCII.
 	\item \verb+~CRC+: CRC16-Prüfsumme (Nur wenn ENC = B64 oder HEX)
-	\item \verb+~AGE+ und \verb+~TICS+: Wie bei Einzelwertabfrage. Damit wird \emph{jedem} Wert das Alter sowie der Erfassungszeitpunkt hinzugefügt. (Wenn beide Optionen gewählt sind, dann immer in der Reihenfolge "`Age -- Tics"'.) Die Werte werden bei der Ascii-Codierung immer innerhalb der senkrechten Striche des Kanals geschrieben. Bei Binärcodierungen werden diese Werte jeweils als \valunit{32}{bit}-Werte jeweils hinter den betreffenden Messwert eingefügt. Diese Optionen dienen lediglich zum Debuggen. Im "`Normalbetrieb"' sollten diese aufgrund des großen Platzbedarfs nicht verwendet werden!
+	\item \verb+~AGE+ und \verb+~TICS+: Wie bei Einzelwertabfrage. Damit wird \emph{jedem} Wert das Alter sowie der Erfassungszeitpunkt hinzugefügt. (Wenn beide Optionen gewählt sind, dann immer in der Reihenfolge "`Age -- Tics"'.) Die Werte werden bei der Ascii-Codierung immer innerhalb der senkrechten Striche des Kanals geschrieben. Bei Binärcodierungen werden diese Werte jeweils als \valunit{32}{bit}-Werte jeweils hinter den betreffenden Messwert eingefügt. Diese Optionen dienen lediglich zum Debuggen. Im "`Normalbetrieb"' sollten diese aufgrund des großen Platzbedarfs nicht verwendet werden!\footnote{Das Alter \texttt{AGE} bezieht sich auf den Abtastzeitpunkt des Datensatzes, nicht auf den Zeitpunkt des Versendens. Der Wert ist damit nur bei der Abtastart \texttt{ALL} relevant, da dort die Daten einer Gruppe zu unterschiedlichen Zeitpunkten abgetastet sein können. Die Zeitdifferenz zwischen Abtastzeitpunkt und Versenden kann durch den Sonderkanal \texttt{\_DLY} abgefragt werden. (Somit ist das tatsächliche Alter \texttt{AGE} + \texttt{\_DLY} plus die Zeit zur Datenübermittlung und Verzögerungen innerhalb des Betriebssystem des PCs.)}
 \end{itemize}
 
 
@@ -506,11 +523,11 @@ Optionen:
 		\verb|_TICS16| & die niederwertigen \valunit{16}{bits} von \verb|_TIC| & ms & \verb|uint16_t| & 2 \\
 		\verb|_TICS8| & die niederwertigen \valunit{8}{bits} von \verb|_TIC| & ms & \verb|uint8_t| & 1 \\[2mm]
 		\verb|_DTICS| & Delta der ucboard-Zeit zwischen ersten und letztem Datum & ms & \verb|uint32_t| & 4 \\
-		\verb|_DTICS16| & min(\verb|_DTICS|, 65\,535) & ms & \verb|uint16_t| & 2 \\
-		\verb|_DTICS8| & min(\verb|_DTICS|, 255) & ms & \verb|uint8_t| & 1 \\[2mm]
-		{\color[rgb]{0.75,0.75,0.75}\verb|_DLY|} & Zeit zwischen Datensatzerstellung und Versenden & ms & \verb|uint32_t| & 4 \\
-		{\color[rgb]{0.75,0.75,0.75}\verb|_DLY16|} & min(\verb|_DLY|, 65\,535) & ms  & \verb|uint16_t| & 2 \\
-		{\color[rgb]{0.75,0.75,0.75}\verb|_DLY8|} & min(\verb|_DLY|, 255) & ms & \verb|uint8_t| & 1 \\
+		\verb|_DTICS16| & min\{\verb|_DTICS|, 65\,535\} & ms & \verb|uint16_t| & 2 \\
+		\verb|_DTICS8| & min\{\verb|_DTICS|, 255\} & ms & \verb|uint8_t| & 1 \\[2mm]
+		\verb|_DLY| & Zeit zwischen Datensatzerstellung und Versenden & ms & \verb|uint32_t| & 4 \\
+		\verb|_DLY16| & min\{\verb|_DLY|, 65\,535\} & ms  & \verb|uint16_t| & 2 \\
+		\verb|_DLY8| & min\{\verb|_DLY|, 255\} & ms & \verb|uint8_t| & 1 \\
 		\mybottomrule
 	\end{tabular}
 \end{table}
@@ -565,7 +582,7 @@ Die Neudefinition einer Gruppe erfolgt durch einfaches Überschreiben der Gruppe
 
 
 \paragraph{Binärdaten}
-Bei ENC = B64 und HEX werden die Daten als Binärdaten verschickt.
+Bei \verb|ENC| = \verb|B64| und \verb|HEX| werden die Daten als Binärdaten verschickt.
 
 Dabei ist das erste Byte des dekodierten Binärdatensatzes die Messgruppe. Darauf folgen ohne Leer- oder Trennzeichen die einzelnen Messdaten mit der jeweils für den Kanal gültigen Breite.
 
@@ -589,6 +606,17 @@ Dabei ist das erste Byte des dekodierten Binärdatensatzes die Messgruppe. Darau
 	#038A1C5F07470ECFA5
 	#BIocXwdHDou8
 \end{verbatim}
+
+
+\paragraph{Sonstiges}
+
+Die Definition einer Messgruppe, die nur aus Sonderkanälen besteht, ist möglich. Dies ist jedoch -- wenn überhaupt -- nur mit der Abtastart \verb|TS| sinnvoll, da bei \verb|ANY| und \verb|ALL| nie ein Datensatz verschickt werden würde.
+
+So kann mit
+\begin{verbatim}
+	!daq grp 1 _cnt8 _dly8 ~Ts=10 ~enc=b64
+\end{verbatim}
+ein "`Taktgeber"' erzeugt werden, der alle \valunit{10}{ms} einen Wert schickt. Über \verb|_CNT8| kann dabei festgestellt werden, ob Werte übersprungen wurden, und mit \verb|_DLY8|, ob der aktuelle Wert verzögert wurde.
 
 
 
@@ -616,7 +644,7 @@ Abfragen Zustand
 
 
 
-\subsubsection{IMU CAL}
+%\subsubsection{IMU CAL}
 
 
 

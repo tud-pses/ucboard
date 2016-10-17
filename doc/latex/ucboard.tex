@@ -176,17 +176,17 @@
 
 
 
-%% =================================================================================
-%% Inhaltsverzeichnis
-%% =================================================================================
-%\cleardoublepage	% Auf einer leeren rechten Seite beginnen
-%\phantomsection		% Diese und die nächste Zeile dient dazu, für das Inhalts-
-					%% verzeichnis einen Eintrag in das pdf-Inhaltsverzeichnis,
-					%% aber nicht in das normale Verzeichnis zu erzeugen.
-%\pdfbookmark[0]{\contentsname}{pdf:toc}	
-%\tableofcontents	% Inhaltsverzeichnis einfügen
-%\clearpage			% Sonst kommt nichts mehr auf die Seite
-%% =================================================================================
+% =================================================================================
+% Inhaltsverzeichnis
+% =================================================================================
+\cleardoublepage	% Auf einer leeren rechten Seite beginnen
+\phantomsection		% Diese und die nächste Zeile dient dazu, für das Inhalts-
+					% verzeichnis einen Eintrag in das pdf-Inhaltsverzeichnis,
+					% aber nicht in das normale Verzeichnis zu erzeugen.
+\pdfbookmark[0]{\contentsname}{pdf:toc}	
+\tableofcontents	% Inhaltsverzeichnis einfügen
+\clearpage			% Sonst kommt nichts mehr auf die Seite
+% =================================================================================
 
 
 
@@ -194,6 +194,10 @@
 % Hauptteil
 % =================================================================================
 
+
+\clearpage
+\input{inc/hardware.tex}
+\FloatBarrier
 
 \clearpage
 \input{inc/kommunikation.tex}
