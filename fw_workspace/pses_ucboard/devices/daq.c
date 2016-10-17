@@ -57,6 +57,16 @@ typedef enum DAQEncoding_
 } DAQEncoding_t;
 
 
+typedef struct DAQGrpVals_
+{
+	uint32_t tics;
+	uint32_t msgcnt;
+	DAQValue_t vals[NMAXGRPCHS];
+	uint32_t maxtics;
+	uint32_t mintics;
+	bool bSent;
+} DAQGrpVals_t;
+
 typedef struct DAQGrp_
 {
 	bool bDefined;
@@ -77,6 +87,9 @@ typedef struct DAQGrp_
 	bool bCRC;
 	bool bAvg;
 	DAQEncoding_t eEncoding;
+	DAQGrpVals_t valsA;
+	DAQGrpVals_t valsB;
+	DAQGrpVals_t* pCurValsToSend;
 } DAQGrp_t;
 
 
@@ -129,6 +142,9 @@ static uint8_t f_nChs = 0;
 #define SPECIALCHANNEL_CNT		(SPECIALCHANNELSFLAG | 7)
 #define SPECIALCHANNEL_CNT8		(SPECIALCHANNELSFLAG | 8)
 #define SPECIALCHANNEL_CNT16	(SPECIALCHANNELSFLAG | 9)
+#define SPECIALCHANNEL_DLY		(SPECIALCHANNELSFLAG | 10)
+#define SPECIALCHANNEL_DLY8		(SPECIALCHANNELSFLAG | 11)
+#define SPECIALCHANNEL_DLY16	(SPECIALCHANNELSFLAG | 12)
 
 
 static const struct {const char* const name; const uint8_t id;} f_aSpecialChannelDict[] =
@@ -142,6 +158,9 @@ static const struct {const char* const name; const uint8_t id;} f_aSpecialChanne
 		{"_CNT", SPECIALCHANNEL_CNT},
 		{"_CNT16", SPECIALCHANNEL_CNT16},
 		{"_CNT8", SPECIALCHANNEL_CNT8},
+		{"_DLY", SPECIALCHANNEL_DLY},
+		{"_DLY16", SPECIALCHANNEL_DLY16},
+		{"_DLY8", SPECIALCHANNEL_DLY8},
 		{NULL, 0}
 };
 
@@ -156,11 +175,10 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 
 
 static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
-											DAQGrp_t* grp, bool* abSendChValue,
-											uint32_t maxtics, uint32_t mintics);
+												DAQGrp_t* grp,
+												DAQGrpVals_t* gvals);
 static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
-											DAQGrp_t* grp, bool* abSendChValue,
-											uint32_t maxtics, uint32_t mintics);
+											DAQGrp_t* grp, DAQGrpVals_t* gvals);
 
 
 
@@ -554,14 +572,19 @@ void daq_do_systick()
 
 			if (bSendGrp)
 			{
-				char tmp[10];
-				char bufstart[200];
-				char* buf = bufstart;
-				char* const bufend = bufstart + 199;
-
 				uint32_t maxtic = 0;
-				uint32_t mintic = 0xFFFFFFFF;
-				bool abSendChValue[NMAXGRPCHS];
+				uint32_t mintic = GETSYSTICS();
+
+				DAQGrpVals_t* gvals;
+
+				if (grp->pCurValsToSend == &grp->valsA)
+				{
+					gvals = &grp->valsB;
+				}
+				else
+				{
+					gvals = &grp->valsA;
+				}
 
 				for (uint8_t c = 0; c < grp->nchs; ++c)
 				{
@@ -574,14 +597,25 @@ void daq_do_systick()
 							mintic = GETSYSTICS();
 							maxtic = GETSYSTICS();
 
-							abSendChValue[c] = (curtic == GETSYSTICS());
+							if (curtic == GETSYSTICS())
+							{
+								gvals->vals[c] = *f_vals[grp->chs[c]].curValToRead;
+							}
+							else
+							{
+								gvals->vals[c].mod = DAQVALUEMOD_NOVALUE;
+								gvals->vals[c].tic = GETSYSTICS();
+								gvals->vals[c].value = 0;
+								gvals->vals[c].updatetic = GETSYSTICS();
+							}
 						}
 						else
 						{
 							if (curtic > grp->prevupdatetics[c])
 							{
 								grp->prevupdatetics[c] = curtic;
-								abSendChValue[c] = true;
+
+								gvals->vals[c] = *f_vals[grp->chs[c]].curValToRead;
 
 								if (curtic > maxtic)
 								{
@@ -595,7 +629,10 @@ void daq_do_systick()
 							}
 							else
 							{
-								abSendChValue[c] = false;
+								gvals->vals[c].mod = DAQVALUEMOD_NOVALUE;
+								gvals->vals[c].tic = GETSYSTICS();
+								gvals->vals[c].value = 0;
+								gvals->vals[c].updatetic = GETSYSTICS();
 							}
 						}
 					}
@@ -613,51 +650,58 @@ void daq_do_systick()
 
 					grp->msgcnt++;
 
+					gvals->maxtics = maxtic;
+					gvals->mintics = mintic;
 
-					if (grp->eEncoding == DAQENCODING_ASCII)
-					{
-						*buf++ = '#';
-						*buf++ = '#';
+					gvals->msgcnt = grp->msgcnt;
+					gvals->tics = GETSYSTICS();
+					gvals->bSent = false;
+					grp->pCurValsToSend = gvals;
 
-						buf = strcpy_returnend(buf, bufend - 1, utoa(p, tmp, 10));
-						*buf++ = ':';	// overwrite '\0' with ':'
-						buf = getGetGrpDataStringAscii_returnend(buf, bufend - 1, grp, abSendChValue, maxtic, mintic);
-						*buf++ = '\n';
-						*buf = '\0';
-					}
-					else
-					{
-
-						uint8_t btmpstart[200];
-						uint8_t* btmp = btmpstart;
-						uint8_t * const btmpend = btmpstart + 199;
-
-						*btmp++ = p;
-						btmp = getGetGrpDataBinary_returnend(btmp, btmpend, grp, abSendChValue, maxtic, mintic);
-
-						if (grp->bCRC)
-						{
-							uint16_t crc = crc16(btmpstart, btmp - btmpstart + 1);
-							btmp = memcpy16_returnend(btmp+1, btmpend, (uint8_t*)&crc);
-						}
-
-						if (grp->eEncoding == DAQENCODING_HEX)
-						{
-							*buf++ = '#';
-							buf = encodeHEX_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
-						}
-						else
-						{
-							*buf++ = '#';
-							buf = encodeB64woPadding_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
-						}
-					}
-
-					uint16_t fmark = 0;
-
-					ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
-					ARingbuffer_atomicput_putS(&f_buffer, bufstart, false);
-					ARingbuffer_atomicput_end(&f_buffer);
+//					if (grp->eEncoding == DAQENCODING_ASCII)
+//					{
+//						*buf++ = '#';
+//						*buf++ = '#';
+//
+//						buf = strcpy_returnend(buf, bufend - 1, utoa(p, tmp, 10));
+//						*buf++ = ':';	// overwrite '\0' with ':'
+//						buf = getGetGrpDataStringAscii_returnend(buf, bufend - 1, grp, abSendChValue, maxtic, mintic);
+//						*buf++ = '\n';
+//						*buf = '\0';
+//					}
+//					else
+//					{
+//
+//						uint8_t btmpstart[200];
+//						uint8_t* btmp = btmpstart;
+//						uint8_t * const btmpend = btmpstart + 199;
+//
+//						*btmp++ = p;
+//						btmp = getGetGrpDataBinary_returnend(btmp, btmpend, grp, abSendChValue, maxtic, mintic);
+//
+//						if (grp->bCRC)
+//						{
+//							uint16_t crc = crc16(btmpstart, btmp - btmpstart + 1);
+//							btmp = memcpy16_returnend(btmp+1, btmpend, (uint8_t*)&crc);
+//						}
+//
+//						if (grp->eEncoding == DAQENCODING_HEX)
+//						{
+//							*buf++ = '#';
+//							buf = encodeHEX_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
+//						}
+//						else
+//						{
+//							*buf++ = '#';
+//							buf = encodeB64woPadding_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
+//						}
+//					}
+//
+//					uint16_t fmark = 0;
+//
+//					ARingbuffer_atomicput_start(&f_buffer, 2, (uint8_t*)&fmark, false);
+//					ARingbuffer_atomicput_putS(&f_buffer, bufstart, false);
+//					ARingbuffer_atomicput_end(&f_buffer);
 
 				}
 			}
@@ -1012,6 +1056,7 @@ static void clearDAQGrpStruct(DAQGrp_t* grp)
 	grp->uTs = 0;
 	grp->bSynced = false;
 	grp->uNextSampleCnt = 0;
+	grp->pCurValsToSend = NULL;
 
 	return;
 }
@@ -1420,10 +1465,15 @@ static char* getGetDataString_returnend(char* buf, char* const bufend,
 
 static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 												DAQGrp_t* grp,
-												bool* abSendChValue,
-												uint32_t maxtics, uint32_t mintics)
+												DAQGrpVals_t* gvals)
 {
-	const uint32_t tics = GETSYSTICS();
+	const uint32_t tics = gvals->tics;
+
+	const uint32_t maxtics = gvals->maxtics;
+	const uint32_t mintics = gvals->mintics;
+
+	const uint32_t delay = GETSYSTICS() - gvals->tics;
+	const uint32_t dtics = maxtics - mintics;
 
 	for (uint8_t c = 0; c < grp->nchs; ++c)
 	{
@@ -1442,8 +1492,6 @@ static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 		{
 			uint32_t val = 0;
 
-			val = maxtics - mintics;
-
 			switch (id)
 			{
 				case SPECIALCHANNEL_TICS: val = mintics; break;
@@ -1451,12 +1499,16 @@ static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 				case SPECIALCHANNEL_TICS8: val = mintics & 0xFF; break;
 
 				case SPECIALCHANNEL_DTICS: break;
-				case SPECIALCHANNEL_DTICS16: val = SATURATION_U(val, 0xFFFF); break;
-				case SPECIALCHANNEL_DTICS8: val = SATURATION_U(val, 0xFF); break;
+				case SPECIALCHANNEL_DTICS16: val = SATURATION_U(dtics, 0xFFFF); break;
+				case SPECIALCHANNEL_DTICS8: val = SATURATION_U(dtics, 0xFF); break;
 
-				case SPECIALCHANNEL_CNT: val = grp->msgcnt; break;
-				case SPECIALCHANNEL_CNT16: val = grp->msgcnt & 0xFFFF; break;
-				case SPECIALCHANNEL_CNT8: val = grp->msgcnt & 0xFF; break;
+				case SPECIALCHANNEL_CNT: val = gvals->msgcnt; break;
+				case SPECIALCHANNEL_CNT16: val = gvals->msgcnt & 0xFFFF; break;
+				case SPECIALCHANNEL_CNT8: val = gvals->msgcnt & 0xFF; break;
+
+				case SPECIALCHANNEL_DLY: val = delay; break;
+				case SPECIALCHANNEL_DLY16: val = delay & 0xFFFF; break;
+				case SPECIALCHANNEL_DLY8: val = delay & 0xFF; break;
 			}
 
 			buf = strcpy_returnend(buf, bufend, utoa(val, tmp, 10));
@@ -1465,18 +1517,8 @@ static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 		else
 		{
 			DAQValue_t* pVal;
-			DAQValue_t tmpval;
 
-			pVal = f_vals[id].curValToRead;
-
-			if (!abSendChValue[c])
-			{
-				tmpval.mod = DAQVALUEMOD_NOVALUE;
-				tmpval.tic = GETSYSTICS();
-				tmpval.value = 0;
-
-				pVal = &tmpval;
-			}
+			pVal = &gvals->vals[c];
 
 			buf = getValueString_bufend(buf, bufend, pVal);
 			*buf++ = ' ';
@@ -1503,11 +1545,18 @@ static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 
 
 static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
-											DAQGrp_t* grp, bool* abSendChValue,
-											uint32_t maxtics, uint32_t mintics)
+											DAQGrp_t* grp, DAQGrpVals_t* gvals)
 {
 	uint8_t * const bufstart = buf;
-	uint32_t tics = GETSYSTICS();
+
+	const uint32_t tics = gvals->tics;
+
+	const uint32_t maxtics = gvals->maxtics;
+	const uint32_t mintics = gvals->mintics;
+
+	const uint32_t delay = GETSYSTICS() - gvals->tics;
+	const uint32_t dtics = maxtics - mintics;
+
 
 	for (uint8_t c = 0; c < grp->nchs; ++c)
 	{
@@ -1516,8 +1565,6 @@ static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufen
 		if (id & SPECIALCHANNELSFLAG)
 		{
 			uint32_t val = 0;
-
-			val = maxtics - mintics;
 
 			switch (id)
 			{
@@ -1538,43 +1585,45 @@ static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufen
 					break;
 
 				case SPECIALCHANNEL_DTICS16:
-					val = SATURATION_U(val, 0xFFFF);
+					val = SATURATION_U(dtics, 0xFFFF);
 					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&val) + 1;
 					break;
 
 				case SPECIALCHANNEL_DTICS8:
-					val = SATURATION_U(val, 0xFF);
+					val = SATURATION_U(dtics, 0xFF);
 					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&val) + 1;
 					break;
 
 				case SPECIALCHANNEL_CNT:
-					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&grp->msgcnt) + 1;
+					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&gvals->msgcnt) + 1;
 					break;
 
 				case SPECIALCHANNEL_CNT16:
-					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&grp->msgcnt) + 1;
+					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&gvals->msgcnt) + 1;
 					break;
 
 				case SPECIALCHANNEL_CNT8:
-					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&grp->msgcnt) + 1;
+					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&gvals->msgcnt) + 1;
+					break;
+
+				case SPECIALCHANNEL_DLY:
+					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&delay) + 1;
+					break;
+
+				case SPECIALCHANNEL_DLY16:
+					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&delay) + 1;
+					break;
+
+				case SPECIALCHANNEL_DLY8:
+					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&delay) + 1;
 					break;
 			}
 		}
 		else
 		{
 			DAQValue_t* pVal;
-			DAQValue_t tmpval;
 
-			pVal = f_vals[id].curValToRead;
-
-			if (!abSendChValue[c])
-			{
-				tmpval.mod = DAQVALUEMOD_NOVALUE;
-				tmpval.tic = GETSYSTICS();
-				tmpval.value = 0;
-
-				pVal = &tmpval;
-			}
+			pVal = &gvals->vals[c];
 
 			switch (f_chs[id].type)
 			{
@@ -1866,8 +1915,17 @@ static bool grplist_streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, u
 
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
 {
-	static uint16_t s_nBytesLeft = 0;
+	static uint8_t s_g = 0;
+	bool bDataToSent = false;
+	DAQGrp_t* grp = NULL;
+
+	char* const bufstart = buf;
+	char* const bufend = buf + nMaxCnt - 1;
+
 	*pbMsgComplete = true;
+	*pnCnt = 0;
+
+	static uint16_t s_nBytesLeft = 0;
 
 	if (s_nBytesLeft > 0)
 	{
@@ -1887,55 +1945,201 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 
 			s_nBytesLeft -= nMaxCnt;
 		}
+
+		return true;
 	}
 	else
 	{
-		if (ARingbuffer_getCount(&f_buffer) == 0)
+		if (ARingbuffer_getCount(&f_buffer) > 0)
 		{
-			*pnCnt = 0;
-			return false;
-		}
+			uint16_t len = 0;
 
-		uint16_t len;
-
-		ARingbuffer_glanceX(&f_buffer, (uint8_t*)&len, 0, 2);
-
-		if (len == 0)
-		{
-			if (nMaxCnt < f_nErrMsgLen)
+			while (len == 0)
 			{
-				*pnCnt = 0;
-				return false;
+				if (ARingbuffer_getCount(&f_buffer) < 2)
+				{
+					break;
+				}
+
+				ARingbuffer_getX(&f_buffer, (uint8_t*)&len, 2);
 			}
-			else
-			{
-				*pnCnt = f_nErrMsgLen;
-				memcpy(buf, f_acErrMsg, f_nErrMsgLen);
-				ARingbuffer_dropX(&f_buffer, 2);
-			}
-		}
-		else
-		{
-			ARingbuffer_dropX(&f_buffer, 2);
 
-			if (len <= nMaxCnt)
+			if (len != 0)
 			{
-				ARingbuffer_getX(&f_buffer, (uint8_t*)buf, len);
-				*pnCnt = len;
-			}
-			else
-			{
-				ARingbuffer_getX(&f_buffer, (uint8_t*)buf, nMaxCnt);
-				*pnCnt = nMaxCnt;
-				*pbMsgComplete = false;
+				if (len <= nMaxCnt)
+				{
+					ARingbuffer_getX(&f_buffer, (uint8_t*)buf, len);
+					*pnCnt = len;
+					*pbMsgComplete = true;
 
-				s_nBytesLeft = len - nMaxCnt;
+					s_nBytesLeft = 0;
+				}
+				else
+				{
+					ARingbuffer_getX(&f_buffer, (uint8_t*)buf, nMaxCnt);
+
+					*pnCnt = nMaxCnt;
+					*pbMsgComplete = false;
+
+					s_nBytesLeft = len - nMaxCnt;
+				}
+
+				return true;
 			}
 		}
 	}
 
+
+	for (uint8_t i = 0; i < NMAXGRPS; ++i)
+	{
+		s_g++;
+
+		if (s_g >= NMAXGRPS)
+		{
+			s_g = 0;
+		}
+
+		grp = &f_grps[s_g];
+
+		if (!grp->bActive)
+		{
+			continue;
+		}
+
+		if ((grp->pCurValsToSend != NULL) && (grp->pCurValsToSend->bSent == false))
+		{
+			bDataToSent = true;
+
+			break;
+		}
+	}
+
+	if (!bDataToSent)
+	{
+		return false;
+	}
+
+	char tmp[10];
+
+	if (grp->eEncoding == DAQENCODING_ASCII)
+	{
+		*buf++ = '#';
+		*buf++ = '#';
+
+		buf = strcpy_returnend(buf, bufend - 1, utoa(s_g, tmp, 10));
+		*buf++ = ':';	// overwrite '\0' with ':'
+		buf = getGetGrpDataStringAscii_returnend(buf, bufend - 1, grp, grp->pCurValsToSend);
+		*buf++ = '\n';
+		*buf = '\0';
+	}
+	else
+	{
+		uint8_t btmpstart[200];
+		uint8_t* btmp = btmpstart;
+		uint8_t * const btmpend = btmpstart + 199;
+
+		*btmp++ = s_g;
+		btmp = getGetGrpDataBinary_returnend(btmp, btmpend, grp, grp->pCurValsToSend);
+
+		if (grp->bCRC)
+		{
+			uint16_t crc = crc16(btmpstart, btmp - btmpstart + 1);
+			btmp = memcpy16_returnend(btmp+1, btmpend, (uint8_t*)&crc);
+		}
+
+		if (grp->eEncoding == DAQENCODING_HEX)
+		{
+			*buf++ = '#';
+			buf = encodeHEX_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
+		}
+		else
+		{
+			*buf++ = '#';
+			buf = encodeB64woPadding_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
+		}
+	}
+
+	grp->pCurValsToSend->bSent = true;
+
+
+	*pnCnt = buf - bufstart;
+
 	return true;
 }
+
+
+//static bool streamout1(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMaxCnt)
+//{
+//	static uint16_t s_nBytesLeft = 0;
+//	*pbMsgComplete = true;
+//
+//	if (s_nBytesLeft > 0)
+//	{
+//		if (s_nBytesLeft <= nMaxCnt)
+//		{
+//			ARingbuffer_getX(&f_buffer, (uint8_t*)buf, s_nBytesLeft);
+//			*pnCnt = s_nBytesLeft;
+//			*pbMsgComplete = true;
+//
+//			s_nBytesLeft = 0;
+//		}
+//		else
+//		{
+//			ARingbuffer_getX(&f_buffer, (uint8_t*)buf, nMaxCnt);
+//			*pnCnt = nMaxCnt;
+//			*pbMsgComplete = false;
+//
+//			s_nBytesLeft -= nMaxCnt;
+//		}
+//	}
+//	else
+//	{
+//		if (ARingbuffer_getCount(&f_buffer) == 0)
+//		{
+//			*pnCnt = 0;
+//			return false;
+//		}
+//
+//		uint16_t len;
+//
+//		ARingbuffer_glanceX(&f_buffer, (uint8_t*)&len, 0, 2);
+//
+//		if (len == 0)
+//		{
+//			if (nMaxCnt < f_nErrMsgLen)
+//			{
+//				*pnCnt = 0;
+//				return false;
+//			}
+//			else
+//			{
+//				*pnCnt = f_nErrMsgLen;
+//				memcpy(buf, f_acErrMsg, f_nErrMsgLen);
+//				ARingbuffer_dropX(&f_buffer, 2);
+//			}
+//		}
+//		else
+//		{
+//			ARingbuffer_dropX(&f_buffer, 2);
+//
+//			if (len <= nMaxCnt)
+//			{
+//				ARingbuffer_getX(&f_buffer, (uint8_t*)buf, len);
+//				*pnCnt = len;
+//			}
+//			else
+//			{
+//				ARingbuffer_getX(&f_buffer, (uint8_t*)buf, nMaxCnt);
+//				*pnCnt = nMaxCnt;
+//				*pbMsgComplete = false;
+//
+//				s_nBytesLeft = len - nMaxCnt;
+//			}
+//		}
+//	}
+//
+//	return true;
+//}
 
 
 bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
