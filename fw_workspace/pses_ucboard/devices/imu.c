@@ -61,8 +61,17 @@ void imu_do_systick()
 {
 	IMUData_t imudata;
 
+//	static int16_t test = -30;
 
 	imuMPU9250_readData(&f_imu, &imudata);
+
+//	daq_setChannelValue_int16(f_uDAQCh_ACCX, DAQVALUEMOD_OK, GETSYSTICS(), test);
+//	test += 10;
+//
+//	if (test > 60)
+//	{
+//		test = -30;
+//	}
 
 	daq_setChannelValue_int16(f_uDAQCh_ACCX, DAQVALUEMOD_OK, GETSYSTICS(), imudata.accX);
 	daq_setChannelValue_int16(f_uDAQCh_ACCY, DAQVALUEMOD_OK, GETSYSTICS(), imudata.accY);
