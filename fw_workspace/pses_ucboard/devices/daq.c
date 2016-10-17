@@ -1283,6 +1283,13 @@ static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char**
 
 		return;
 	}
+	else if ((args->nArgs - 1) > NMAXGRPCHS)
+	{
+		*pErrCode = ERRCODE_DAQ_TOOMUCHGROUPCHANNELS;
+		*pszError = "Number of channels for group exceeds maximum!";
+
+		return;
+	}
 
 
 	if ((f_grps[grpid].bActive) && f_bStarted)
