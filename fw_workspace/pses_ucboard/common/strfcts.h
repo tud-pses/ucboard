@@ -14,7 +14,7 @@
 
 #define MAXSTRLENCOMM 256
 
-#define MAXSPLITS 10
+#define MAXSPLITS 20
 
 typedef struct SplittedStr_
 {

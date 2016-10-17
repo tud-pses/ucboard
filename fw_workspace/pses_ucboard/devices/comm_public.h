@@ -36,7 +36,7 @@ typedef enum EnCmdSpec_
 } EnCmdSpec_t;
 
 
-#define COMMMAXARGS 10
+#define COMMMAXARGS 20
 
 typedef struct CommCmdArgs_
 {
