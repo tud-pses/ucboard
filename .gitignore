@@ -11,3 +11,4 @@
 /kicad_drvbatswitch/*.xml
 /kicad_drvbatswitch/drvbatswitch
 /stm32cubemx/pses_ucboard
+/doc/latex/*.toc
