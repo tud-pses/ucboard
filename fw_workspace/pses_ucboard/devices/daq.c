@@ -85,7 +85,8 @@ typedef struct DAQGrp_
 	bool bAge;
 	bool bTics;
 	bool bCRC;
-	bool bAvg;
+	uint32_t uAvg;
+	int32_t avgcnt;
 	DAQEncoding_t eEncoding;
 	DAQGrpVals_t valsA;
 	DAQGrpVals_t valsB;
@@ -174,10 +175,10 @@ static DAQValueDS_t f_vals[NMAXCHS];
 static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t nMax);
 
 
-static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
+static char* getGrpDataStringAscii_returnend(char* buf, char* const bufend,
 												DAQGrp_t* grp,
 												DAQGrpVals_t* gvals);
-static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
+static uint8_t* getGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 											DAQGrp_t* grp, DAQGrpVals_t* gvals);
 
 
@@ -548,8 +549,16 @@ void daq_do_systick()
 						{
 							grp->bSynced = true;
 							grp->uNextSampleCnt = 0;
-						}
 
+							if (grp->uAvg > 1)
+							{
+								grp->avgcnt = (int32_t)grp->uAvg - (int32_t)grp->uTs;
+							}
+							else
+							{
+								grp->avgcnt = 0;
+							}
+						}
 					}
 
 					if (grp->bSynced)
@@ -558,7 +567,14 @@ void daq_do_systick()
 						{
 							bSendGrp = true;
 
-							grp->uNextSampleCnt = grp->uTs - 1;
+							if (grp->uAvg > 1)
+							{
+								grp->uNextSampleCnt = 0;
+							}
+							else
+							{
+								grp->uNextSampleCnt = grp->uTs - 1;
+							}
 						}
 						else
 						{
@@ -570,12 +586,13 @@ void daq_do_systick()
 			}
 
 
+			uint32_t maxtic = 0;
+			uint32_t mintic = GETSYSTICS();
+
+			DAQGrpVals_t* gvals;
+
 			if (bSendGrp)
 			{
-				uint32_t maxtic = 0;
-				uint32_t mintic = GETSYSTICS();
-
-				DAQGrpVals_t* gvals;
 
 				if (grp->pCurValsToSend == &grp->valsA)
 				{
@@ -597,16 +614,64 @@ void daq_do_systick()
 							mintic = GETSYSTICS();
 							maxtic = GETSYSTICS();
 
-							if (curtic == GETSYSTICS())
+							if (grp->avgcnt == 0)
 							{
-								gvals->vals[c] = *f_vals[grp->chs[c]].curValToRead;
+								if (curtic == GETSYSTICS())
+								{
+									gvals->vals[c] = *f_vals[grp->chs[c]].curValToRead;
+								}
+								else
+								{
+									gvals->vals[c].mod = DAQVALUEMOD_NOVALUE;
+									gvals->vals[c].tic = GETSYSTICS();
+									gvals->vals[c].value = 0;
+									gvals->vals[c].updatetic = GETSYSTICS();
+								}
+							}
+							else if (grp->avgcnt > 0)
+							{
+								if (gvals->vals[c].mod == DAQVALUEMOD_OK)
+								{
+									if (curtic != GETSYSTICS())
+									{
+										gvals->vals[c].mod = DAQVALUEMOD_NOVALUE;
+									}
+									else if (f_vals[grp->chs[c]].curValToRead->mod == DAQVALUEMOD_OK)
+									{
+										gvals->vals[c].value += f_vals[grp->chs[c]].curValToRead->value;
+									}
+									else
+									{
+										gvals->vals[c].mod = f_vals[grp->chs[c]].curValToRead->mod;
+									}
+								}
+
+								if (grp->avgcnt == (grp->uAvg - 1))
+								{
+									gvals->vals[c].tic = GETSYSTICS();
+									gvals->vals[c].updatetic = GETSYSTICS();
+
+									if (gvals->vals[c].mod == DAQVALUEMOD_OK)
+									{
+										gvals->vals[c].value /= (int32_t)grp->uAvg;
+									}
+								}
+							}
+
+							if (grp->avgcnt == (grp->uAvg - 1))
+							{
+								bSendGrp = true;
+
+								if (grp->uAvg > 1)
+								{
+									grp->avgcnt = (int32_t)grp->uAvg - (int32_t)grp->uTs;
+								}
 							}
 							else
 							{
-								gvals->vals[c].mod = DAQVALUEMOD_NOVALUE;
-								gvals->vals[c].tic = GETSYSTICS();
-								gvals->vals[c].value = 0;
-								gvals->vals[c].updatetic = GETSYSTICS();
+								bSendGrp = false;
+
+								grp->avgcnt++;
 							}
 						}
 						else
@@ -637,12 +702,13 @@ void daq_do_systick()
 						}
 					}
 				}
+			}
 
-
+			if (bSendGrp)
+			{
 				if (grp->uCurSkipCnt != 0)
 				{
 					grp->uCurSkipCnt--;
-					bSendGrp = false;
 				}
 				else
 				{
@@ -978,6 +1044,15 @@ static char* getGrpString_returnend(char* buf, char* const bufend, uint8_t grpid
 		buf = strcpy_returnend(buf, bufend, " ");
 	}
 
+
+	if (grp->uAvg > 1)
+	{
+		buf = strcpy_returnend(buf, bufend, "~AVG=");
+		buf = strcpy_returnend(buf, bufend, utoa(grp->uAvg, tmp, 10));
+		buf = strcpy_returnend(buf, bufend, " ");
+	}
+
+
 	if (grp->uSkip > 0)
 	{
 		buf = strcpy_returnend(buf, bufend, "~SKIP=");
@@ -1049,7 +1124,7 @@ static void clearDAQGrpStruct(DAQGrp_t* grp)
 	grp->bAge = false;
 	grp->bTics = false;
 	grp->bCRC = false;
-	grp->bAvg = false;
+	grp->uAvg = 1;
 	grp->nchs = 0;
 	grp->uCurSkipCnt = 0;
 	grp->uSkip = 0;
@@ -1108,7 +1183,7 @@ static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char**
 	grp.bAge = false;
 	grp.bTics = false;
 	grp.bCRC = false;
-	grp.bAvg = false;
+	grp.uAvg = 1;
 	grp.nchs = 0;
 
 	for (uint8_t p = 0; p < args->nParams; ++p)
@@ -1196,6 +1271,28 @@ static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char**
 				return;
 			}
 		}
+		else if (strcmpi(args->paramnames[p], "AVG") == STRCMPRES_EQUAL)
+		{
+			if ( (args->paramvals[p] == NULL) )
+			{
+				grp.uAvg = 0;
+			}
+			else if (!isPositiveInteger(args->paramvals[p]))
+			{
+				*pErrCode = ERRCODE_DAQ_INVALIDPARAMETER;
+				*pszError = "Invalid value for parameter AVG! (Must be positive Integer.)";
+				return;
+			}
+			else
+			{
+				grp.uAvg = atoi(args->paramvals[p]);
+
+				if (grp.uAvg == 0)
+				{
+					grp.uAvg = 1;
+				}
+			}
+		}
 		else if (strcmpi(args->paramnames[p], "CRC") == STRCMPRES_EQUAL)
 		{
 			grp.bCRC = true;
@@ -1225,6 +1322,22 @@ static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char**
 		*pErrCode = ERRCODE_DAQ_CONTRADICTINGPARAMETERS;
 		*pszError = "Only one of the options ALL, ANY and TS can be set!";
 		return;
+	}
+
+
+	if (grp.uAvg != 1)
+	{
+		if (grp.eSampling != DAQSAMPLING_TS)
+		{
+			*pErrCode = ERRCODE_DAQ_INVALIDPARAMETER;
+			*pszError = "Parameter AVG only allowed in sampling mode TS!";
+			return;
+		}
+
+		if (grp.uAvg == 0)
+		{
+			grp.uAvg = grp.uTs;
+		}
 	}
 
 
@@ -1301,6 +1414,8 @@ static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char**
 	}
 
 
+	uint32_t uTs = 0;
+
 	for (uint8_t c = 1; c < args->nArgs; ++c)
 	{
 		uint8_t chid;
@@ -1337,6 +1452,20 @@ static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char**
 					*pszError = "All group channels sampling times must be an integer divisor of group sampling time!";
 					return;
 				}
+
+				if (uTs == 0)
+				{
+					uTs = f_chs[chid].samplingtime;
+				}
+				else if (uTs != f_chs[chid].samplingtime)
+				{
+					if (grp.uAvg > 1)
+					{
+						*pErrCode = ERRCODE_DAQ_INCOMPATIBLESAMPLINGTIME;
+						*pszError = "If averaging is used, all group channels sampling times must be equal!";
+						return;
+					}
+				}
 			}
 		}
 
@@ -1344,6 +1473,26 @@ static void parseGrpDef(CommCmdArgs_t* args, EnErrCode_t* pErrCode, const char**
 		grp.prevupdatetics[grp.nchs] = GETSYSTICS();
 		grp.nchs++;
 	}
+
+
+	if (grp.uAvg > 1)
+	{
+		if ((grp.uAvg % uTs) != 0)
+		{
+			*pErrCode = ERRCODE_DAQ_INCOMPATIBLEAVERAGINGTIME;
+			*pszError = "Channel sampling time must be an integer divisor of averaging time!";
+			return;
+		}
+		else if (grp.uAvg > grp.uTs)
+		{
+			*pErrCode = ERRCODE_DAQ_INCOMPATIBLEAVERAGINGTIME;
+			*pszError = "Averaging time must not be bigger than group sampling time!";
+			return;
+		}
+
+		grp.uAvg /= uTs;
+	}
+
 
 	f_grps[grpid] = grp;
 	f_grps[grpid].bDefined = true;
@@ -1396,7 +1545,7 @@ static char* getValueString_bufend(char* buf, char* const bufend, DAQValue_t* pd
 }
 
 
-static char* getGetDataString_returnend(char* buf, char* const bufend,
+static char* getDataString_returnend(char* buf, char* const bufend,
 										CommCmdArgs_t* args,
 										EnErrCode_t* pErrCode, const char** pszError)
 {
@@ -1470,7 +1619,7 @@ static char* getGetDataString_returnend(char* buf, char* const bufend,
 }
 
 
-static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
+static char* getGrpDataStringAscii_returnend(char* buf, char* const bufend,
 												DAQGrp_t* grp,
 												DAQGrpVals_t* gvals)
 {
@@ -1551,7 +1700,7 @@ static char* getGetGrpDataStringAscii_returnend(char* buf, char* const bufend,
 }
 
 
-static uint8_t* getGetGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
+static uint8_t* getGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 											DAQGrp_t* grp, DAQGrpVals_t* gvals)
 {
 	uint8_t * const bufstart = buf;
@@ -2035,7 +2184,7 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 
 		buf = strcpy_returnend(buf, bufend - 1, utoa(s_g, tmp, 10));
 		*buf++ = ':';	// overwrite '\0' with ':'
-		buf = getGetGrpDataStringAscii_returnend(buf, bufend - 1, grp, grp->pCurValsToSend);
+		buf = getGrpDataStringAscii_returnend(buf, bufend - 1, grp, grp->pCurValsToSend);
 		*buf++ = '\n';
 		*buf = '\0';
 	}
@@ -2046,7 +2195,7 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 		uint8_t * const btmpend = btmpstart + 199;
 
 		*btmp++ = s_g;
-		btmp = getGetGrpDataBinary_returnend(btmp, btmpend, grp, grp->pCurValsToSend);
+		btmp = getGrpDataBinary_returnend(btmp, btmpend, grp, grp->pCurValsToSend);
 
 		if (grp->bCRC)
 		{
@@ -2253,7 +2402,7 @@ bool cmd_daq(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 		{
 			char* strend;
 			acRespData[0] = SOT_RXRESP;
-			strend = getGetDataString_returnend(acRespData+1, acRespData + TXMAXMSGLEN, &args, &eError, &szError);
+			strend = getDataString_returnend(acRespData+1, acRespData + TXMAXMSGLEN, &args, &eError, &szError);
 
 			if (eError == ERRCODE_NOERR)
 			{
