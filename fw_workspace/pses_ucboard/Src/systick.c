@@ -25,10 +25,7 @@ static uint32_t f_uTic = 0;
 const uint32_t * const g_systick_puTic = &f_uTic;
 
 
-//uint32_t systick_getTics()
-//{
-//	return f_uTic;
-//}
+
 
 
 extern bool g_main_bInit;
@@ -36,6 +33,8 @@ extern bool g_main_bInit;
 
 void HAL_SYSTICK_Callback(void)
 {
+//	static uint32_t s_maxtics = 0;
+
 	if (!g_main_bInit)
 	{
 		return;
@@ -43,7 +42,7 @@ void HAL_SYSTICK_Callback(void)
 
 	++f_uTic;
 
-	// uint32_t tic = stopwatch_getTic();
+//	uint32_t tic = stopwatch_getTic();
 
 	if (BUTTON_A_ISPRESSED())
 	{
@@ -71,9 +70,18 @@ void HAL_SYSTICK_Callback(void)
 	}
 
 
+//	tic = stopwatch_getDeltaTime_us(tic);
+//
+//	if (tic > s_maxtics)
+//	{
+//		s_maxtics = tic;
+//	}
+
+
 	if ( (f_uTic % 1000) == 0)
 	{
-		//display_println_uint("systick [us]: ", stopwatch_getDeltaTime_us(tic));
+//		display_println_uint("systick [us]: ", tic);
+//		display_println_uint("systick max [us]: ", s_maxtics);
 	}
 
 	if ( (f_uTic % 500) == 0 )
