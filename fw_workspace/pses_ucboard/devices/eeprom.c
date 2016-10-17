@@ -56,7 +56,7 @@ static void readAll(uint16_t startaddr, uint16_t cnt, uint8_t* buffer);
 static void singlewrite(uint16_t startaddr, uint16_t cnt, uint8_t* buffer);
 static void write(uint16_t startaddr, uint16_t cnt, uint8_t* buffer);
 static uint8_t readStatusRegister();
-static void clear();
+//static void clear();
 static bool waitForIdle();
 
 
@@ -149,19 +149,19 @@ static bool waitForIdle()
 }
 
 
-static void clear()
-{
-	for (uint16_t i = 0; i < 2048; ++i)
-	{
-		f_eepromdata[i] = 0;
-	}
-
-	write(0, 2048, f_eepromdata);
-
-	readAll(0, 2048, f_eepromdata);
-
-	return;
-}
+//static void clear()
+//{
+//	for (uint16_t i = 0; i < 2048; ++i)
+//	{
+//		f_eepromdata[i] = 0;
+//	}
+//
+//	write(0, 2048, f_eepromdata);
+//
+//	readAll(0, 2048, f_eepromdata);
+//
+//	return;
+//}
 
 
 static uint8_t readStatusRegister()
