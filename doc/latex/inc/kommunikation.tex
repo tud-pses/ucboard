@@ -109,6 +109,7 @@ Die Parameter der Schnittstellen sind in \tabref{tab:Comm:UARTParam} zusammengef
 		\verb|VOUT| & Ein- und Ausschalten \valunit{12}{V}-Ausgang (Kinect) \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{IMU}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der IMU} \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{US}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der US-Sensoren}\\
+		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{EEPROM}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Auslesen des EEPROM-Inhalts}\\
 		\mybottomrule
 	\end{tabular}
 \end{table}
@@ -450,7 +451,7 @@ Abfrage aller Ultraschallwerte, jeweils mit Alter
 
 
 \begin{verbatim}
-	!DAQ GET ~TICS USF
+	?DAQ GET ~TICS USF
 	:1860 3059246
 \end{verbatim}
 
@@ -464,23 +465,30 @@ Abfrage aller Ultraschallwerte, jeweils mit Alter
 
 Es stehen zwanzig parametrierbare Messgruppen zur Verfügung, die zum automatischen Verschicken von Messdaten verwendet werden. In diesen können bis zu zehn verschiedene Kanäle (Sensorwerte) zusammengefasst werden. Neben den normalen Kanälen stehen noch die in \tabref{tab:Comm:DAQ:SpecialChannels} aufgeführten "`Sonderkanäle"' zur Verfügung, die Metadaten zu den Datensätzen enthalten. (Diese stehen bei der Einzelabfrage über \verb|?DAQ GET chname| nicht zur Verfügung.)
 
-Es wird je Gruppe immer nur ein Messdatensatz gepuffert. Kann dieser nicht verschickt werden, bis die nächste Abtastung der Gruppe erfolgt ist, so wird dieser verworfen. Dabei werden alle Gruppen gleichberechtigt behandelt, \dah es erfolgt keine Bevorzugung von Messgruppen mit kleiner Abtastzeit. Damit ist die Wahrscheinlichkeit gering, dass bei langsam abgetasteten Messgruppen Daten verlorengehen, auch wenn viel Bandbreite für Messgruppen mit kleiner Abtastzeit belegt wird. Ein Verlust von Messdatensätzen aufgrund einer zu geringen Bandbreite \footnote{An dieser Stelle muss noch angemerkt werden, dass das Management der zu versendenden Daten im Idle-Task des ucboards erfolgt. \Dah während der Datenerfassung im SysTick-Task werden keine neuen Daten zum Verschicken bereit gemacht, auch wenn der letzte Datensatz abgearbeitet ist. Damit ist der erreichbare Datendurchsatz kleiner als der sich theoretisch aus der Baudrate ergebenden Wert. Dies kann \bzw sollte in Zukunft noch geändert werden. Bisher benötigt der SysTick-Task weniger als \valunit{200}{\upmu s}. Damit würde im ungünstigsten Fall die Datenrate ein Fünftel "`verlieren"'.}
+Es wird je Gruppe immer nur ein Messdatensatz gepuffert. Kann dieser nicht verschickt werden, bis die nächste Abtastung der Gruppe erfolgt ist, so wird dieser verworfen. Dabei werden alle Gruppen gleichberechtigt behandelt, \dah es erfolgt keine Bevorzugung von Messgruppen mit kleiner Abtastzeit. Damit ist die Wahrscheinlichkeit gering, dass bei langsam abgetasteten Messgruppen Daten verlorengehen, auch wenn viel Bandbreite für Messgruppen mit kleiner Abtastzeit belegt wird.\footnote{An dieser Stelle muss noch angemerkt werden, dass das Management der zu versendenden Daten im Idle-Task des ucboards erfolgt. \Dah während der Datenerfassung im SysTick-Task werden keine neuen Daten zum Verschicken bereit gemacht, auch wenn der letzte Datensatz abgearbeitet ist. Damit ist der erreichbare Datendurchsatz kleiner als der sich theoretisch aus der Baudrate ergebenden Wert. Dies kann \bzw sollte in Zukunft noch geändert werden. Bisher benötigt der SysTick-Task weniger als \valunit{200}{\upmu s}. Damit würde im ungünstigsten Fall die Datenrate ein Fünftel "`verlieren"'.}
 
-
-Gruppe 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{10}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
+Eine Messgruppe wird über den Subbefehl \verb|GRP| definiert.
 \begin{verbatim}
-	!DAQ GRP 1 ~ALL=100 ~ENC=B64 ~CRC _TIC USF USL USR 
+	!DAQ GRP grpnb chname1 [chname2 [chname3 [...]]] [~option1] [~option2] [...]
 \end{verbatim}
+Die Gruppennummer \verb|grpnb| muss eine Ganzzahl zwischen 0 und 19 sein.
 
-Gruppe 2 enthält die Spannungen der beiden Akkus, wobei immer eine Nachricht verschickt wird, sobald eine neue Spannung gemessen ist.
-\begin{verbatim}
-	!DAQ GRP 2 ~ANY VSBAT VDBAT 
-\end{verbatim}
-
-Gruppe 3 enthält die Beschleunigungswerte in der Ebene und die Gierrate. Die Daten werden alle \valunit{10}{ms} verschickt. Dabei werden alle innerhalb der \valunit{10}{ms} erfassten Daten gemittelt.
-\begin{verbatim}
-	!DAQ GRP 3 ~TS=10 ~AVG ~ENC=B64 ~CRC AX AY GZ 
-\end{verbatim}
+Die Möglichkeiten der Gruppendefinition wird zunächst an Beispielen demonstriert. Danach werden die Optionen genauer beschrieben.
+\begin{itemize}
+	\item Gruppe 1 enthält die Werte des Ultraschalls. Es wird gesendet, wenn alle Ultraschallwerte vorliegen, wobei maximal \valunit{10}{ms} nach dem Erfassen des ersten Wertes gewartet wird. Die Daten werden base64-codiert und mit einer CRC16-Prüfsumme verschickt.
+		\begin{verbatim}
+			!DAQ GRP 1 ~ALL=10 ~ENC=B64 ~CRC _TIC USL USF USR 
+		\end{verbatim}
+		(Die Reihenfolge der Kanalnamen (\verb|_TIC|, \verb|USL|, \verb|USF|, \verb|USR|) spielt eine Rolle, da die Messwerte ohne Namen in dieser Reihenfolge ausgegeben werden. Die Reihenfolge der Optionen und ob diese am Anfang oder Ende oder auch zwischen den Kanalnamen stehen spielt keine Rolle.)
+	\item Gruppe 2 enthält die Spannungen der beiden Akkus, wobei immer eine Nachricht verschickt wird, sobald eine neue Spannung gemessen ist.
+		\begin{verbatim}
+			!DAQ GRP 2 ~ANY VSBAT VDBAT 
+		\end{verbatim}
+	\item Gruppe 3 enthält die Beschleunigungswerte in der Ebene und die Gierrate. Die Daten werden alle \valunit{10}{ms} verschickt. Dabei werden alle innerhalb der \valunit{10}{ms} erfassten Daten gemittelt.
+		\begin{verbatim}
+			!DAQ GRP 3 ~TS=10 ~AVG ~ENC=B64 ~CRC AX AY GZ 
+		\end{verbatim}
+\end{itemize}
 
 
 Optionen:
@@ -503,7 +511,29 @@ Optionen:
 		\end{itemize}
 	\item \verb+~SKIP=n+: Überspringt \texttt{n} Werte. \Dah bei einem Wert von neun wird jeder zehnte Wert verwendet. Dieses Überspringen wird nach allen anderen Berechnungen und Abfragen durchgeführt. Diese Option dient primär zum Debuggen (um die Menge an ausgegebenem Text zu reduzieren), kann aber auch zur Unterabtastung für Kanäle ohne feste Abtastzeit verwendet werden. (Dabei ist dann aber keine Mittelung möglich.)
 	\item \verb+~ENC=B64|HEX|ASCII+: Nachricht wird base64-codiert (ohne Padding), Hex-codiert oder Ascii-codiert. ASCII meint hierbei "`lesbaren Text"'. Standardwert ist ASCII.
-	\item \verb+~CRC+: CRC16-Prüfsumme (Nur wenn ENC = B64 oder HEX)
+	\item \verb+~CRC+: CRC16-Prüfsumme (Nur wenn ENC = B64 oder HEX)\\
+		Berechnung mit:
+		\begin{lstlisting}[style=C_colored_smallfont]
+// from Antonio Pires, http://stackoverflow.com/questions/10564491/function-to-calculate-a-crc16-checksum
+
+// CRC-16-CCITT (polynom 0x1021)
+
+
+uint16_t crc16(uint8_t* data_p, uint16_t length)
+{
+	uint8_t x;
+	uint16_t crc = 0xFFFF;
+
+    while (length--)
+    {
+        x = (crc >> 8) ^ (*data_p++);
+        x ^= (x >> 4);
+        crc = (crc << 8) ^ ((uint16_t)(x << 12)) ^ ((uint16_t)(x <<5)) ^ ((uint16_t)x);
+    }
+
+    return crc;
+}
+		\end{lstlisting}
 	\item \verb+~AGE+ und \verb+~TICS+: Wie bei Einzelwertabfrage. Damit wird \emph{jedem} Wert das Alter sowie der Erfassungszeitpunkt hinzugefügt. (Wenn beide Optionen gewählt sind, dann immer in der Reihenfolge "`Age -- Tics"'.) Die Werte werden bei der Ascii-Codierung immer innerhalb der senkrechten Striche des Kanals geschrieben. Bei Binärcodierungen werden diese Werte jeweils als \valunit{32}{bit}-Werte jeweils hinter den betreffenden Messwert eingefügt. Diese Optionen dienen lediglich zum Debuggen. Im "`Normalbetrieb"' sollten diese aufgrund des großen Platzbedarfs nicht verwendet werden!\footnote{Das Alter \texttt{AGE} bezieht sich auf den Abtastzeitpunkt des Datensatzes, nicht auf den Zeitpunkt des Versendens. Der Wert ist damit nur bei der Abtastart \texttt{ALL} relevant, da dort die Daten einer Gruppe zu unterschiedlichen Zeitpunkten abgetastet sein können. Die Zeitdifferenz zwischen Abtastzeitpunkt und Versenden kann durch den Sonderkanal \texttt{\_DLY} abgefragt werden. (Somit ist das tatsächliche Alter \texttt{AGE} + \texttt{\_DLY} plus die Zeit zur Datenübermittlung und Verzögerungen innerhalb des Betriebssystem des PCs.)}
 \end{itemize}
 
@@ -525,58 +555,60 @@ Optionen:
 		\verb|_DTICS| & Delta der ucboard-Zeit zwischen ersten und letztem Datum & ms & \verb|uint32_t| & 4 \\
 		\verb|_DTICS16| & min\{\verb|_DTICS|, 65\,535\} & ms & \verb|uint16_t| & 2 \\
 		\verb|_DTICS8| & min\{\verb|_DTICS|, 255\} & ms & \verb|uint8_t| & 1 \\[2mm]
-		\verb|_DLY| & Zeit zwischen Datensatzerstellung und Versenden & ms & \verb|uint32_t| & 4 \\
-		\verb|_DLY16| & min\{\verb|_DLY|, 65\,535\} & ms  & \verb|uint16_t| & 2 \\
-		\verb|_DLY8| & min\{\verb|_DLY|, 255\} & ms & \verb|uint8_t| & 1 \\
+		\verb|_DLY| & Zeit zwischen Datensatzerstellung und Versenden, bei 255 gesättigt & ms & \verb|uint8_t| & 1 \\
 		\mybottomrule
 	\end{tabular}
 \end{table}
 
 
-Anzeige aller Gruppeninfos
-\begin{verbatim}
-	?DAQ GRPS
-	:[...]
-\end{verbatim}
+Weitere Funktionen zu Messgruppen:
+\begin{itemize}
+	\item Anzeige aller Gruppeninformationen
+		\begin{verbatim}
+			?DAQ GRPS
+			:[...]
+		\end{verbatim}
+	\item Anzeigen Informationen zur Gruppe 1
+		\begin{verbatim}
+			?DAQ GRP 1
+			:[...]
+		\end{verbatim}
+	\item Löschen von Gruppe 1
+		\begin{verbatim}
+			!DAQ GRP 1 ~DELETE
+			:ok
+		\end{verbatim}
+	\item Deaktivieren von Gruppe 1
+		\begin{verbatim}
+			!DAQ GRP 1 ~DEACTIVATE
+			:ok
+		\end{verbatim}
+	\item Aktivieren von Gruppe 1
+		\begin{verbatim}
+			!DAQ GRP 1 ~ACTIVATE
+			:ok
+		\end{verbatim}
+		(Standardmäßig ist eine Gruppe nach der (Neu-)Definition aktiviert. Dies kann unterbunden werden, indem die Option \verb|~DEACTIVATE| in die Definition mit aufgenommen wird.)
+\end{itemize}
 
-
-Anzeigen Info zur Gruppe 1
-\begin{verbatim}
-	?DAQ GRP 1
-	:[...]
-\end{verbatim}
-
-Löschen von Gruppe 1
-\begin{verbatim}
-	!DAQ GRP 1 ~DELETE
-	:ok
-\end{verbatim}
-
-Deaktivieren von Gruppe 1
-\begin{verbatim}
-	!DAQ GRP 1 ~DEACTIVATE
-	:ok
-\end{verbatim}
-
-Aktivieren von Gruppe 1
-\begin{verbatim}
-	!DAQ GRP 1 ~ACTIVATE
-	:ok
-\end{verbatim}
-
-Starten der Datenerfassung
-\begin{verbatim}
-	!DAQ START
-	:ok
-\end{verbatim}
-
-Anhalten der Datenerfassung
-\begin{verbatim}
-	!DAQ STOP
-	:ok
-\end{verbatim}
-
-
+Starten und Anhalten der Erfassung und Übermittlung der Messdaten
+\begin{itemize}
+	\item Starten der Datenerfassung
+		\begin{verbatim}
+			!DAQ START
+			:started
+		\end{verbatim}
+	\item Anhalten der Datenerfassung
+		\begin{verbatim}
+			!DAQ STOP
+			:stopped
+		\end{verbatim}
+	\item Abfrage Status der Datenerfassung
+		\begin{verbatim}
+			?DAQ
+			:stopped
+		\end{verbatim}
+\end{itemize}
 
 Die Neudefinition einer Gruppe erfolgt durch einfaches Überschreiben der Gruppendefinition. Dabei ist zu beachten, dass \emph{aktive} Gruppen nur dann überschrieben werden können, wenn die Datenerfassung angehalten ist (\texttt{!DAQ STOP}).
 
@@ -614,9 +646,9 @@ Die Definition einer Messgruppe, die nur aus Sonderkanälen besteht, ist möglic
 
 So kann mit
 \begin{verbatim}
-	!daq grp 1 _cnt8 _dly8 ~Ts=10 ~enc=b64
+	!daq grp 1 _cnt8 _dly ~Ts=10 ~enc=b64
 \end{verbatim}
-ein "`Taktgeber"' erzeugt werden, der alle \valunit{10}{ms} einen Wert schickt. Über \verb|_CNT8| kann dabei festgestellt werden, ob Werte übersprungen wurden, und mit \verb|_DLY8|, ob der aktuelle Wert verzögert wurde.
+ein "`Taktgeber"' erzeugt werden, der alle \valunit{10}{ms} einen Wert schickt. Über \verb|_CNT8| kann dabei festgestellt werden, ob Werte übersprungen wurden, und mit \verb|_DLY|, ob der aktuelle Wert verzögert wurde.
 
 
 
