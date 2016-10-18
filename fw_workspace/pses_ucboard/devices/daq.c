@@ -144,8 +144,6 @@ static uint8_t f_nChs = 0;
 #define SPECIALCHANNEL_CNT8		(SPECIALCHANNELSFLAG | 8)
 #define SPECIALCHANNEL_CNT16	(SPECIALCHANNELSFLAG | 9)
 #define SPECIALCHANNEL_DLY		(SPECIALCHANNELSFLAG | 10)
-#define SPECIALCHANNEL_DLY8		(SPECIALCHANNELSFLAG | 11)
-#define SPECIALCHANNEL_DLY16	(SPECIALCHANNELSFLAG | 12)
 
 
 static const struct {const char* const name; const uint8_t id;} f_aSpecialChannelDict[] =
@@ -160,8 +158,6 @@ static const struct {const char* const name; const uint8_t id;} f_aSpecialChanne
 		{"_CNT16", SPECIALCHANNEL_CNT16},
 		{"_CNT8", SPECIALCHANNEL_CNT8},
 		{"_DLY", SPECIALCHANNEL_DLY},
-		{"_DLY16", SPECIALCHANNEL_DLY16},
-		{"_DLY8", SPECIALCHANNEL_DLY8},
 		{NULL, 0}
 };
 
@@ -1662,9 +1658,7 @@ static char* getGrpDataStringAscii_returnend(char* buf, char* const bufend,
 				case SPECIALCHANNEL_CNT16: val = gvals->msgcnt & 0xFFFF; break;
 				case SPECIALCHANNEL_CNT8: val = gvals->msgcnt & 0xFF; break;
 
-				case SPECIALCHANNEL_DLY: val = delay; break;
-				case SPECIALCHANNEL_DLY16: val = delay & 0xFFFF; break;
-				case SPECIALCHANNEL_DLY8: val = delay & 0xFF; break;
+				case SPECIALCHANNEL_DLY: val = SATURATION_U(delay, 0xFF); break;
 			}
 
 			buf = strcpy_returnend(buf, bufend, utoa(val, tmp, 10));
@@ -1763,15 +1757,8 @@ static uint8_t* getGrpDataBinary_returnend(uint8_t* buf, uint8_t* const bufend,
 					break;
 
 				case SPECIALCHANNEL_DLY:
-					buf = memcpy32_returnend(buf, bufend, (uint8_t*)&delay) + 1;
-					break;
-
-				case SPECIALCHANNEL_DLY16:
-					buf = memcpy16_returnend(buf, bufend, (uint8_t*)&delay) + 1;
-					break;
-
-				case SPECIALCHANNEL_DLY8:
-					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&delay) + 1;
+					val = SATURATION_U(delay, 0xFF);
+					buf = memcpy8_returnend(buf, bufend, (uint8_t*)&val) + 1;
 					break;
 			}
 		}
