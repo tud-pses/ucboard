@@ -1062,7 +1062,7 @@ void USART3_IRQHandler(void)
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
 	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_RXNE) != RESET )
-	{LED_A_ON();
+	{//LED_A_ON();
 		// read byte from receive register (which also resets USART_IT_RXNE)
 		rxdata = USART3->RDR;
 		processRxdata(UART_3, rxdata);
