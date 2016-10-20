@@ -530,7 +530,7 @@ void daq_do_systick()
 								buf = strcpy_returnend(buf, bufend - 1, utoa(ERRCODE_DAQ_UNSYNCHABLECHANNELS, tmp, 10));
 								buf = strcpy_returnend(buf, bufend - 1, "): Group ");
 								buf = strcpy_returnend(buf, bufend - 1, utoa(p, tmp, 10));
-								buf = strcpy_returnend(buf, bufend - 1, " is unsynchable!");
+								buf = strcpy_returnend(buf, bufend - 1, " is unsynchronisable!");
 								*buf++ = '\n';
 								*buf = '\0';
 
@@ -653,22 +653,6 @@ void daq_do_systick()
 									}
 								}
 							}
-
-							if (grp->avgcnt == (grp->uAvg - 1))
-							{
-								bSendGrp = true;
-
-								if (grp->uAvg > 1)
-								{
-									grp->avgcnt = (int32_t)grp->uAvg - (int32_t)grp->uTs;
-								}
-							}
-							else
-							{
-								bSendGrp = false;
-
-								grp->avgcnt++;
-							}
 						}
 						else
 						{
@@ -696,6 +680,25 @@ void daq_do_systick()
 								gvals->vals[c].updatetic = GETSYSTICS();
 							}
 						}
+					}
+				}
+
+				if (grp->eSampling == DAQSAMPLING_TS)
+				{
+					if (grp->avgcnt == (grp->uAvg - 1))
+					{
+						bSendGrp = true;
+
+						if (grp->uAvg > 1)
+						{
+							grp->avgcnt = (int32_t)grp->uAvg - (int32_t)grp->uTs;
+						}
+					}
+					else
+					{
+						bSendGrp = false;
+
+						grp->avgcnt++;
 					}
 				}
 			}
