@@ -1,5 +1,5 @@
 
-\chapter{Hardware}
+\chapter{Fahrzeuge}
 
 
 \section{Fahrgestelle}
@@ -257,6 +257,10 @@ Somit kann durch Messen der Zeit zwischen zwei Zustandswechseln die Zeitdauer f�
 Auf dem ucboard wird die Zeit zwischen den Impulsen auf eine Mikrosekunde genau bestimmt. Die Ausgabe der Messwerte erfolgt dann in \valunit{0,1}{ms}. Daneben wird auch die Summe dieser Zeiten über acht Zustandswechsel, also einer Radumdrehung, bestimmt und in einer Genauigkeit von \valunit{1}{ms} ausgegeben. Zuletzt erfolgt auch die Ausgabe der Anzahl an gezählten Zustandswechseln in Modulo 256, wenn extern selber mitgezählt werden soll. (Letzteres erlaubt auch die Überprüfung, ob ggf. Messdaten verloren gegangen sind.)
 
 Im Gegensatz zu einem "`klassischen"' Encoder kann die Drehrichtung nicht festgestellt werden!
+
+\begin{itemize}
+	\item Der Abstand zwischen Rad und Aufbau darf nicht zu groß sein. Ist das Fahrzeug beispielsweise aufgebockt, so werden in der Regler keine Impulse mehr gezählt.\footnote{Vom Hersteller gibt es noch einen Hall-Sensor aus der gleichen Baureihe (HAL 502), der jedoch etwas empfindlicher (die notwendige Flussdichte beträgt \ca ein Drittel im Vergleich zum HAL 503) ist. Sollten häufig Probleme mit übersprungenen Impulsen auf"|treten, wäre dies eine mögliche Lösung.}
+\end{itemize}
 
 
 \subsection{IMU}

@@ -1,0 +1,76 @@
+
+
+\chapter{Programmierung}
+
+
+\section{Einrichtung Entwicklungsumgebung}
+
+
+\paragraph{System Workbench for STM32}
+
+Die verwendete Entwicklungsumgebung "`System Workbench for STM32"' basiert auf Eclipse. Die Entwicklungsumgebung kann über \href{www.openstm32.org}{\color[rgb]{0,0,1} www.openstm32.org} geladen werden. Die Entwicklungsumgebung beinhaltet einen Compiler. 
+
+
+\paragraph{Projekt importieren}
+
+Wenn das git-Repostory lokal geclont wurde, muss das Projekt einmalig in die Entwicklungsumgebung importiert werden. Dazu wird wie folgt vorgegangen:
+\begin{enumerate}
+	\item Starten von "`System Workbench for STM32"'
+	\item "`File"' $\to$ "`Switch Workspace"' $\to$ "`Other\ldots"': Verzeichnis \verb|fw_workspace\| des Repositories auswählen 
+	\item "`File"' $\to$ "`Import"'\ldots:
+		\begin{itemize}
+			\item "`General"' $\to$ "`Existing Projects into Workspace"'
+			\item "`Select root directory"': Verzeichnis \verb|fw_workspace\| des Repositories über "`Browse\ldots"' auswählen 
+			\item "`Projects"': pses\_ucboard auswählen
+			\item "`Options"': "`Copy projects into workspace"' darf NICHT ausgewählt sein. (Die Daten sind ja schon da, wo sie hingehören.)
+			\item "`Finish"'
+		\end{itemize}
+	\item STRG+B sollte Projekt erstellen
+	\item Falls im "`Problems"'-Reiter ein Fehler angezeigt wird, dass ein Symbol nicht aufgelöst werden kann:
+		\begin{itemize}
+			\item Rechte Maustaste auf Projekt (ersten Eintrag) im "`Project Explorer"', $\to$ "`Properties"'
+			\item "`C/C++ General"' $\to$ "`Indexer"'\\ (Falls es den Punkt "`C/C++ General"' nicht gibt, dann hat man vorher nicht auf das Projekt geklickt.)
+			\item "`Enable project specific settings"' auswählen
+			\item "`Index source files not included in the build"' abwählen
+		\end{itemize}
+		(Die Ursache liegt darin, dass die Headerdateien für viele Mikrocontrollervarianten vorhanden sind, die alle die gleichen Symbole definieren. Letztlich wird nur ein Header eingebunden, aber mit der genannten Option schaut sich Eclipse dennoch alles an und weiß dann nicht, welches Symbol das richtige ist.)
+\end{enumerate}
+
+
+
+\paragraph{Einrichten des Programmieradapters ST-Link/V2}
+
+\textbf{Hinweis:} Es müsste möglich sein, den ST-Link/V2 auch zum Debuggen einzurichten. Dies wurde bisher jedoch noch nicht gemacht, sondern er wird lediglich zum Flashen verwendet.
+
+\textbf{Hinweis:} Hier wird die Einrichtung unter Windows beschrieben.
+
+\begin{enumerate}
+	\item "`STM32 ST-Link Utility"' von der STM-Homepage herunterladen und installieren (beinhaltet auch die Treiber). \\ \textbf{Hinweis:} Dieser Schritt könnte schon problematisch sein, wenn man den ST-Link/V2 zum Debuggen verwendet will, da damit auch ein spezieller Treiber installiert wird, für gbd aber ein generischer Treiber benötigt wird. (Quelle: Forum, quergelesen. Müsste noch geklärt werden.)
+	\item Im Verzeichnis \verb|fw_workspace\pses_ucboard| die Datei \verb|stlinkflash_template.bat| in \verb|stlinkflash.bat| kopieren. (Letztere sollte von Git ignoriert werden.)
+	\item In der Datei \verb|stlinkflash.bat| die Pfade zum ST-Link-Utility anpassen.
+	\item In der Entwicklungsumgebung: 
+		\begin{enumerate}
+			\item "`Run"' $\to$ "`External Tools"' $\to$ "`External Tools Configurations\ldots"'
+			\item Links auf "`Program"' klicken, dann oben auf das linke Icon zum Erstellen einer neuen Konfiguration
+				\begin{itemize}
+					\item "`Name"': "`STM flashen"'
+					\item "`Location"': Über "`Browse Workspace\ldots"' die Datei \verb|stlinkflash.bat| auswählen
+					\item "`Arguments"': \\
+						{\small \verb|"${workspace_loc}\${project_name}\${config_name:${project_name}}\${project_name}.bin"|}\\
+						Die doppelten Anführungszeichen müssen miteingegeben werden!
+				\end{itemize}
+			\item "`Apply"'
+			\item "`Close"'
+		\end{enumerate}
+	\item Beim ersten Klicken auf das "`External-Tools"'-Icon (Play-Symbol mit Werkzeugkoffer) kann dann die Konfiguration "`STM flashen"' ausgewählt werden. Danach ist diese automatisch voreingestellt.\\(Die Batch-Datei verwendet das Kommandozeilenprogramm des "`ST-Link-Utilities, um den Chip zu flashen, zu überprüfen und danach zu reseten.)
+	\item Sollte sich bei Klick auf das Icon eine Message-Box mit dem Fehler "`Variable references empty selection: \$\{project\_name\}"' erscheinen, dann muss einfach "`in"' eine Datei im Editor-Fenster geklickt werden, so dass der Eingabefokus auf dieser Datei liegt. Wenn dann wieder auf das Icon geklickt wird, sollte es funktionieren.
+\end{enumerate}
+
+
+
+\section{Übersicht über Sourcecode}
+
+
+\section{Belegung der Ressourcen}
+
+

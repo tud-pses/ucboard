@@ -1,4 +1,4 @@
-\documentclass[11pt,oneside,colorback,accentcolor=tud2c,nopartpage,bigchapter,fleqn,ngerman]{tudreport}
+\documentclass[11pt,twoside,colorback,accentcolor=tud2c,nopartpage,bigchapter,fleqn,ngerman]{tudreport}
 % Für Skripte 11pt-Schrift verwenden (Standard ist 9.5)
 
 
@@ -102,16 +102,15 @@
 % =================================================================================
 % Texte für den Titel und die Rückseite des Titels vorgeben
 % =================================================================================
-\title{Notizen}
-\subtitle{Eric Lenz}
+\title{Beschreibung Fahrzeug und ucboard}
+\subtitle{PS Echtzeitsysteme}
+\subsubtitle{Rev. 0+ (Entwurf)}
 
 % \settitlepicture{}	% Bild für Deckblatt
 % \printpicturesize
-\setinstitutionlogo[height]{common/rtm_mit_schrift}	% Logo statt \institution-Text
+%\setinstitutionlogo[height]{common/rtm_mit_schrift}	% Logo statt \institution-Text
 \institution{
-	Institut für Automatisierungstechnik und Mechatronik\\
-	FG Regelungstechnik und Mechatronik\\
-    Prof. Dr.-Ing. U. Konigorski}
+	PS Echtzeitsysteme\\FG Echtzeitsysteme\\FG Regelungstechnik und Mechatronik}
 
 % Folgende Einträge werden auf der Rückseite der Titelseite gedruckt:
 \uppertitleback{}
@@ -133,7 +132,7 @@
 %\selectlanguage{english}
 \selectlanguage{ngerman}
 
-%\maketitle
+\maketitle
 
 
 %% =================================================================================
@@ -195,6 +194,8 @@
 % =================================================================================
 
 
+\part{Anwenden}
+
 \clearpage
 \input{inc/hardware.tex}
 \FloatBarrier
@@ -203,10 +204,24 @@
 \input{inc/kommunikation.tex}
 \FloatBarrier
 
+
+\part{Entwickeln und Anpassen}
+
+\clearpage
+\input{inc/repository.tex}
+\FloatBarrier
+
+\clearpage
+\input{inc/programmierung.tex}
+\FloatBarrier
+
 \clearpage
 \input{inc/schaltung.tex}
 \FloatBarrier
 
+\clearpage
+\input{inc/aufbau.tex}
+\FloatBarrier
 
 % =================================================================================
 
