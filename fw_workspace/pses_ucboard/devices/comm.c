@@ -148,7 +148,7 @@ char* createErrStr_returnend(char* buf, char* const bufend, char sotchar, EnErrC
 	if (msg != NULL)
 	{
 		usedbufend = strcat_returnend(buf, bufend - 1,
-										"_Err(",
+										"_ERR(",
 										utoa(eErr, codebuf, 10),
 										"): ",
 										msg,
@@ -157,7 +157,7 @@ char* createErrStr_returnend(char* buf, char* const bufend, char sotchar, EnErrC
 	else
 	{
 		usedbufend = strcat_returnend(buf, bufend - 1,
-										"_Err(",
+										"_ERR(",
 										utoa(eErr, codebuf, 10),
 										")",
 										NULL);
