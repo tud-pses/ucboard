@@ -119,7 +119,7 @@ void car_init()
 	return;
 }
 
-#define GETPWMVAL(v) (1500 + v)
+#define GETPWMVAL_STEERING(v) (1500 + v/2)
 
 
 static int16_t f_iCurSteeringVal = 0;
@@ -128,9 +128,10 @@ static bool f_bSteeringOff = true;
 
 void car_setSteering(int16_t val)
 {
-	val = SATURATION_LU(val / 2, -500, 500);
+	val = SATURATION_LU(val, -1000, 1000);
+	f_iCurSteeringVal = val;
 
-	TIM2->CCR1 = GETPWMVAL(val);
+	TIM2->CCR1 = GETPWMVAL_STEERING(val);
 
 	return;
 }
@@ -870,9 +871,9 @@ bool cmd_steer(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			}
 			else
 			{
-				val = atoi(sstr.strs[0]) / 2;
+				val = atoi(sstr.strs[0]);
 
-				if ( (val < -500) || (val > 500) )
+				if ( (val < -1000) || (val > 1000) )
 				{
 					bOutOfRange = true;
 				}
@@ -882,7 +883,7 @@ bool cmd_steer(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 
 					f_bSteeringOff = false;
 					f_iCurSteeringVal = val;
-					TIM2->CCR1 = GETPWMVAL(val);
+					TIM2->CCR1 = GETPWMVAL_STEERING(val);
 				}
 			}
 		}
