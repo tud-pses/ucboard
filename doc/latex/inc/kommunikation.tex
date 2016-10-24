@@ -196,7 +196,7 @@ Setzen:
 
 \begin{verbatim}
 	!STEER -200 -201
-	:Err(269): Message corrupted! (The two values have to be equal!)
+	:ERR(269): Message corrupted! (The two values have to be equal!)
 \end{verbatim}
 }
 
@@ -233,7 +233,7 @@ Optionale Wiederholung des Arguments, um Fehlübertragungen zu detektieren:
 
 \begin{verbatim}
 	!drv f 300 301
-	:Err(269): Message corrupted! (The two values have to be equal!)
+	:ERR(269): Message corrupted! (The two values have to be equal!)
 \end{verbatim}
 
 
@@ -424,7 +424,7 @@ abgefragt werden:
 
 Zur Abfrage von Einzelwerten dient der Subbefehl \verb|GET|:
 \begin{verbatim}
-	!DAQ GET chname1 [chname2 [chname3 [...]]] [~AGE] [~TICS]
+	?DAQ GET chname1 [chname2 [chname3 [...]]] [~AGE] [~TICS]
 \end{verbatim}
 Diesem muss mindestens der Name eines Kanals übergeben werden. Es können aber auch mehrere Kanäle auf einmal abgefragt werden. Die Option \verb|~AGE| gibt zu \emph{jedem} Wert das Alter in Tics (\dah ms) zwischen dem Zeitpunkt der Datenerfassung und der Datenabfrage zurück. Die Option \verb|~TICS| gibt zu \emph{jedem} Wert den Erfassungszeitpunkt in Tics zurück. Sind beide Optionen gewählt, dann wird immer AGE vor TICS zurückgegeben, unabhängig von der Reihenfolge der Optionen.
 
@@ -438,7 +438,7 @@ Einzelabfrage des Sensorwertes des vorderen Ultraschallsensors
 
 Ausgabe des Alters des Messwertes
 \begin{verbatim}
-	!DAQ GET ~AGE USF
+	?DAQ GET ~AGE USF
 	:1860 68
 \end{verbatim}
 
