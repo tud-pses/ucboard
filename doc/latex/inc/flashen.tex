@@ -1,0 +1,33 @@
+
+
+\chapter{Flashen}
+
+
+\textbf{Hinweis:} Bisher wird hier nur die Variante des Flashens unter Windows mit dem "`STM32 ST-Link Utility"' beschrieben.
+
+\section{Vorbereitung}
+
+"`STM32 ST-Link Utility"' von der STM-Homepage herunterladen und installieren (beinhaltet auch die Treiber). 
+
+\textbf{Hinweis:} Die könnte schon problematisch sein, wenn man den ST-Link/V2 zum Debuggen verwendet will, da damit auch ein spezieller Treiber installiert wird, für gbd aber ein generischer Treiber benötigt wird. (Quelle: Forum, quergelesen. Müsste noch geklärt werden.)
+
+
+
+\section{Flashen}
+
+\begin{enumerate}
+	\item ST-Link/V2 an Platine anschließen. Fahrzeug einschalten.
+	\item "`STM32 ST-Link/V2 Utility"' öffnen.
+	\item Auf "`Connect"'-Icon (drittes von links) klicken. Es sollten die Daten des Mikrocontrollers angezeigt werden.
+	\item Auf "`Open File"'-Icon (erstes von links) klicken und bin-Datei auswählen.
+		\begin{itemize}
+			\item Im Repository unter \verb|fw_releases\| liegen die "`offiziellen"' Versionen.
+		\end{itemize}
+	\item Auf "`Program Verify"'-Icon (sechstes von links) klicken.
+		\begin{itemize}
+			\item Start-Adresse ist ist \verb|0x08000000|. (Sollte voreingestellt sein.)
+		\end{itemize}
+\end{enumerate}
+
+
+

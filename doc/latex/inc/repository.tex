@@ -12,6 +12,7 @@
 \begin{tabular}{lp{12cm}}
 	\verb|datasheets\| & Datenblätter der Sensoren sowie Datenblätter der Bauteile der Schaltungen \\
 	\verb|doc\| & Latex-Dateien um dieses Dokument zu erstellen \\
+	\verb|fw_releases\| & (firmware\_releases) bin-Dateien der wesentlichen Firmwareversionen \\
 	\verb|fw_workspace\| & (firmware\_workspace) Workspace der Entwicklungsumgebung, Sourcecode des auf dem Mikrocontroller laufenden Programms \\
 	\verb|kicad_drvbatswitch\| & KiCad-Dateien (Schaltplan und Layout) der kleinen Schaltplatine für den den Fahrakku \\
 	\verb|kicad_ucboard\| & KiCad-Dateien (Schaltplan und Layout) der ucboard-Platine \\
@@ -20,3 +21,45 @@
 	\verb|stm32cubemx\| & Projekt für STM32CubeMX (Programm zur Konfiguration des Mikrocontollers) \\
 \end{tabular}
 
+
+\section{Firmware-Releases}
+
+Im Verzeichnis \verb|fw_releases\| befinden sich die Firmware-Versionen (Programme für den Mikrocontroller) zu bestimmten Versionständen. Die bin-Dateien sind dabei nach dem Schema
+\begin{center}
+	\texttt{pses\_ucboard\_ver\textit{VERSIONSNUMMER}\_\texttt{BUILDCONF}.bin}
+\end{center}
+benannt, so \zB
+\begin{center}
+	\texttt{pses\_ucboard\_ver0.9.0\_Debug.bin}
+\end{center}
+
+Zu jeder Version, die in diesem Verzeichnis liegt, sollte im Git-Repository ein Tag der Form
+\begin{center}
+	\texttt{fwver\_\textit{VERSIONSNUMMER}}
+\end{center}
+vorhanden sein. Zu dem Beispiel oben gehört also der Tag
+\begin{center}
+	\texttt{fwver\_0.9.0}
+\end{center}
+
+Während der Weiterentwicklung bis zu einem Stand, der eine neue Versionsnummer erhält, sollte der Versionsnummer in \verb|version.h| ein "`\verb|+|"' angehängt werden, also \zB \verb|0.9.0+|. (Idealerweise wird das \verb|+| direkt nach dem Erzeugen der Release-Version angehängt, um zu vermeiden dies zu vergessen.)
+
+Für Weiterentwicklungen innerhalb der Gruppen sollte dem Versionsstring noch der Gruppenname oder eine ähnliche Kennzeichnung hinzugefügt werden.
+
+
+\tabref{tab:repo:fw_versions} gibt eine Übersicht über die Firmware-Versionen.
+
+\begin{table}%
+	\centering
+	\caption{Übersicht über Firmware-Versionen}
+	\label{tab:repo:fw_versions}
+	\begin{tabular}{lrp{10cm}}
+		\mytoprule
+		Version & Datum & Kommentar \\
+		\mymidrule
+		0.9.0
+			& 25.10.2016
+			& Grundfunktionalität weitgehend vorhanden. (Es fehlen noch die Befehle zum Parametrieren und Kalibrieren der Sensoren und der Treiber für das Magnetometer.) \\
+		\mybottomrule
+	\end{tabular}
+\end{table}
