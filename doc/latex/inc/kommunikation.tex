@@ -296,26 +296,29 @@ Bei der direkten Ansteuerung wird direkt die Impulsbreite vorgegeben, die an den
 
 \paragraph{DMS}
 
-{\color[rgb]{0.75,0.75,0.75}
-"`Totmannschaltung"' (Dead-man switch)\\
-\\
-Dieser Parameter gibt die Zeit in Millisekunden an, innerhalb derer eine neue DRV-Nachricht erhalten sein muss. Wird diese Zeit ohne DRV-Nachricht überschritten, so wird der Motor gestoppt, \dah der Sollwert auf 0 (aber nicht \texttt{OFF} gesetzt.) (Bei der nächsten \texttt{DRV}-Nachricht wird der Motor dann wieder angesteuert.)
+Die Totmannschaltung (DMS -- Dead-man switch) soll insbesondere im Entwicklungsstatus der PC-Software und der Algorithmen verhindern, dass das Fahrzeug bei abgestürztem PC oder abgestürzten ROS-Nodes weiterfährt.
+
+Dieser Parameter gibt die Zeit in Millisekunden an, innerhalb derer eine neue DRV-Nachricht erhalten sein muss. Wird diese Zeit ohne DRV-Nachricht überschritten, so wird der Motor gestoppt, \dah der Sollwert auf 0 (aber nicht \texttt{OFF}) gesetzt. Bei der nächsten \texttt{DRV}-Nachricht wird der Motor dann wieder angesteuert.
 
 \begin{verbatim}
 	!DRV ~DMS=1000
-	:ok
+	:~DMS=1000
 \end{verbatim}
-\textcolor[rgb]{0.75,0.75,0.75}{
-Zum Abschalten der Sicherheitsschaltung dient der Wert \texttt{OFF}.}
+Zum Abschalten der Sicherheitsschaltung dient der Wert \texttt{0}.
 
-
-DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeitzählung der Totmannschaltung (\bzw Tot-PC-Schaltung) neu zu starten.
+DRV kann auch ohne Parameter aufgerufen werden. Dann dient er nur dazu, die Zeitzählung der Totmannschaltung neu zu starten.
 
 \begin{verbatim}
 	!DRV
 	:ok
 \end{verbatim}
-}
+
+Abfrage der DMS-Abschaltzeit zusammen mit dem aktuellen DRV-Wert:
+\begin{verbatim}
+	?DRV ~DMS
+	:OFF ~DMS=1000
+\end{verbatim}
+
 
 
 \subsubsection{DAQ}
