@@ -45,6 +45,7 @@
             this.grpDisplay = new System.Windows.Forms.GroupBox();
             this.grpDAQ = new System.Windows.Forms.GroupBox();
             this.grpCommands = new System.Windows.Forms.GroupBox();
+            this.cmdClearText = new System.Windows.Forms.Button();
             this.grpConnection.SuspendLayout();
             this.grpDisplay.SuspendLayout();
             this.grpDAQ.SuspendLayout();
@@ -157,6 +158,7 @@
             this.rtbCommands.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.rtbCommands.Location = new System.Drawing.Point(6, 46);
             this.rtbCommands.Name = "rtbCommands";
+            this.rtbCommands.ReadOnly = true;
             this.rtbCommands.Size = new System.Drawing.Size(338, 478);
             this.rtbCommands.TabIndex = 9;
             this.rtbCommands.Text = "";
@@ -177,6 +179,7 @@
             this.rtbDisplay.Font = new System.Drawing.Font("Consolas", 8.25F);
             this.rtbDisplay.Location = new System.Drawing.Point(6, 19);
             this.rtbDisplay.Name = "rtbDisplay";
+            this.rtbDisplay.ReadOnly = true;
             this.rtbDisplay.Size = new System.Drawing.Size(338, 321);
             this.rtbDisplay.TabIndex = 11;
             this.rtbDisplay.Text = "";
@@ -187,6 +190,7 @@
             this.rtbDAQ.Font = new System.Drawing.Font("Consolas", 8.25F);
             this.rtbDAQ.Location = new System.Drawing.Point(6, 19);
             this.rtbDAQ.Name = "rtbDAQ";
+            this.rtbDAQ.ReadOnly = true;
             this.rtbDAQ.Size = new System.Drawing.Size(338, 505);
             this.rtbDAQ.TabIndex = 12;
             this.rtbDAQ.Text = "";
@@ -224,15 +228,28 @@
             this.grpCommands.TabStop = false;
             this.grpCommands.Text = "Befehle/Antworten";
             // 
+            // cmdClearText
+            // 
+            this.cmdClearText.Location = new System.Drawing.Point(999, 548);
+            this.cmdClearText.Name = "cmdClearText";
+            this.cmdClearText.Size = new System.Drawing.Size(75, 23);
+            this.cmdClearText.TabIndex = 15;
+            this.cmdClearText.Text = "Löschen";
+            this.cmdClearText.UseVisualStyleBackColor = true;
+            this.cmdClearText.Click += new System.EventHandler(this.cmdClearText_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1085, 549);
+            this.ClientSize = new System.Drawing.Size(1085, 581);
+            this.Controls.Add(this.cmdClearText);
             this.Controls.Add(this.grpCommands);
             this.Controls.Add(this.grpDAQ);
             this.Controls.Add(this.grpDisplay);
             this.Controls.Add(this.grpConnection);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
             this.Name = "Form1";
             this.Text = "ucterm";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
@@ -265,6 +282,7 @@
         private System.Windows.Forms.GroupBox grpDisplay;
         private System.Windows.Forms.GroupBox grpDAQ;
         private System.Windows.Forms.GroupBox grpCommands;
+        private System.Windows.Forms.Button cmdClearText;
     }
 }
 

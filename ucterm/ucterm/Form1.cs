@@ -14,9 +14,21 @@ namespace ucterm
     {
         private UCConnector m_connector;
 
+        private StringBuilder m_sbDAQData;
+        private StringBuilder m_sbDisplayData;
+        private StringBuilder m_sbCmdRespData;
+
+        private System.Timers.Timer m_updateTimer;
+
+        private Boolean m_bClearText = false;
+
         public Form1()
         {
             InitializeComponent();
+
+            m_sbDAQData = new StringBuilder(10000);
+            m_sbDisplayData = new StringBuilder(10000);
+            m_sbCmdRespData = new StringBuilder(10000);
 
             m_connector = new UCConnector();
             m_connector.ConnectionStateChange += connector_ConnectionStateChange;
@@ -27,6 +39,13 @@ namespace ucterm
             cmdRefreshCOMList_Click(this, null);
 
             txtBaudrate.Text = "921600";
+            connector_ConnectionStateChange(this, null);
+
+            m_updateTimer = new System.Timers.Timer();
+            m_updateTimer.Elapsed += new System.Timers.ElapsedEventHandler(updatetimer_Elapsed);
+            m_updateTimer.AutoReset = false;
+            m_updateTimer.Interval = 200;
+            m_updateTimer.Start();
 
             return;
         }
@@ -98,8 +117,13 @@ namespace ucterm
         {
             String cmd = txtTxCommand.Text;
 
-            rtbCommands.AppendText("\n");
-            rtbCommands.AppendText(cmd);
+            System.Threading.Monitor.Enter(m_sbCmdRespData);
+
+            m_sbCmdRespData.Append("\n");
+            m_sbCmdRespData.Append(cmd);
+
+            System.Threading.Monitor.Exit(m_sbCmdRespData);
+
             m_connector.send(cmd);
 
             return;
@@ -107,62 +131,141 @@ namespace ucterm
 
         private void connector_NewRespData(object sender, String data)
         {
-            MethodInvoker updater;
+            System.Threading.Monitor.Enter(m_sbCmdRespData);
 
-            updater = delegate
-            {
-                rtbCommands.AppendText("\n");
-                rtbCommands.AppendText(data);
-                rtbCommands.SelectionStart = rtbCommands.Text.Length;
-                rtbCommands.ScrollToCaret();
-            };
+            m_sbCmdRespData.Append("\n");
+            m_sbCmdRespData.Append(data);
 
-            if (this.InvokeRequired)
-            {
-                this.BeginInvoke(updater);
-            }
-            else
-            {
-                updater();
-            }
+            System.Threading.Monitor.Exit(m_sbCmdRespData);
 
             return;
         }
 
         private void connector_NewDisplayData(object sender, String data)
         {
-            MethodInvoker updater;
+            System.Threading.Monitor.Enter(m_sbDisplayData);
 
-            updater = delegate
-            {
-                rtbDisplay.AppendText("\n");
-                rtbDisplay.AppendText(data);
-                rtbDisplay.SelectionStart = rtbDisplay.Text.Length;
-                rtbDisplay.ScrollToCaret();
-            };
+            m_sbDisplayData.Append("\n");
+            m_sbDisplayData.Append(data);
 
-            if (this.InvokeRequired)
-            {
-                this.BeginInvoke(updater);
-            }
-            else
-            {
-                updater();
-            }
+            System.Threading.Monitor.Exit(m_sbDisplayData);
 
             return;
         }
 
         private void connector_NewDAQData(object sender, String data)
         {
+            System.Threading.Monitor.Enter(m_sbDAQData);
+
+            m_sbDAQData.Append("\n");
+            m_sbDAQData.Append(data);
+
+            System.Threading.Monitor.Exit(m_sbDAQData);
+
+            return;
+        }
+
+
+        private void updatetimer_Elapsed(object source, System.Timers.ElapsedEventArgs e)
+        {
+            String szCmdRespData = null;
+            String szDisplayData = null;
+            String szDAQData = null;
+
+
+            System.Threading.Monitor.Enter(m_sbCmdRespData);
+
+            if (m_sbCmdRespData.Length > 0)
+            {
+                szCmdRespData = m_sbCmdRespData.ToString();
+                m_sbCmdRespData.Clear();
+            }
+
+            System.Threading.Monitor.Exit(m_sbCmdRespData);
+
+
+            System.Threading.Monitor.Enter(m_sbDisplayData);
+
+            if (m_sbDisplayData.Length > 0)
+            {
+                szDisplayData = m_sbDisplayData.ToString();
+                m_sbDisplayData.Clear();
+            }
+
+            System.Threading.Monitor.Exit(m_sbDisplayData);
+
+
+            System.Threading.Monitor.Enter(m_sbDAQData);
+
+            if (m_sbDAQData.Length > 0)
+            {
+                szDAQData = m_sbDAQData.ToString();
+                m_sbDAQData.Clear();
+            }
+
+            System.Threading.Monitor.Exit(m_sbDAQData);
+
+
+
             MethodInvoker updater;
 
             updater = delegate
             {
-                rtbDAQ.AppendText("\n");
-                rtbDAQ.AppendText(data);
-                rtbDAQ.SelectionStart = rtbDAQ.Text.Length;
-                rtbDAQ.ScrollToCaret();
+                if (m_bClearText)
+                {
+                    rtbCommands.Clear();
+                    rtbDisplay.Clear();
+                    rtbDAQ.Clear();
+
+                    m_bClearText = false;
+                }
+                else
+                {
+                    if (szCmdRespData != null)
+                    {
+                        if (rtbCommands.TextLength + szCmdRespData.Length > 10 * 1024 * 1024)
+                        {
+                            rtbCommands.Text = rtbCommands.Text.Remove(0, 5 * 1024 * 1024) + szCmdRespData;
+                        }
+                        else
+                        {
+                            rtbCommands.AppendText(szCmdRespData);
+                        }
+
+                        rtbCommands.SelectionStart = rtbCommands.Text.Length;
+                        rtbCommands.ScrollToCaret();
+                    }
+
+                    if (szDisplayData != null)
+                    {
+                        if (rtbDisplay.TextLength + szDisplayData.Length > 10 * 1024 * 1024)
+                        {
+                            rtbDisplay.Text = rtbDisplay.Text.Remove(0, 5 * 1024 * 1024) + szDisplayData;
+                        }
+                        else
+                        {
+                            rtbDAQ.AppendText(szDisplayData);
+                        }
+
+                        rtbDisplay.SelectionStart = rtbDisplay.Text.Length;
+                        rtbDisplay.ScrollToCaret();
+                    }
+
+                    if (szDAQData != null)
+                    {
+                        if (rtbDAQ.TextLength + szDAQData.Length > 10 * 1024 * 1024)
+                        {
+                            rtbDAQ.Text = rtbDAQ.Text.Remove(0, 5 * 1024 * 1024) + szDAQData;
+                        }
+                        else
+                        {
+                            rtbDAQ.AppendText(szDAQData);
+                        }
+
+                        rtbDAQ.SelectionStart = rtbDAQ.Text.Length;
+                        rtbDAQ.ScrollToCaret();
+                    }
+                }
             };
 
             if (this.InvokeRequired)
@@ -173,6 +276,8 @@ namespace ucterm
             {
                 updater();
             }
+
+            m_updateTimer.Start();
 
             return;
         }
@@ -211,6 +316,9 @@ namespace ucterm
                     txtBaudrate.Enabled = false;
                     cmdRefreshCOMList.Enabled = false;
 
+                    cmdSend.Enabled = true;
+                    txtTxCommand.Enabled = true;
+
                     cmdConnect.Text = "Trennen";
                 }
                 else if ( (state == UCConnector.EnConnState.DISCONNECTED) || (state == UCConnector.EnConnState.FAILED_TO_CONNECTED) )
@@ -222,11 +330,16 @@ namespace ucterm
                     txtBaudrate.Enabled = true;
                     cmdRefreshCOMList.Enabled = true;
 
+                    cmdSend.Enabled = false;
+                    txtTxCommand.Enabled = false;
+
                     cmdConnect.Text = "Verbinden";
                 }
                 else
                 {
                     grpConnection.Enabled = false;
+
+                    cmdSend.Enabled = false;
                 }
             };
 
@@ -256,6 +369,16 @@ namespace ucterm
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             m_connector.disconnect();
+            m_updateTimer.Enabled = false;
+
+            return;
+        }
+
+        private void cmdClearText_Click(object sender, EventArgs e)
+        {
+            m_bClearText = true;
+
+            return;
         }
     }
 }
