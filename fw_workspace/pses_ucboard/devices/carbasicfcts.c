@@ -31,6 +31,10 @@ static void initBats();
 extern void Error_Handler();
 
 
+static uint32_t f_uDMSCount = 0;
+static uint32_t f_uDMSSetVal = 0;
+
+
 typedef enum EnDrvMode_
 {
 	DRVMODE_OFF,
@@ -144,11 +148,18 @@ static void drv_do_systick();
 
 void car_do_systick()
 {
+	if (f_uDMSCount > 1)
+	{
+		f_uDMSCount--;
+	}
+	else if (f_uDMSCount == 1)
+	{
+		f_iRequestedDrvVal = 0;
+	}
+
 	voltagemeas_do_systick();
 
 	drv_do_systick();
-
-
 
 
 	if (f_eDrvState == DRVSTATE_OFF)
@@ -619,51 +630,44 @@ bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					void* pRespStream,
 					void* pDirectCallback)
 {
-	SplittedStr_t sstr;
-
+	CommCmdArgs_t cargs;
 	EnDrvMode_t eReqDrvMode;
-
 
 	*(CommStreamFctPtr*)pRespStream = NULL;
 	*(CommDirectFctPtr*)pDirectCallback = NULL;
 
-	strsplit(&sstr, acData, ' ', '"', 10);
+	comm_parseArgs(&cargs, acData);
 
 	if (eSpec == CMDSPEC_SET)
 	{
-		bool bWrongUsage;
+		bool bWrongUsage = false;
 		bool bOutOfRange = false;
 		bool bMsgCorrupted = false;
 		uint8_t uReqArgsMin = 2;
 		uint8_t uReqArgsMax = 3;
 
+		uint32_t uDMSVal = 0;
+		bool bDMSParam = false;
+
+		bool bNewVals = false;
+
 		int16_t minval = 0;
 		int16_t maxval = 0;
 
-
-		bWrongUsage = (sstr.cnt == 0);
-
-		if (!bWrongUsage)
+		for (uint8_t p = 0; p < cargs.nParams; ++p)
 		{
+			if (strcmpi(cargs.paramnames[p], "DMS") == STRCMPRES_EQUAL)
+			{
+				bDMSParam = true;
 
-			if (strcmpi(sstr.strs[0], "OFF") == STRCMPRES_EQUAL)
-			{
-				eReqDrvMode = DRVMODE_OFF;
-
-				uReqArgsMin = 1;
-				uReqArgsMax = 1;
-			}
-			else if (strcmpi(sstr.strs[0], "F") == STRCMPRES_EQUAL)
-			{
-				eReqDrvMode = DRVMODE_FORWARDS;
-			}
-			else if (strcmpi(sstr.strs[0], "B") == STRCMPRES_EQUAL)
-			{
-				eReqDrvMode = DRVMODE_BACKWARDS;
-			}
-			else if (strcmpi(sstr.strs[0], "D") == STRCMPRES_EQUAL)
-			{
-				eReqDrvMode = DRVMODE_DIRECT;
+				if (cargs.paramvals[p] == NULL)
+				{
+					bWrongUsage = true;
+				}
+				else
+				{
+					uDMSVal = atoi(cargs.paramvals[p]);
+				}
 			}
 			else
 			{
@@ -671,65 +675,93 @@ bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			}
 		}
 
-		if ( (sstr.cnt < uReqArgsMin) && (sstr.cnt > uReqArgsMax) )
-		{
-			bWrongUsage = true;
-		}
 
-		if (!bWrongUsage)
+		if (!bWrongUsage && (cargs.nArgs > 0))
 		{
-			int val;
-			int val2;
-
-			if (eReqDrvMode == DRVMODE_OFF)
+			if (strcmpi(cargs.args[0], "OFF") == STRCMPRES_EQUAL)
 			{
-				f_eRequestedDrvMode = DRVMODE_OFF;
+				eReqDrvMode = DRVMODE_OFF;
+
+				uReqArgsMin = 1;
+				uReqArgsMax = 1;
+			}
+			else if (strcmpi(cargs.args[0], "F") == STRCMPRES_EQUAL)
+			{
+				eReqDrvMode = DRVMODE_FORWARDS;
+			}
+			else if (strcmpi(cargs.args[0], "B") == STRCMPRES_EQUAL)
+			{
+				eReqDrvMode = DRVMODE_BACKWARDS;
+			}
+			else if (strcmpi(cargs.args[0], "D") == STRCMPRES_EQUAL)
+			{
+				eReqDrvMode = DRVMODE_DIRECT;
 			}
 			else
 			{
-				val = atoi(sstr.strs[1]);
+				bWrongUsage = true;
+			}
 
-				if (sstr.cnt == 3)
+			if ( (cargs.nArgs < uReqArgsMin) && (cargs.nArgs > uReqArgsMax) )
+			{
+				bWrongUsage = true;
+			}
+
+			if (!bWrongUsage)
+			{
+				int val;
+				int val2;
+
+				if (eReqDrvMode == DRVMODE_OFF)
 				{
-					val2 = atoi(sstr.strs[2]);
-
-					if (val != val2)
-					{
-						bMsgCorrupted = true;
-					}
+					f_eRequestedDrvMode = DRVMODE_OFF;
 				}
-
-				if (!bMsgCorrupted)
+				else
 				{
-					if (eReqDrvMode == DRVMODE_DIRECT)
+					val = atoi(cargs.args[1]);
+
+					if (cargs.nArgs == 3)
 					{
-						minval = -500;
-						maxval = 500;
-					}
-					else if (eReqDrvMode == DRVMODE_FORWARDS)
-					{
-						minval = -500;
-						maxval = 1000;
-					}
-					else
-					{
-						minval = 0;
-						maxval = 500;
+						val2 = atoi(cargs.args[2]);
+
+						if (val != val2)
+						{
+							bMsgCorrupted = true;
+						}
 					}
 
-					if ( (val < minval) || (val > maxval) )
+					if (!bMsgCorrupted)
 					{
-						bOutOfRange = true;
-					}
-					else
-					{
-						f_eRequestedDrvMode = eReqDrvMode;
-						f_iRequestedDrvVal = val;
+						if (eReqDrvMode == DRVMODE_DIRECT)
+						{
+							minval = -500;
+							maxval = 500;
+						}
+						else if (eReqDrvMode == DRVMODE_FORWARDS)
+						{
+							minval = -500;
+							maxval = 1000;
+						}
+						else
+						{
+							minval = 0;
+							maxval = 500;
+						}
+
+						if ( (val < minval) || (val > maxval) )
+						{
+							bOutOfRange = true;
+						}
+						else
+						{
+							f_eRequestedDrvMode = eReqDrvMode;
+							f_iRequestedDrvVal = val;
+							bNewVals = true;
+						}
 					}
 				}
 			}
 		}
-
 
 		if (bWrongUsage)
 		{
@@ -737,7 +769,7 @@ bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					acRespData,
 					acRespData + RXMAXMSGLEN - 1,
 					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: !DRV OFF|F|B|D [value [value]]\n");
+					"Usage: !DRV [OFF|[F|B|D [value [value]]]] [~DMS=time_ms]\n");
 
 			*pnRespLen = strend - acRespData;
 		}
@@ -774,66 +806,144 @@ bool cmd_drv(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 		}
 		else
 		{
-			if (f_eRequestedDrvMode == DRVMODE_OFF)
+			if (bDMSParam)
 			{
-				strcpy(acRespData + 1, "OFF");
-				acRespData[0] = SOT_RXRESP;
-				*pnRespLen = strlen(acRespData);
+				f_uDMSSetVal = uDMSVal;
+			}
+
+			if (f_uDMSSetVal == 0)
+			{
+				f_uDMSSetVal = 0;
 			}
 			else
 			{
-				acRespData[0] = SOT_RXRESP;
-
-				acRespData[1] = (f_eRequestedDrvMode == DRVMODE_FORWARDS) ? 'F'
-									: ((f_eRequestedDrvMode == DRVMODE_BACKWARDS) ? 'B' : 'D');
-				acRespData[2] = ' ';
-
-				itoa(f_iRequestedDrvVal, acRespData + 3, 10);
-				*pnRespLen = strlen(acRespData);
+				f_uDMSCount = f_uDMSSetVal + 1;
 			}
+
+
+			char* const pRespDataStart = acRespData;
+			char tmp[10];
+			bool bRespVal = false;
+
+			*acRespData++ = SOT_RXRESP;
+
+			if (f_eRequestedDrvMode == DRVMODE_OFF)
+			{
+				acRespData = strcpy_returnend(acRespData,
+										acRespData + RXMAXMSGLEN, "OFF");
+				bRespVal = true;
+			}
+			else if (bNewVals)
+			{
+				*acRespData++ = (f_eRequestedDrvMode == DRVMODE_FORWARDS) ? 'F'
+									: ((f_eRequestedDrvMode == DRVMODE_BACKWARDS) ? 'B' : 'D');
+				*acRespData++ = ' ';
+
+				acRespData = strcpy_returnend(acRespData,
+										acRespData + RXMAXMSGLEN,
+										itoa(f_iRequestedDrvVal, tmp, 10));
+
+				bRespVal = true;
+			}
+
+			if (bDMSParam)
+			{
+				if (bRespVal)
+				{
+					*acRespData++ = ' ';
+				}
+
+				acRespData = strcpy_returnend(acRespData,
+										acRespData + RXMAXMSGLEN, "~DMS=");
+				acRespData = strcpy_returnend(acRespData,
+										acRespData + RXMAXMSGLEN,
+										itoa(f_uDMSSetVal, tmp, 10));
+			}
+
+			if (!bRespVal && !bDMSParam)
+			{
+				acRespData = strcpy_returnend(acRespData,
+										acRespData + RXMAXMSGLEN, "ok");
+			}
+
+			*pnRespLen = acRespData - pRespDataStart;
 		}
 	}
 	else
 	{
-		if ( (sstr.cnt > 1) || ((sstr.cnt == 1) && (strcmpi(sstr.strs[0], "D") != STRCMPRES_EQUAL)) )
+		bool bDMSParam = false;
+		bool bWrongUsage = false;
+
+		for (uint8_t p = 0; p < cargs.nParams; ++p)
+		{
+			if (strcmpi(cargs.paramnames[p], "DMS") == STRCMPRES_EQUAL)
+			{
+				bDMSParam = true;
+
+				if (cargs.paramvals[p] != NULL)
+				{
+					bWrongUsage = true;
+				}
+			}
+			else
+			{
+				bWrongUsage = true;
+			}
+		}
+
+		if ( (bWrongUsage) || (cargs.nArgs > 1) ||
+					((cargs.nArgs == 1) && (strcmpi(cargs.args[0], "D") != STRCMPRES_EQUAL)) )
 		{
 			char* strend = createErrStr_returnend(
 					acRespData,
 					acRespData + RXMAXMSGLEN,
 					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: ?DRV [D]");
+					"Usage: ?DRV [D] [~DMS]");
 
 			*pnRespLen = strend - acRespData;
 		}
 		else
 		{
+			char tmp[10];
+			char* const pRespDataStart = acRespData;
+
+			*acRespData++ = SOT_RXRESP;
+
 			if (f_eDrvState == DRVSTATE_OFF)
 			{
-				strcpy(acRespData + 1, "OFF");
-				acRespData[0] = SOT_RXRESP;
-				*pnRespLen = strlen(acRespData);
+				acRespData = strcpy_returnend(acRespData,
+									pRespDataStart + RXMAXMSGLEN, "OFF");
 			}
-			else if (sstr.cnt == 1)
+			else if (cargs.nArgs == 1)
 			{
-				acRespData[0] = SOT_RXRESP;
-
-				acRespData[1] = 'D';
-				acRespData[2] = ' ';
-
-				itoa((int32_t)TIM2->CCR2 - 1500, acRespData + 3, 10);
-				*pnRespLen = strlen(acRespData);
+				acRespData = strcpy_returnend(acRespData,
+									pRespDataStart + RXMAXMSGLEN, "D ");
+				acRespData = strcpy_returnend(acRespData,
+									pRespDataStart + RXMAXMSGLEN,
+									itoa((int32_t)TIM2->CCR2 - 1500, tmp, 10));
 			}
 			else
 			{
-				acRespData[0] = SOT_RXRESP;
-
-				acRespData[1] = (f_eCurrentDrvMode == DRVMODE_FORWARDS) ? 'F'
+				*acRespData++ = (f_eCurrentDrvMode == DRVMODE_FORWARDS) ? 'F'
 									: ((f_eCurrentDrvMode == DRVMODE_BACKWARDS) ? 'B' : 'D');
-				acRespData[2] = ' ';
+				*acRespData++ = ' ';
 
-				itoa(f_iCurrentDrvVal, acRespData + 3, 10);
-				*pnRespLen = strlen(acRespData);
+				acRespData = strcpy_returnend(acRespData,
+									pRespDataStart + RXMAXMSGLEN,
+									itoa(f_iCurrentDrvVal, tmp, 10));
 			}
+
+			if (bDMSParam)
+			{
+				acRespData = strcpy_returnend(acRespData,
+									pRespDataStart + RXMAXMSGLEN, " ~DMS=");
+
+				acRespData = strcpy_returnend(acRespData,
+									pRespDataStart + RXMAXMSGLEN,
+									itoa(f_uDMSSetVal, tmp, 10));
+			}
+
+			*pnRespLen = acRespData - pRespDataStart;
 		}
 	}
 
