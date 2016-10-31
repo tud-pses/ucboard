@@ -33,7 +33,6 @@
 static uint32_t f_nORECount = 0;
 
 
-
 typedef enum EnCommRxState_
 {
 	COMMRXSTATE_IDLE = 0,
@@ -51,11 +50,11 @@ typedef enum EnCommTxState_
 } EnCommTxState_t;
 
 
-static EnCommTxState_t f_eTxPrimaryState = COMMTXSTATE_IDLE;
-static EnCommTxState_t f_eTxSecState = COMMTXSTATE_IDLE;
+static volatile EnCommTxState_t f_eTxPrimaryState = COMMTXSTATE_IDLE;
+static volatile EnCommTxState_t f_eTxSecState = COMMTXSTATE_IDLE;
 
-static EnCommTxState_t* f_pUART2TxState = NULL;
-static EnCommTxState_t* f_pUART3TxState = NULL;
+static volatile EnCommTxState_t* f_pUART2TxState = NULL;
+static volatile EnCommTxState_t* f_pUART3TxState = NULL;
 
 static bool f_bAppendExtraNewline = true;
 
@@ -72,8 +71,8 @@ typedef struct Buffer_
 {
 	uint8_t* const start;
 	uint8_t* const end;
-	uint8_t* head;
-	uint8_t* tail;
+	volatile uint8_t* head;
+	volatile uint8_t* tail;
 } Buffer_t;
 
 
@@ -82,8 +81,8 @@ typedef struct Buffer_
 #define BUFFER_ISEMPTY(buf) 	((buf).tail >= (buf).head)
 #define BUFFER_ISNOTEMPTY(buf) 	((buf).tail < (buf).head)
 #define BUFFER_CLEAR(buf) 		((buf).head = (buf).tail = (buf).start)
-#define BUFFER_PUSH(buf, c) 	(*(buf).head++ = c)
-#define BUFFER_POP(buf)			(*(buf).tail++)
+#define BUFFER_WRITE(buf, c) 	(*(buf).head++ = c)
+#define BUFFER_READ(buf)			(*(buf).tail++)
 // logically, BUFFER_ISEMPTY(buf) should be tail == head, but as this is no ringbuffer tail >= head
 // is more robust to changes to the buffer variables from other points in the code.
 // (This should be reviewed ...)
@@ -91,32 +90,32 @@ typedef struct Buffer_
 
 
 
-static Buffer_t* f_pbufUART2Tx = 0;
-static Buffer_t* f_pbufUART3Tx = 0;
+static volatile  Buffer_t* f_pbufUART2Tx = 0;
+static volatile  Buffer_t* f_pbufUART3Tx = 0;
 
 static uint8_t f_acTxRespBuf[TXMAXMSGLEN];
-static Buffer_t f_bufTxResp = {f_acTxRespBuf,
+static volatile Buffer_t f_bufTxResp = {f_acTxRespBuf,
 									f_acTxRespBuf + TXMAXMSGLEN - 1,
 									f_acTxRespBuf,
 									f_acTxRespBuf};
 
 
 static uint8_t f_acTxOutstreamBuf[TXMAXMSGLEN];
-static Buffer_t f_bufTxOutstream = {f_acTxOutstreamBuf,
+static volatile Buffer_t f_bufTxOutstream = {f_acTxOutstreamBuf,
 									f_acTxOutstreamBuf + TXMAXMSGLEN - 1,
 									f_acTxOutstreamBuf,
 									f_acTxOutstreamBuf};
 
 
 static uint8_t f_acTxSecondaryBuf[TXMAXMSGLEN];
-static Buffer_t f_bufTxSec = {f_acTxSecondaryBuf,
+static volatile Buffer_t f_bufTxSec = {f_acTxSecondaryBuf,
 									f_acTxSecondaryBuf + TXMAXMSGLEN - 1,
 									f_acTxSecondaryBuf,
 									f_acTxSecondaryBuf};
 
 
 static uint8_t f_acRxBuf[RXMAXMSGLEN+2];
-static Buffer_t f_bufRx = {f_acRxBuf,
+static volatile Buffer_t f_bufRx = {f_acRxBuf,
 									f_acRxBuf + RXMAXMSGLEN - 1,
 									f_acRxBuf,
 									f_acRxBuf};
@@ -366,7 +365,7 @@ void comm_do()
 			f_pUART3TxState = &f_eTxSecState;
 			f_pbufUART3Tx = &f_bufTxSec;
 
-			USART3->TDR = BUFFER_POP(*f_pbufUART3Tx);
+			USART3->TDR = BUFFER_READ(*f_pbufUART3Tx);
 			__USART_ENABLE_IT_TXE(USART3);
 		}
 		else
@@ -374,7 +373,7 @@ void comm_do()
 			f_pUART2TxState = &f_eTxSecState;
 			f_pbufUART2Tx = &f_bufTxSec;
 
-			USART2->TDR = BUFFER_POP(*f_pbufUART2Tx);
+			USART2->TDR = BUFFER_READ(*f_pbufUART2Tx);
 			__USART_ENABLE_IT_TXE(USART2);
 		}
 	}
@@ -382,9 +381,11 @@ void comm_do()
 
 	if (f_eTxPrimaryState == COMMTXSTATE_IDLE)
 	{
-		Buffer_t* pbufPrimary = NULL;
+		volatile Buffer_t* pbufPrimary = NULL;
 
-		if (s_bIncompleteRespStreamMsg || s_bIncompletePriorityStreamMsg || s_bIncompleteStreamMsg)
+		if (s_bIncompleteRespStreamMsg
+				|| s_bIncompletePriorityStreamMsg
+				|| s_bIncompleteStreamMsg)
 		{
 			uint16_t nCnt;
 			bool bMsgComplete;
@@ -415,11 +416,11 @@ void comm_do()
 
 			if (bMsgComplete)
 			{
-				BUFFER_PUSH(f_bufTxOutstream, EOT_TX);
+				BUFFER_WRITE(f_bufTxOutstream, EOT_TX);
 
 				if (f_bAppendExtraNewline)
 				{
-					BUFFER_PUSH(f_bufTxOutstream, '\n');
+					BUFFER_WRITE(f_bufTxOutstream, '\n');
 				}
 			}
 
@@ -502,11 +503,11 @@ void comm_do()
 
 					if (bMsgComplete)
 					{
-						BUFFER_PUSH(f_bufTxOutstream, EOT_TX);
+						BUFFER_WRITE(f_bufTxOutstream, EOT_TX);
 
 						if (f_bAppendExtraNewline)
 						{
-							BUFFER_PUSH(f_bufTxOutstream, '\n');
+							BUFFER_WRITE(f_bufTxOutstream, '\n');
 						}
 					}
 
@@ -525,16 +526,15 @@ void comm_do()
 				f_pUART2TxState = &f_eTxPrimaryState;
 				f_pbufUART2Tx = pbufPrimary;
 
-				USART2->TDR = BUFFER_POP(*f_pbufUART2Tx);
+				USART2->TDR = BUFFER_READ(*f_pbufUART2Tx);
 				__USART_ENABLE_IT_TXE(USART2);
-
 			}
 			else
 			{
 				f_pUART3TxState = &f_eTxPrimaryState;
 				f_pbufUART3Tx = pbufPrimary;
 
-				USART3->TDR = BUFFER_POP(*f_pbufUART3Tx);
+				USART3->TDR = BUFFER_READ(*f_pbufUART3Tx);
 				__USART_ENABLE_IT_TXE(USART3);
 			}
 		}
@@ -700,7 +700,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 	if (eUART != f_ePrimaryUART)
 	{
 		// _ToDo: Ensure:
-		// f_ePrimaryUART has to be read anew for the last comparison to sure
+		// f_ePrimaryUART has to be read anew for the last comparison to prevent
 		// that even in the worst case both UARTs assume to be the primary
 		// (active) UART.
 		// (For this application this is avoidable situation.)
@@ -742,7 +742,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 			else if ((rxdata == SOT_SETCMD) || (rxdata == SOT_GETCMD))
 			{
 				BUFFER_CLEAR(f_bufRx);
-				BUFFER_PUSH(f_bufRx, rxdata);
+				BUFFER_WRITE(f_bufRx, rxdata);
 
 				s_eRxState = COMMRXSTATE_INPROGRESS;
 			}
@@ -758,7 +758,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 			{
 				if (!BUFFER_ISFILLED(f_bufRx))
 				{
-					BUFFER_PUSH(f_bufRx, rxdata);
+					BUFFER_WRITE(f_bufRx, rxdata);
 				}
 				else
 				{
@@ -773,14 +773,14 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 				EnCmdSpec_t eCmdSpec;
 				bool bErr = false;
 
-				BUFFER_PUSH(f_bufRx, '\0');
+				BUFFER_WRITE(f_bufRx, '\0');
 
 				// skip leading spaces
-				byte = BUFFER_POP(f_bufRx);
+				byte = BUFFER_READ(f_bufRx);
 
 				while (byte == ' ')
 				{
-					byte = BUFFER_POP(f_bufRx);
+					byte = BUFFER_READ(f_bufRx);
 				}
 
 				if (byte == SOT_GETCMD)
@@ -798,6 +798,10 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 							(char*)f_bufTxResp.end - 1,
 							SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
 							"A command must start with \"!\" or \"?\" !");
+
+					// Make sure that buffer is regarded as empty as long as it
+					// is not completely filled:
+					f_bufTxResp.tail = f_bufTxResp.end;
 
 					*f_bufTxResp.head = '\n';		// overwrite \0 with \n
 					*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
@@ -829,6 +833,10 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 								SOT_RXRESP, ERRCODE_COMM_UNKNOWNCMD,
 								"Unknown command!");
 
+						// Make sure that buffer is regarded as empty as long as it
+						// is not completely filled:
+						f_bufTxResp.tail = f_bufTxResp.end;
+
 						*f_bufTxResp.head = '\n';		// overwrite \0 with \n
 						*++f_bufTxResp.head = EOT_TX;	// append EOT-byte
 
@@ -843,8 +851,13 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					{
 						uint16_t nRespLen = 0;
 
+						// Make sure that buffer is regarded as empty as long as it
+						// is not completely filled:
+						f_bufTxResp.tail = f_bufTxResp.end;
+
 						callback(eCmdSpec, (char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx),
 								(char*)f_bufTxResp.start, &nRespLen, &f_pRespStream, &s_pDirectCallback);
+
 
 						if (nRespLen < 0xFFFF)
 						{
@@ -880,7 +893,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 			{
 				if (!BUFFER_ISFILLED(f_bufRx))
 				{
-					BUFFER_PUSH(f_bufRx, rxdata);
+					BUFFER_WRITE(f_bufRx, rxdata);
 				}
 				else
 				{
@@ -893,7 +906,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 				// process data
 				uint16_t nRespLen = 0;
 
-				BUFFER_PUSH(f_bufRx, '\0');
+				BUFFER_WRITE(f_bufRx, '\0');
+
+				// Make sure that buffer is regarded as empty as long as it
+				// is not completely filled:
+				f_bufTxResp.tail = f_bufTxResp.end;
 
 				((CommDirectFctPtr)s_pDirectCallback)((char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx),
 						(char*)f_bufTxResp.start, &nRespLen, &f_pRespStream, &s_pDirectCallback);
@@ -931,6 +948,10 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 				if (BUFFER_ISEMPTY(f_bufTxResp))
 				{
+					// Make sure that buffer is regarded as empty as long as it
+					// is not completely filled:
+					f_bufTxResp.tail = f_bufTxResp.end;
+
 					if (s_eCommError == COMMERROR_WRONGSOT)
 					{
 						f_bufTxResp.head = (uint8_t*)createErrStr_returnend(
@@ -1017,20 +1038,23 @@ void USART2_IRQHandler(void)
 	}
 
 	// USART_IT_TXE:  Transmit Data Register empty interrupt
-	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_TXE) != RESET )
+	if (*f_pUART2TxState == COMMTXSTATE_INPROGRESS)
 	{
-		if ( (f_pbufUART2Tx == 0) || BUFFER_ISEMPTY(*f_pbufUART2Tx) )
+		if ( __USART_GET_IT_STATUS(USART2, USART_ISR_TXE) != RESET )
 		{
-			__USART_DISABLE_IT_TXE(USART2);
-
-			if (f_pUART2TxState != NULL)
+			if ( (f_pbufUART2Tx == 0) || BUFFER_ISEMPTY(*f_pbufUART2Tx) )
 			{
-				*f_pUART2TxState = COMMTXSTATE_IDLE;
+				__USART_DISABLE_IT_TXE(USART2);
+
+				if (f_pUART2TxState != NULL)
+				{
+					*f_pUART2TxState = COMMTXSTATE_IDLE;
+				}
 			}
-		}
-		else
-		{
-			USART2->TDR = BUFFER_POP(*f_pbufUART2Tx);
+			else
+			{
+				USART2->TDR = BUFFER_READ(*f_pbufUART2Tx);
+			}
 		}
 	}
 
@@ -1062,27 +1086,30 @@ void USART3_IRQHandler(void)
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
 	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_RXNE) != RESET )
-	{//LED_A_ON();
+	{
 		// read byte from receive register (which also resets USART_IT_RXNE)
 		rxdata = USART3->RDR;
 		processRxdata(UART_3, rxdata);
 	}
 
 	// USART_IT_TXE:  Transmit Data Register empty interrupt
-	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_TXE) != RESET )
+	if (*f_pUART3TxState == COMMTXSTATE_INPROGRESS)
 	{
-		if ( (f_pbufUART3Tx == 0) || BUFFER_ISEMPTY(*f_pbufUART3Tx) )
+		if ( __USART_GET_IT_STATUS(USART3, USART_ISR_TXE) != RESET )
 		{
-			__USART_DISABLE_IT_TXE(USART3);
-
-			if (f_pUART3TxState != NULL)
+			if ( (f_pbufUART3Tx == 0) || BUFFER_ISEMPTY(*f_pbufUART3Tx) )
 			{
-				*f_pUART3TxState = COMMTXSTATE_IDLE;
+				__USART_DISABLE_IT_TXE(USART3);
+
+				if (f_pUART3TxState != NULL)
+				{
+					*f_pUART3TxState = COMMTXSTATE_IDLE;
+				}
 			}
-		}
-		else
-		{
-			USART3->TDR = BUFFER_POP(*f_pbufUART3Tx);
+			else
+			{
+				USART3->TDR = BUFFER_READ(*f_pbufUART3Tx);
+			}
 		}
 	}
 
