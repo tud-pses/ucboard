@@ -13,6 +13,10 @@
 #include "us_srf08.h"
 #include "i2cmgr.h"
 
+#include "comm_public.h"
+
+#include <string.h>
+
 #include "daq.h"
 
 #include "display.h"
@@ -32,6 +36,10 @@ static USdevice_t f_usdevices[NDEVICES];
 
 static USbroadcaster_t f_usbroadcaster;
 
+static USParam_t f_usparam = {US_RANGE_INIT, US_GAIN_INIT};
+static bool f_bSetNewParams = false;
+
+static bool f_bUSOn = true;
 
 // Conversion sound run time T into distance d:
 // c = 343,2 m/s
@@ -58,7 +66,7 @@ void us_init()
 
 	for (i = 0; i < NDEVICES; ++i)
 	{
-		usonic_init(&f_usdevices[i], USPORT, f_uADDRESSES[i]);
+		usonic_init(&f_usdevices[i], USPORT, f_uADDRESSES[i], f_usparam);
 	}
 
 	daq_provideChannel("USL", "ultrasonic left distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[0]);
@@ -86,13 +94,14 @@ typedef enum EnUSQueryState_
 void us_do_systick()
 {
 	static EnUSQueryState_t s_eState = USQUERYSTATE_IDLE;
-	//static uint32_t s_uTicStart = 0;
+
+	static uint32_t s_uTicStart = 0;
 	static uint32_t s_auTicEnd[NDEVICES] = {0};
 	static uint32_t s_auData[NDEVICES] = {0};
 
 	static uint16_t s_uNextStep_ms = 0;
 
-	if (s_eState == USQUERYSTATE_IDLE)
+	if ((s_eState == USQUERYSTATE_IDLE) && (f_bUSOn))
 	{
 		s_eState = USQUERYSTATE_PENDING;
 	}
@@ -117,11 +126,11 @@ void us_do_systick()
 			}
 
 			usonicbc_trigger(&f_usbroadcaster);
-			//s_uTicStart = GETSYSTICS();
+			s_uTicStart = GETSYSTICS();
 
 			s_eState = USQUERYSTATE_TRIGGERED;
 
-			s_uNextStep_ms = 30;
+			s_uNextStep_ms = GET_MEASDURATION_MS(f_usparam.range) + 1;
 
 			break;
 
@@ -220,11 +229,25 @@ void us_do_systick()
 				if (bAllReceived)
 				{
 					bool bResetConfig = false;
+					bool bSetNewParams = f_bSetNewParams;
+					f_bSetNewParams = false;
 
 					for (int i = 0; i < NDEVICES; ++i)
 					{
-						if (s_auData[i] == 0)
+						bool bResetParams = bSetNewParams;
+
+						if ((!bResetParams) && (s_auData[i] == 0))
 						{
+							if ((s_auTicEnd[i] - s_uTicStart) >
+										GET_MEASDURATION_MS(f_usparam.range) + 5)
+							{
+								bResetParams = true;
+							}
+						}
+
+						if (bResetParams)
+						{
+							usonic_setConfig(&f_usdevices[i], &f_usparam);
 							usonic_startConfig(&f_usdevices[i]);
 							bResetConfig = true;
 						}
@@ -269,3 +292,287 @@ void us_do_systick()
 }
 
 
+
+
+static char* getParamString_returnend(char* buf, char* const bufend, USParam_t* param)
+{
+	char tmp[10];
+
+	buf = strcpy_returnend(buf, bufend, "~RANGE=");
+	buf = strcpy_returnend(buf, bufend, utoa(param->range, tmp, 10));
+
+	buf = strcpy_returnend(buf, bufend, " ~GAIN=");
+	buf = strcpy_returnend(buf, bufend, utoa(param->gain, tmp, 10));
+
+	buf = strcpy_returnend(buf, bufend, "   [");
+	buf = strcpy_returnend(buf, bufend,
+								utoa(GET_RANGE_MM(param->range), tmp, 10));
+	buf = strcpy_returnend(buf, bufend, " mm, ");
+	buf = strcpy_returnend(buf, bufend,
+								utoa(GET_MEASDURATION_MS(param->range), tmp, 10));
+	buf = strcpy_returnend(buf, bufend, " ms]");
+
+	return buf;
+}
+
+
+bool cmd_us(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
+					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
+					void* pDirectCallback)
+{
+	CommCmdArgs_t cargs;
+
+	*(CommStreamFctPtr*)pRespStream = NULL;
+	*(CommDirectFctPtr*)pDirectCallback = NULL;
+
+	comm_parseArgs(&cargs, acData);
+
+	if (eSpec == CMDSPEC_SET)
+	{
+		bool bWrongUsage = false;
+		bool bOutOfRange = false;
+		bool bSetOnOff = true;
+
+		bool bSetRangeVal = false;
+		bool bSetGainVal = false;
+
+		uint8_t rangeval = 255;
+		uint8_t gainval = 31;
+
+		bWrongUsage = (cargs.nArgs != 1);
+
+		if (!bWrongUsage)
+		{
+			if (strcmpi(cargs.args[0], "OFF") == STRCMPRES_EQUAL)
+			{
+				if (cargs.nParams > 0)
+				{
+					bWrongUsage = true;
+				}
+				else
+				{
+					f_bUSOn = false;
+				}
+			}
+			else if (strcmpi(cargs.args[0], "ON") == STRCMPRES_EQUAL)
+			{
+				if (cargs.nParams > 0)
+				{
+					bWrongUsage = true;
+				}
+				else
+				{
+					f_bUSOn = true;
+				}
+			}
+			else if (strcmpi(cargs.args[0], "OPT") == STRCMPRES_EQUAL)
+			{
+				bSetOnOff = false;
+
+				if (cargs.nParams == 0)
+				{
+					bWrongUsage = true;
+				}
+				else
+				{
+					for (uint8_t p = 0; p < cargs.nParams; ++p)
+					{
+						if (strcmpi(cargs.paramnames[p], "RANGE") == STRCMPRES_EQUAL)
+						{
+							if (cargs.paramvals[p] != NULL)
+							{
+								int32_t val;
+
+								if (!isInteger(cargs.paramvals[p]))
+								{
+									bWrongUsage = true;
+								}
+								else
+								{
+									val = atoi(cargs.paramvals[p]);
+
+									if ((val < 0) || (val > 255))
+									{
+										bOutOfRange = true;
+									}
+									else
+									{
+										rangeval = (uint8_t)val;
+										bSetRangeVal = true;
+									}
+								}
+							}
+							else
+							{
+								bWrongUsage = true;
+							}
+						}
+						else if (strcmpi(cargs.paramnames[p], "GAIN") == STRCMPRES_EQUAL)
+						{
+							if (cargs.paramnames[p] != NULL)
+							{
+								int32_t val;
+
+								if (!isInteger(cargs.paramvals[p]))
+								{
+									bWrongUsage = true;
+								}
+								else
+								{
+									val = atoi(cargs.paramvals[p]);
+
+									if ((val < 0) || (val > 31))
+									{
+										bOutOfRange = true;
+									}
+									else
+									{
+										gainval = (uint8_t)val;
+										bSetGainVal = true;
+									}
+								}
+							}
+							else
+							{
+								bWrongUsage = true;
+							}
+						}
+						else
+						{
+							bWrongUsage = false;
+							break;
+						}
+					}
+				}
+			}
+			else
+			{
+				bWrongUsage = true;
+			}
+		}
+
+		if (bWrongUsage)
+		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN - 1,
+					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+					"Usage: !US ON|OFF|OPT [~RANGE=value] [~GAIN=value]");
+
+			*pnRespLen = strend - acRespData;
+		}
+		else if (bOutOfRange)
+		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN - 1,
+					SOT_RXRESP, ERRCODE_COMM_VALUEOUTOFRANGE,
+					"Value out of range! (RANGE: [0, 255], GAIN: [0, 31])");
+
+			*pnRespLen = strend - acRespData;
+		}
+		else
+		{
+			if (bSetOnOff)
+			{
+				if (f_bUSOn)
+				{
+					strcpy(acRespData + 1, "ON");
+				}
+				else
+				{
+					strcpy(acRespData + 1, "OFF");
+				}
+
+				acRespData[0] = SOT_RXRESP;
+				*pnRespLen = strlen(acRespData);
+			}
+			else
+			{
+				if (bSetRangeVal)
+				{
+					f_usparam.range = rangeval;
+				}
+
+				if (bSetGainVal)
+				{
+					f_usparam.gain = gainval;
+				}
+
+				f_bSetNewParams = true;
+
+				char* const pRespDataStart = acRespData;
+
+				*acRespData++ = SOT_RXRESP;
+				acRespData = getParamString_returnend(acRespData,
+											pRespDataStart + RXMAXMSGLEN,
+											&f_usparam);
+
+				*pnRespLen = acRespData - pRespDataStart;
+			}
+		}
+	}
+	else
+	{
+		bool bWrongUsage = false;
+		bool bQueryOnOff = true;
+
+		if ((cargs.nArgs > 1) || (cargs.nParams != 0))
+		{
+			bWrongUsage = true;
+		}
+		else if (cargs.nArgs == 1)
+		{
+			if (strcmpi(cargs.args[0], "OPT") == STRCMPRES_EQUAL)
+			{
+				bQueryOnOff = false;
+			}
+			else
+			{
+				bWrongUsage = true;
+			}
+		}
+
+		if (bWrongUsage)
+		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN,
+					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+					"Usage: ?US [OPT]");
+
+			*pnRespLen = strend - acRespData;
+		}
+		else
+		{
+			if (bQueryOnOff)
+			{
+				if (f_bUSOn)
+				{
+					strcpy(acRespData + 1, "ON");
+				}
+				else
+				{
+					strcpy(acRespData + 1, "OFF");
+				}
+
+				acRespData[0] = SOT_RXRESP;
+				*pnRespLen = strlen(acRespData);
+			}
+			else
+			{
+				char* const pRespDataStart = acRespData;
+
+				*acRespData++ = SOT_RXRESP;
+				acRespData = getParamString_returnend(acRespData,
+											pRespDataStart + RXMAXMSGLEN,
+											&f_usparam);
+
+				*pnRespLen = acRespData - pRespDataStart;
+			}
+		}
+	}
+
+	return true;
+}

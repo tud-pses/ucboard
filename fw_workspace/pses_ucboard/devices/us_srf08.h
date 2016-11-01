@@ -13,6 +13,12 @@
 #include "stdtypes.h"
 #include "i2cmgr.h"
 
+
+typedef struct USParam_ {
+	uint8_t range;
+	uint8_t gain;
+} USParam_t;
+
 typedef enum EnUSonicDataState_ {
 	USONICDATA_IDLE,
 	USONICDATA_INITMEASUREMENT,
@@ -50,6 +56,8 @@ typedef struct USdevice_
 	uint8_t acTxBuffer[10];
 	I2CMGR_Msg_t aMsgs[4];
 
+	USParam_t param;
+
 	bool bNewData;
 	bool bStartNewMeasurement;
 
@@ -73,8 +81,10 @@ typedef struct USbroadcaster_
 bool usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort);
 bool usonicbc_trigger(USbroadcaster_t* this);
 
-bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address);
+bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address, USParam_t param);
 bool usonic_ping(USdevice_t* this);
+
+void usonic_setConfig(USdevice_t* this, const USParam_t* const param);
 
 bool usonic_startConfig(USdevice_t* this);
 EnUSConfigResult_t usonic_getConfigResult(USdevice_t* this);
@@ -136,27 +146,49 @@ inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance)
 #define US_CMD_SET_SLAVEID_3BYTE	165
 #define US_CMD_SET_SLAVEID_2BYTE	170
 
-//Werte für US_ADDR_GAIN
-#define US_GAIN_40		1
-#define US_GAIN_50		2
-#define US_GAIN_60		3
-#define US_GAIN_70		4
-#define US_GAIN_80		5
-#define US_GAIN_100		6
-#define US_GAIN_120		7
-#define US_GAIN_140		8
-#define US_GAIN_200		9
-#define US_GAIN_250		10
-#define US_GAIN_300		11
-#define US_GAIN_350		12
-#define US_GAIN_400		13
-#define US_GAIN_500		14
-#define US_GAIN_600		15
-#define US_GAIN_700		16
-//#define US_GAIN			US_GAIN_700
-#define US_GAIN			US_GAIN_700
 
-#define US_NO_RESPONSE	0xFF
+
+
+#define GET_RANGE_MM(rangeval) (((rangeval) + 1) * 43)
+#define GET_MEASDURATION_MS(rangeval) ((((rangeval) + 1) * 250) / 1000)
+
+
+
+//Werte für US_ADDR_GAIN
+#define US_GAIN_94		0
+#define US_GAIN_97		1
+#define US_GAIN_100		2
+#define US_GAIN_103		3
+#define US_GAIN_107		4
+#define US_GAIN_110		5
+#define US_GAIN_114		6
+#define US_GAIN_118		7
+#define US_GAIN_123		8
+#define US_GAIN_128		9
+#define US_GAIN_133		10
+#define US_GAIN_139		11
+#define US_GAIN_145		12
+#define US_GAIN_152		13
+#define US_GAIN_159		14
+#define US_GAIN_168		15
+#define US_GAIN_177		16
+#define US_GAIN_187		17
+#define US_GAIN_199		18
+#define US_GAIN_212		19
+#define US_GAIN_227		20
+#define US_GAIN_245		21
+#define US_GAIN_265		22
+#define US_GAIN_288		23
+#define US_GAIN_317		24
+#define US_GAIN_352		25
+#define US_GAIN_395		26
+#define US_GAIN_450		27
+#define US_GAIN_524		28
+#define US_GAIN_626		29
+#define US_GAIN_777		30
+#define US_GAIN_1025	31
+
+#define US_GAIN_INIT	US_GAIN_177
 
 
 
@@ -418,9 +450,10 @@ inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance)
 #define US_RANGE_10965MM			254
 #define US_RANGE_11008MM			255
 
-//#define US_RANGE				US_RANGE_11008MM
-#define US_RANGE				US_RANGE_6020MM
+#define US_RANGE_INIT				US_RANGE_6020MM
 
+
+#define US_NO_RESPONSE		0xFF
 
 
 #endif /* US_SRF08_H_ */

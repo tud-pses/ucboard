@@ -80,7 +80,7 @@ bool usonicbc_trigger(USbroadcaster_t* this)
 }
 
 
-bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address)
+bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address, USParam_t param)
 {
 	EnI2CMgrRes_t res;
 	I2C_InitTypeDef stI2CConfig;
@@ -93,6 +93,8 @@ bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address)
 	this->eDataState = USONICDATA_IDLE;
 	this->eI2CPort = ePort;
 	this->uI2CAddress = address;
+
+	this->param = param;
 
 
 	stI2CConfig.Timing = 0x2000090E;
@@ -180,6 +182,14 @@ bool usonic_ping(USdevice_t* this)
 }
 
 
+void usonic_setConfig(USdevice_t* this, const USParam_t* const param)
+{
+	this->param = *param;
+
+	return;
+}
+
+
 bool usonic_startConfig(USdevice_t* this)
 {
 	EnI2CMgrRes_t res;
@@ -191,10 +201,10 @@ bool usonic_startConfig(USdevice_t* this)
 	}
 
 	this->acTxBuffer[0] = US_ADDR_GAIN;
-	this->acTxBuffer[1] = US_GAIN;
+	this->acTxBuffer[1] = this->param.gain;
 
 	this->acTxBuffer[2] = US_ADDR_RANGE;
-	this->acTxBuffer[3] = US_RANGE;
+	this->acTxBuffer[3] = this->param.range;
 
 	i2cmgr_setupMsgStruct(&this->aMsgs[0], I2CMGRMSG_TX, 2, &this->acTxBuffer[0]);
 	i2cmgr_setupMsgStruct(&this->aMsgs[1], I2CMGRMSG_TX, 2, &this->acTxBuffer[2]);
@@ -246,10 +256,10 @@ static bool setConfig(USdevice_t* this)
 	}
 
 	this->acTxBuffer[0] = US_ADDR_GAIN;
-	this->acTxBuffer[1] = US_GAIN;
+	this->acTxBuffer[1] = this->param.gain;
 
 	this->acTxBuffer[2] = US_ADDR_RANGE;
-	this->acTxBuffer[3] = US_RANGE;
+	this->acTxBuffer[3] = this->param.range;
 
 	i2cmgr_setupMsgStruct(&this->aMsgs[0], I2CMGRMSG_TX, 2, &this->acTxBuffer[0]);
 	i2cmgr_setupMsgStruct(&this->aMsgs[1], I2CMGRMSG_TX, 2, &this->acTxBuffer[2]);

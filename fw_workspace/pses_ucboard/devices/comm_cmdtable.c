@@ -18,6 +18,7 @@ extern bool cmd_steer(COMMCMDFCT_ARGS);
 extern bool cmd_tics(COMMCMDFCT_ARGS);
 extern bool cmd_vout12v(COMMCMDFCT_ARGS);
 extern bool cmd_reset(COMMCMDFCT_ARGS);
+extern bool cmd_us(COMMCMDFCT_ARGS);
 extern bool cmd_version(COMMCMDFCT_ARGS);
 
 
@@ -34,6 +35,7 @@ CommCmdTableEntry_t g_commCmdFctTable[] =
 		{"SID",  &cmd_sessionid},
 		{"STEER",  &cmd_steer},
 		{"TICS",  &cmd_tics},
+		{"US",  &cmd_us},
 		{"VER",  &cmd_version},
 		{"VOUT",  &cmd_vout12v},
 		{0,  0}	// last entry must be {0, 0} (exit condition when iterating over table)
