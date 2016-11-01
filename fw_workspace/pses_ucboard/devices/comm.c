@@ -519,22 +519,30 @@ void comm_do()
 
 		if (pbufPrimary != NULL)
 		{
-			f_eTxPrimaryState = COMMTXSTATE_INPROGRESS;
+			// Before setting the state to INPROGESS, make sure that
+			// - the corresponding UART-Tx-Buffer-Pointer points to
+			//   the right buffer
+			// - the first byte is written to the TDR (to ensure that
+			//   TXE is cleared)
 
 			if (f_ePrimaryUART == UART_2)
 			{
 				f_pUART2TxState = &f_eTxPrimaryState;
 				f_pbufUART2Tx = pbufPrimary;
-
 				USART2->TDR = BUFFER_READ(*f_pbufUART2Tx);
+
+				f_eTxPrimaryState = COMMTXSTATE_INPROGRESS;
+
 				__USART_ENABLE_IT_TXE(USART2);
 			}
 			else
 			{
 				f_pUART3TxState = &f_eTxPrimaryState;
 				f_pbufUART3Tx = pbufPrimary;
-
 				USART3->TDR = BUFFER_READ(*f_pbufUART3Tx);
+
+				f_eTxPrimaryState = COMMTXSTATE_INPROGRESS;
+
 				__USART_ENABLE_IT_TXE(USART3);
 			}
 		}
