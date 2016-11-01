@@ -108,7 +108,7 @@ Die Parameter der Schnittstellen sind in \tabref{tab:Comm:UARTParam} zusammengef
 		\verb|DAQ| & Datenerfassung \\
 		\verb|VOUT| & Ein- und Ausschalten \valunit{12}{V}-Ausgang (Kinect) \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{IMU}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der IMU} \\
-		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{US}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der US-Sensoren}\\
+		\texttt{US} & Zum Parametrieren der US-Sensoren \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{EEPROM}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Auslesen des EEPROM-Inhalts}\\
 		\mybottomrule
 	\end{tabular}
@@ -433,30 +433,37 @@ Diesem muss mindestens der Name eines Kanals übergeben werden. Es können aber 
 
 Beispiele:
 
-Einzelabfrage des Sensorwertes des vorderen Ultraschallsensors
-\begin{verbatim}
-	?DAQ GET USF
-	:1860
-\end{verbatim}
+\begin{itemize}
+	\item Einzelabfrage des Sensorwertes des vorderen Ultraschallsensors
+		\begin{verbatim}
+			?DAQ GET USF
+			:1860
+		\end{verbatim}
+	\item Ausgabe des Alters des Messwertes
+		\begin{verbatim}
+			?DAQ GET ~AGE USF
+			:1860 68
+		\end{verbatim}
+	\item Abfrage aller Ultraschallwerte, jeweils mit Alter
+		\begin{verbatim}
+			?DAQ GET ~AGE USL USF USR
+			:487 72 | 1860 75 | 4293 85
+		\end{verbatim}
+	\item Ausgabe der ucboard-Zeit des Messwerts
+		\begin{verbatim}
+			?DAQ GET ~TICS USF
+			:1860 3059246
+		\end{verbatim}
+\end{itemize}
 
-Ausgabe des Alters des Messwertes
-\begin{verbatim}
-	?DAQ GET ~AGE USF
-	:1860 68
-\end{verbatim}
-
-Abfrage aller Ultraschallwerte, jeweils mit Alter
-\begin{verbatim}
-	?DAQ GET ~AGE USL USF USR
-	:487 72 | 1860 75 | 4293 85
-\end{verbatim}
 
 
 
-\begin{verbatim}
-	?DAQ GET ~TICS USF
-	:1860 3059246
-\end{verbatim}
+
+
+
+
+
 
 
 
@@ -679,10 +686,47 @@ Abfragen Zustand
 
 
 
-%\subsubsection{IMU CAL}
+\subsubsection{US}
+
+\paragraph{Aktiveren und Deaktivieren der US-Sensoren}
+
+(Nach einem Neustart des ucboards sind die US-Sensoren aktiv.)
+
+Aktivieren der US-Sensoren
+\begin{verbatim}
+	!US ON
+	:ON
+\end{verbatim}
+
+Deaktivieren der US-Sensoren
+\begin{verbatim}
+	!US OFF
+	:OFF
+\end{verbatim}
 
 
+Abfragen Zustand der US-Sensoren
+\begin{verbatim}
+	?US
+	:OFF
+\end{verbatim}
 
 
+\paragraph{Einstellungen US-Sensoren}
 
+Es können die beiden Parameter "`Range"' und "`Gain"' eingestellt werden. (Es wird immer für alle drei US-Sensoren der selbe Wert genommen.) Für die Bedeutung der Parameter und deren Zahlenwerte siehe das Datenblatt des Sensors!
 
+Setzen der Einstellungen:
+\begin{verbatim}
+	!US OPT ~RANGE=100 ~GAIN=10
+	:~RANGE=100 ~GAIN=10   [4343 mm, 25 ms]}
+\end{verbatim}
+(Es kann auch nur \verb|~RANGE| oder \verb|~GAIN| gesetzt werden.)
+
+In eckigen Klammern wird die Entsprechung des Range-Parameters in Millimetern und Millisekunden ausgegeben. Die tatsächliche Abtastzeit wird ein paar Millisekunden über diesem Wert liegen, da ein gewisser Overhead vorhanden ist.
+
+Abfragen der aktuellen Einstellungen:
+\begin{verbatim}
+	?US OPT
+	:~RANGE=100 ~GAIN=10   [4343 mm, 25 ms]}
+\end{verbatim}
