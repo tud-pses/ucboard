@@ -26,6 +26,8 @@ namespace ucterm
         {
             InitializeComponent();
 
+            Text = "ucterm " + VersionInfo.VersionString;
+
             m_sbDAQData = new StringBuilder(10000);
             m_sbDisplayData = new StringBuilder(10000);
             m_sbCmdRespData = new StringBuilder(10000);
@@ -244,7 +246,7 @@ namespace ucterm
                         }
                         else
                         {
-                            rtbDAQ.AppendText(szDisplayData);
+                            rtbDisplay.AppendText(szDisplayData);
                         }
 
                         rtbDisplay.SelectionStart = rtbDisplay.Text.Length;
