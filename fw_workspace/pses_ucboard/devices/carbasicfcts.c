@@ -967,12 +967,14 @@ bool cmd_steer(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 	{
 		bool bWrongUsage;
 		bool bOutOfRange = false;
+		bool bMsgCorrupted = false;
 
-		bWrongUsage = (sstr.cnt != 1);
+		bWrongUsage = ( (sstr.cnt == 0) || (sstr.cnt > 2) );
 
 		if (!bWrongUsage)
 		{
 			int val;
+			int val2;
 
 			if (strcmpi(sstr.strs[0], "OFF") == STRCMPRES_EQUAL)
 			{
@@ -983,17 +985,30 @@ bool cmd_steer(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			{
 				val = atoi(sstr.strs[0]);
 
-				if ( (val < -1000) || (val > 1000) )
+				if (sstr.cnt == 2)
 				{
-					bOutOfRange = true;
-				}
-				else
-				{
-					bOutOfRange = false;
+					val2 = atoi(sstr.strs[1]);
 
-					f_bSteeringOff = false;
-					f_iCurSteeringVal = val;
-					TIM2->CCR1 = GETPWMVAL_STEERING(val);
+					if (val != val2)
+					{
+						bMsgCorrupted = true;
+					}
+				}
+
+				if (!bMsgCorrupted)
+				{
+					if ( (val < -1000) || (val > 1000) )
+					{
+						bOutOfRange = true;
+					}
+					else
+					{
+						bOutOfRange = false;
+
+						f_bSteeringOff = false;
+						f_iCurSteeringVal = val;
+						TIM2->CCR1 = GETPWMVAL_STEERING(val);
+					}
 				}
 			}
 		}
@@ -1004,7 +1019,7 @@ bool cmd_steer(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					acRespData,
 					acRespData + RXMAXMSGLEN - 1,
 					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: !STEER value\n\tvalue: [-1000, 1000]");
+					"Usage: !STEER value [value]\n\tvalue: [-1000, 1000]");
 
 			*pnRespLen = strend - acRespData;
 		}
@@ -1015,6 +1030,16 @@ bool cmd_steer(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					acRespData + RXMAXMSGLEN - 1,
 					SOT_RXRESP, ERRCODE_COMM_VALUEOUTOFRANGE,
 					"Value out of range! (value: [-1000, 1000])");
+
+			*pnRespLen = strend - acRespData;
+		}
+		else if (bMsgCorrupted)
+		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN - 1,
+					SOT_RXRESP, ERRCODE_COMM_MSGCORRUPTED,
+					"Message corrupted! (The two values have to be equal!)\n");
 
 			*pnRespLen = strend - acRespData;
 		}
