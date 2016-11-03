@@ -107,7 +107,7 @@ Die Parameter der Schnittstellen sind in \tabref{tab:Comm:UARTParam} zusammengef
 		\verb|DRV| & Setzen und Abfragen der Fahrgeschwindigkeit \\
 		\verb|DAQ| & Datenerfassung \\
 		\verb|VOUT| & Ein- und Ausschalten \valunit{12}{V}-Ausgang (Kinect) \\
-		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{IMU}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Parametrieren der IMU} \\
+		\texttt{IMU} & Zum Parametrieren der IMU \\
 		\texttt{US} & Zum Parametrieren der US-Sensoren \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{EEPROM}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Auslesen des EEPROM-Inhalts}\\
 		\mybottomrule
@@ -719,7 +719,7 @@ Es können die beiden Parameter "`Range"' und "`Gain"' eingestellt werden. (Es w
 Setzen der Einstellungen:
 \begin{verbatim}
 	!US OPT ~RANGE=100 ~GAIN=10
-	:~RANGE=100 ~GAIN=10   [4343 mm, 25 ms]}
+	:~RANGE=100 ~GAIN=10   [4343 mm, 25 ms]
 \end{verbatim}
 (Es kann auch nur \verb|~RANGE| oder \verb|~GAIN| gesetzt werden.)
 
@@ -728,5 +728,25 @@ In eckigen Klammern wird die Entsprechung des Range-Parameters in Millimetern un
 Abfragen der aktuellen Einstellungen:
 \begin{verbatim}
 	?US OPT
-	:~RANGE=100 ~GAIN=10   [4343 mm, 25 ms]}
+	:~RANGE=100 ~GAIN=10   [4343 mm, 25 ms]
+\end{verbatim}
+
+
+
+\subsubsection{IMU}
+
+Setzen der Einstellungen:
+\begin{verbatim}
+	!IMU OPT ~ARANGE=8 ~AFILT=3 ~GRANGE=1000 ~GFILT=0
+	:~ARANGE=8 ~AFILT=3 ~GRANGE=1000 ~GFILT=0   [A: 45 Hz, G: 250 Hz]
+\end{verbatim}
+(Es brauchen nicht alle Optionen gesetzt zu werden.)
+
+\verb|ARANGE| gibt den Messbereich des Beschleunigungssensors in $g$ an und kann auf 2, 4, 8 oder 16 gesetzt werden. \verb|GRANGE| gibt den Messbereich des Gyrometers in Grad pro Sekunde an und kann auf 250, 500, 1000 oder 2000 gesetzt werden. Die möglichen Werte für die Filter sind auf \pagerefh{tab:hw:imufilters} in \tabref{tab:hw:imufilters:acc} (\verb|AFILT|) \bzw \tabref{tab:hw:imufilters:gyro} (\verb|GFILT|) aufgeführt.
+
+
+Abfragen der aktuellen Einstellungen:
+\begin{verbatim}
+	?IMU OPT
+	:~ARANGE=8 ~AFILT=3 ~GRANGE=1000 ~GFILT=0   [A: 45 Hz, G: 250 Hz]
 \end{verbatim}
