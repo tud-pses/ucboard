@@ -163,7 +163,7 @@ bool isInteger(const char *s)
 {
 	// if first character is a sign, then the string must contain at least
 	// two characters
-	if ( (*s == '-') && (*s == '+') )
+	if ( (*s == '-') || (*s == '+') )
 	{
 		if (*++s == '\0')
 		{
