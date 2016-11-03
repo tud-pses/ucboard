@@ -12,11 +12,6 @@
 #include "spimgr.h"
 #include "stdtypes.h"
 
-typedef struct IMUDevice_
-{
-	uint8_t f_uDeviceID;
-} IMUDevice_t;
-
 
 
 typedef enum EnMPU9250AccRange_
@@ -36,6 +31,52 @@ typedef enum EnMPU9250GyroRange_
 } EnMPU9250GyroRange_t;
 
 
+typedef enum EnMPU9250AccFilter_
+{
+	MPU9250ACCFILTER_BW1046,
+	MPU9250ACCFILTER_BW218,
+	MPU9250ACCFILTER_BW218_,
+	MPU9250ACCFILTER_BW99,
+	MPU9250ACCFILTER_BW45,
+	MPU9250ACCFILTER_BW21,
+	MPU9250ACCFILTER_BW10,
+	MPU9250ACCFILTER_BW5,
+	MPU9250ACCFILTER_BW420,
+} EnMPU9250AccFilter_t;
+
+
+typedef enum EnMPU9250GyroFilter_
+{
+	MPU9250GYROFILTER_BW3600,
+	MPU9250GYROFILTER_BW250,
+	MPU9250GYROFILTER_BW184,
+	MPU9250GYROFILTER_BW92,
+	MPU9250GYROFILTER_BW41,
+	MPU9250GYROFILTER_BW20,
+	MPU9250GYROFILTER_BW10,
+	MPU9250GYROFILTER_BW5,
+} EnMPU9250GyroFilter_t;
+
+
+typedef struct IMUConf_
+{
+	EnMPU9250AccRange_t accrange;
+	EnMPU9250AccFilter_t accfilt;
+	EnMPU9250GyroRange_t gyrorange;
+	EnMPU9250GyroFilter_t gyrofilt;
+} IMUConf_t;
+
+
+
+typedef struct IMUDevice_
+{
+	uint8_t f_uDeviceID;
+	IMUConf_t conf;
+	bool init;
+} IMUDevice_t;
+
+
+
 typedef struct IMUData_
 {
 	int16_t accX;
@@ -49,10 +90,11 @@ typedef struct IMUData_
 
 
 
-bool imuMPU9250_init(IMUDevice_t* this, EnSPI_PORT_t ePort, char cCSPort, uint8_t uCSPin);
+bool imuMPU9250_init(IMUDevice_t* this,
+							EnSPI_PORT_t ePort, char cCSPort, uint8_t uCSPin,
+							const IMUConf_t* const conf);
 
-bool imuMPU9250_setAccRange(IMUDevice_t* this, EnMPU9250AccRange_t eRange);
-bool imuMPU9250_setGyroRange(IMUDevice_t* this, EnMPU9250GyroRange_t eRange);
+bool imuMPU9250_setConf(IMUDevice_t* this, const IMUConf_t* const conf);
 
 bool imuMPU9250_readData(IMUDevice_t* this, IMUData_t* imudata);
 
