@@ -30,7 +30,7 @@
 
 #include <string.h>
 
-static uint32_t f_nORECount = 0;
+//static uint32_t f_nORECount = 0;
 
 
 typedef enum EnCommRxState_
@@ -335,9 +335,9 @@ void comm_init()
 	__USART_DISABLE_IT_TXE(USART3);
 
 	__USART_ENABLE_IT_RXNE(USART2);
-	__USART_ENABLE_IT_ER(USART2);
+	//__USART_ENABLE_IT_ER(USART2);
 	__USART_ENABLE_IT_RXNE(USART3);
-	__USART_ENABLE_IT_ER(USART3);
+	//__USART_ENABLE_IT_ER(USART3);
 
 	return;
 }
@@ -358,14 +358,15 @@ void comm_do()
 
 	if ((f_eTxSecState == COMMTXSTATE_PENDING))
 	{
-		f_eTxSecState = COMMTXSTATE_INPROGRESS;
-
 		if (f_ePrimaryUART == UART_2)
 		{
 			f_pUART3TxState = &f_eTxSecState;
 			f_pbufUART3Tx = &f_bufTxSec;
 
 			USART3->TDR = BUFFER_READ(*f_pbufUART3Tx);
+
+			f_eTxSecState = COMMTXSTATE_INPROGRESS;
+
 			__USART_ENABLE_IT_TXE(USART3);
 		}
 		else
@@ -374,6 +375,9 @@ void comm_do()
 			f_pbufUART2Tx = &f_bufTxSec;
 
 			USART2->TDR = BUFFER_READ(*f_pbufUART2Tx);
+
+			f_eTxSecState = COMMTXSTATE_INPROGRESS;
+
 			__USART_ENABLE_IT_TXE(USART2);
 		}
 	}
@@ -1029,13 +1033,21 @@ void USART2_IRQHandler(void)
 {
 	uint8_t rxdata;
 
-	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_ORE) != RESET )
-	{
-		// reset USART_IT_ORE
-		USART2->ICR = USART_ICR_ORECF;
-
-		f_nORECount++;
-	}
+//	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_ORE) != RESET )
+//	{
+//		// reset USART_IT_ORE
+//		USART2->ICR = USART_ICR_ORECF;
+//
+//		f_nORECount++;
+//	}
+//
+//	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_FE | USART_ISR_NE | USART_ISR_LBDF) != RESET )
+//	{
+//		// reset USART_IT_FE
+//		USART3->ICR = USART_ICR_FECF | USART_ICR_NCF | USART_ICR_LBDCF;
+//
+//		return;
+//	}
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
 	if ( __USART_GET_IT_STATUS(USART2, USART_ISR_RXNE) != RESET )
@@ -1074,23 +1086,23 @@ void USART3_IRQHandler(void)
 {
 	uint8_t rxdata;
 
-	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_ORE) != RESET )
-	{
-		// reset USART_IT_ORE
-		USART3->ICR = USART_ICR_ORECF;
-
-		f_nORECount++;
-
-		return;
-	}
-
-	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_FE | USART_ISR_NE | USART_ISR_LBDF) != RESET )
-	{
-		// reset USART_IT_FE
-		USART3->ICR = USART_ICR_FECF | USART_ICR_NCF | USART_ICR_LBDCF;
-
-		return;
-	}
+//	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_ORE) != RESET )
+//	{
+//		// reset USART_IT_ORE
+//		USART3->ICR = USART_ICR_ORECF;
+//
+//		f_nORECount++;
+//
+//		return;
+//	}
+//
+//	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_FE | USART_ISR_NE | USART_ISR_LBDF) != RESET )
+//	{
+//		// reset USART_IT_FE
+//		USART3->ICR = USART_ICR_FECF | USART_ICR_NCF | USART_ICR_LBDCF;
+//
+//		return;
+//	}
 
 	// USART_IT_RXNE: Receive Data register not empty interrupt
 	if ( __USART_GET_IT_STATUS(USART3, USART_ISR_RXNE) != RESET )
