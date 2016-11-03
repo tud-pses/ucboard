@@ -440,7 +440,7 @@ bool cmd_us(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 						}
 						else
 						{
-							bWrongUsage = false;
+							bWrongUsage = true;
 							break;
 						}
 					}
