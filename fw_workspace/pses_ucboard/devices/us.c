@@ -73,6 +73,8 @@ void us_init()
 	daq_provideChannel("USF", "ultrasonic front distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[1]);
 	daq_provideChannel("USR", "ultrasonic right distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[2]);
 
+	f_bUSOn = false;
+
 	return;
 }
 
