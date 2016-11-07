@@ -69,12 +69,29 @@ typedef struct IMUConf_
 } IMUConf_t;
 
 
+typedef struct MagConf_
+{
+	bool bUseASA;
+} MagConf_t;
+
+
+
+typedef struct MAGData_
+{
+	int32_t magX;
+	int32_t magY;
+	int32_t magZ;
+} MAGData_t;
+
 
 typedef struct IMUDevice_
 {
 	uint8_t f_uDeviceID;
 	IMUConf_t conf;
 	bool init;
+	MagConf_t magconf;
+	MAGData_t magdata;
+	bool bNewMagData;
 } IMUDevice_t;
 
 
@@ -91,6 +108,8 @@ typedef struct IMUData_
 } IMUData_t;
 
 
+#define MAG_MAGOVERFLOWVALUE	0x7FFFFFF
+
 
 bool imuMPU9250_init(IMUDevice_t* this,
 							EnSPI_PORT_t ePort, char cCSPort, uint8_t uCSPin,
@@ -99,6 +118,11 @@ bool imuMPU9250_init(IMUDevice_t* this,
 bool imuMPU9250_setConf(IMUDevice_t* this, const IMUConf_t* const conf);
 
 bool imuMPU9250_readData(IMUDevice_t* this, IMUData_t* imudata);
+
+
+bool imuMPU9250_getMagData(IMUDevice_t* this, MAGData_t* magdata);
+void imuMPU9250_getMagASA(IMUDevice_t* this, uint8_t* paASAVals);
+void imuMPU9250_do_mag_systick(IMUDevice_t* this);
 
 
 #endif /* IMU_MPU9250_H_ */

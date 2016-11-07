@@ -9,8 +9,13 @@
 #include "imu_mpu9250.h"
 #include "imu_mpu9250_privatedefs.h"
 
+#include "mag_AK8963_privatedefs.h"
+
 #include "spimgr.h"
 #include "display.h"
+
+#include "stopwatch.h"
+#include "common_fcts.h"
 
 uint8_t readRegister(IMUDevice_t* this, EnRegister_t reg);
 void writeRegister(IMUDevice_t* this, EnRegister_t reg, uint8_t val);
@@ -19,6 +24,16 @@ void writeRegister_masked(IMUDevice_t* this, EnRegister_t reg, uint8_t val, uint
 
 void readRegisters_burst(IMUDevice_t* this, EnRegister_t startreg, uint8_t cnt, uint8_t* auData);
 
+
+static bool initMag(IMUDevice_t* this);
+static bool writeRegisterIntI2C(IMUDevice_t* this, uint8_t device, EnAKRegister_t reg, uint8_t val);
+static bool readRegisterIntI2C(IMUDevice_t* this, uint8_t device, EnAKRegister_t reg, uint8_t cnt,
+																	uint8_t* rx);
+
+
+static int32_t f_magASAX = 0;
+static int32_t f_magASAY = 0;
+static int32_t f_magASAZ = 0;
 
 bool imuMPU9250_init(IMUDevice_t* this,
 							EnSPI_PORT_t ePort, char cCSPort, uint8_t uCSPin,
@@ -29,6 +44,8 @@ bool imuMPU9250_init(IMUDevice_t* this,
 	bool bres;
 
 	this->init = false;
+
+	this->bNewMagData = false;
 
 	cfg.Mode = SPI_MODE_MASTER;
 	cfg.Direction = SPI_DIRECTION_2LINES;
@@ -51,6 +68,8 @@ bool imuMPU9250_init(IMUDevice_t* this,
 		return false;
 	}
 
+	writeRegister(this, REG_PWR_MGMT_1, (1 << 7));
+	stopwatch_wait_us(1000);
 
 	uint8_t rx = readRegister(this, REG_WHO_AM_I);
 
@@ -60,12 +79,17 @@ bool imuMPU9250_init(IMUDevice_t* this,
 	}
 
 	// deactivate i2c
-	writeRegister_masked(this, REG_USER_CTRL, USERCTRL_I2CMSTIF_MASK, USERCTRL_I2CMSTIF_DISABLEI2CSLV);
+	writeRegister_masked(this, REG_USER_CTRL, USERCTRL_I2CIFDIS_MASK, USERCTRL_I2CIFDIS_DISABLEI2CSLV);
 
 
 	bres = imuMPU9250_setConf(this, conf);
 
 	this->init = bres;
+
+	if (!initMag(this))
+	{
+		display_println("Magnetometer init failed!");
+	}
 
 	return this->init;
 }
@@ -280,7 +304,7 @@ void readRegisters_burst(IMUDevice_t* this, EnRegister_t startreg, uint8_t cnt, 
 }
 
 
-#define READ_INT16(b) ( ((uint16_t)(*b) << 8) | (*(b+1)) )
+#define READ_INT16(b) ( (int16_t)( ((uint16_t)(*b) << 8) | (*(b+1)) ) )
 
 bool imuMPU9250_readData(IMUDevice_t* this, IMUData_t* imudata)
 {
@@ -298,3 +322,216 @@ bool imuMPU9250_readData(IMUDevice_t* this, IMUData_t* imudata)
 
 	return true;
 }
+
+#define READ_MAG_INT16(b) ((int16_t)( ((uint16_t)(*b)) | ((uint16_t)(*(b+1)) << 8) ))
+#define MAG_SENS_ADJ(raw, asa) ((raw) * ((asa) - 128)) / 256 + (raw)
+
+static bool readMagData(IMUDevice_t* this, MAGData_t* magdata)
+{
+	uint8_t auData[7];
+	int32_t tmp;
+
+	readRegisters_burst(this, REG_EXT_SENS_DATA_00, 7, auData);
+
+
+	if ((auData[6] & AK_ST2_HOFL_MASK) == AK_ST2_HOFL_OVERFLOWOCCURED)
+	{
+		magdata->magX = MAG_MAGOVERFLOWVALUE;
+		magdata->magY = MAG_MAGOVERFLOWVALUE;
+		magdata->magZ = MAG_MAGOVERFLOWVALUE;
+
+		return true;
+	}
+
+
+	// Orientation:
+	//	magX -> carY
+	//  magY -> carX
+	//  magZ -> -carZ
+
+	if (this->magconf.bUseASA)
+	{
+		tmp = READ_MAG_INT16(&auData[0]);
+		tmp = MAG_SENS_ADJ(tmp, f_magASAX);
+		tmp = SATURATION_LU(tmp, -32768, 32767);
+		magdata->magY = tmp;
+
+		tmp = READ_MAG_INT16(&auData[2]);
+		tmp = MAG_SENS_ADJ(tmp, f_magASAY);
+		tmp = SATURATION_LU(tmp, -32768, 32767);
+		magdata->magX = tmp;
+
+		tmp = READ_MAG_INT16(&auData[4]);
+		tmp = MAG_SENS_ADJ(tmp, f_magASAZ);
+		tmp = SATURATION_LU(tmp, -32767, 32768);
+		magdata->magZ = -tmp;
+	}
+	else
+	{
+		tmp = READ_MAG_INT16(&auData[0]);
+		magdata->magY = tmp;
+
+		tmp = READ_MAG_INT16(&auData[2]);
+		magdata->magX = tmp;
+
+		tmp = READ_MAG_INT16(&auData[4]);
+		magdata->magZ = -tmp;
+	}
+
+
+	return true;
+}
+
+typedef enum EnMagSM_
+{
+	MAGSM_IDLE = 0,
+	MAGSM_POLLST1,
+	MAGSM_GETDATA,
+} EnMagSM_t;
+
+
+
+bool imuMPU9250_getMagData(IMUDevice_t* this, MAGData_t* magdata)
+{
+	if (!this->bNewMagData)
+	{
+		return false;
+	}
+
+	*magdata = this->magdata;
+
+	this->bNewMagData = false;
+
+	return true;
+}
+
+
+void imuMPU9250_getMagASA(IMUDevice_t* this, uint8_t* paASAVals)
+{
+	paASAVals[0] = (uint8_t)f_magASAY; // xcar = ymag
+	paASAVals[1] = (uint8_t)f_magASAX; // ycar = zmag
+	paASAVals[2] = (uint8_t)f_magASAZ; // zcar = -zmag
+
+	return;
+}
+
+
+void imuMPU9250_do_mag_systick(IMUDevice_t* this)
+{
+	static EnMagSM_t s_state = MAGSM_IDLE;
+	static uint16_t s_nextStep = 0;
+
+	if (s_nextStep > 0)
+	{
+		s_nextStep--;
+		return;
+	}
+
+	if (s_state == MAGSM_IDLE)
+	{
+		writeRegister(this, REG_I2C_SLV0_ADDR, AK_I2C_ADDR | I2CSLVXADDR_RWFLAG_READ);
+		writeRegister(this, REG_I2C_SLV0_REG, AKREG_ST1);
+		writeRegister(this, REG_I2C_SLV0_CTRL, I2CSLVXCTRL_EN | 1);
+
+		s_state = MAGSM_POLLST1;
+		s_nextStep = 1;
+	}
+	else if (s_state == MAGSM_POLLST1)
+	{
+		uint8_t st1;
+		st1 = readRegister(this, REG_EXT_SENS_DATA_00);
+
+		if (st1 != 0)
+		{
+			//display_println_hex("st1: ", st1);
+			writeRegister(this, REG_I2C_SLV0_ADDR, AK_I2C_ADDR | I2CSLVXADDR_RWFLAG_READ);
+			writeRegister(this, REG_I2C_SLV0_REG, AKREG_HXL);
+			writeRegister(this, REG_I2C_SLV0_CTRL, I2CSLVXCTRL_EN | 7);
+
+			s_state = MAGSM_GETDATA;
+			s_nextStep = 1;
+		}
+	}
+	else // if (s_state == MAGSM_GETDATA)
+	{
+		readMagData(this, &this->magdata);
+		this->bNewMagData = true;
+
+		s_state = MAGSM_IDLE;
+	}
+
+	return;
+}
+
+
+static bool initMag(IMUDevice_t* this)
+{
+	// activate i2c-master
+	writeRegister_masked(this, REG_USER_CTRL,
+									USERCTRL_I2CMSTEN_MASK,
+									USERCTRL_I2CMSTEN_ENABLEI2CMST);
+
+	// configure I2C-master
+	writeRegister(this, REG_I2C_MST_CTRL, 0x0D);
+	writeRegister(this, REG_I2C_SLV0_ADDR, AK_I2C_ADDR);
+
+	writeRegisterIntI2C(this, AK_I2C_ADDR, AKREG_CNTL2, AK_CNTL2_SRST_RESET);
+	stopwatch_wait_us(1100);
+
+	// read "who am i"
+	uint8_t val = 0;
+	readRegisterIntI2C(this, AK_I2C_ADDR, AKREG_WIA, 1, &val);
+
+	if (val != AK_WIA_VALUE)
+	{
+		return false;
+	}
+
+
+	writeRegisterIntI2C(this, AK_I2C_ADDR, AKREG_CNTL, AK_CNTL_MODE_FUSEROMACCESS);
+	stopwatch_wait_us(1100);
+
+	uint8_t calibvals[3];
+	readRegisterIntI2C(this, AK_I2C_ADDR, AKREG_ASAX, 3, calibvals);
+
+	f_magASAX = calibvals[0];
+	f_magASAY = calibvals[1];
+	f_magASAZ = calibvals[2];
+
+
+	writeRegisterIntI2C(this, AK_I2C_ADDR, AKREG_CNTL,
+									AK_CNTL_OUTBIT_16 | AK_CNTL_MODE_CONT_100HZ);
+
+	stopwatch_wait_us(1100);
+
+	this->magconf.bUseASA = true;
+
+	return true;
+}
+
+
+static bool writeRegisterIntI2C(IMUDevice_t* this, uint8_t device, EnAKRegister_t reg, uint8_t val)
+{
+	writeRegister(this, REG_I2C_SLV0_ADDR, device | I2CSLVXADDR_RWFLAG_WRITE);
+	writeRegister(this, REG_I2C_SLV0_REG, reg);
+	writeRegister(this, REG_I2C_SLV0_DO, val);
+	writeRegister(this, REG_I2C_SLV0_CTRL, I2CSLVXCTRL_EN | 1);
+
+	return true;
+}
+
+
+static bool readRegisterIntI2C(IMUDevice_t* this, uint8_t device, EnAKRegister_t reg, uint8_t cnt,
+																	uint8_t* rx)
+{
+	writeRegister(this, REG_I2C_SLV0_ADDR, device | I2CSLVXADDR_RWFLAG_READ);
+	writeRegister(this, REG_I2C_SLV0_REG, reg);
+	writeRegister(this, REG_I2C_SLV0_CTRL, I2CSLVXCTRL_EN | cnt);
+
+	stopwatch_wait_us(1500);
+
+	readRegisters_burst(this, REG_EXT_SENS_DATA_00, cnt, rx);
+
+	return true;
+}
+
