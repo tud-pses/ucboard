@@ -176,7 +176,11 @@ static char* getConfString_returnend(char* buf, char* const bufend, IMUConf_t* c
 
 	switch (conf->gyrofilt)
 	{
-		case MPU9250GYROFILTER_BW3600:
+		case MPU9250GYROFILTER_BW8800_FS32K:
+			iGyroFilterVal = -2;
+			uGyroFilterBW = 8800;
+			break;
+		case MPU9250GYROFILTER_BW3600_FS32K:
 			iGyroFilterVal = -1;
 			uGyroFilterBW = 3600;
 			break;
@@ -207,6 +211,10 @@ static char* getConfString_returnend(char* buf, char* const bufend, IMUConf_t* c
 		case MPU9250GYROFILTER_BW5:
 			iGyroFilterVal = 6;
 			uGyroFilterBW = 5;
+			break;
+		case MPU9250GYROFILTER_BW3600:
+			iGyroFilterVal = 7;
+			uGyroFilterBW = 3600;
 			break;
 	}
 
@@ -341,7 +349,8 @@ bool cmd_imu(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 
 							switch (iVal)
 							{
-								case -1: conf.gyrofilt = MPU9250GYROFILTER_BW3600; break;
+								case -2: conf.gyrofilt = MPU9250GYROFILTER_BW8800_FS32K; break;
+								case -1: conf.gyrofilt = MPU9250GYROFILTER_BW3600_FS32K; break;
 								case 0: conf.gyrofilt = MPU9250GYROFILTER_BW250; break;
 								case 1: conf.gyrofilt = MPU9250GYROFILTER_BW184; break;
 								case 2: conf.gyrofilt = MPU9250GYROFILTER_BW92; break;
@@ -349,6 +358,7 @@ bool cmd_imu(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 								case 4: conf.gyrofilt = MPU9250GYROFILTER_BW20; break;
 								case 5: conf.gyrofilt = MPU9250GYROFILTER_BW10; break;
 								case 6: conf.gyrofilt = MPU9250GYROFILTER_BW5; break;
+								case 7: conf.gyrofilt = MPU9250GYROFILTER_BW3600; break;
 								default:
 									bOutOfRange = true;
 									break;
@@ -392,7 +402,7 @@ bool cmd_imu(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					acRespData,
 					acRespData + RXMAXMSGLEN - 1,
 					SOT_RXRESP, ERRCODE_COMM_VALUEOUTOFRANGE,
-					"Value out of range! (ARANGE: {2, 4, 8, 16}, AFILT: [-1, 7], GRANGE: {250, 500, 1000, 2000}, GFILT=[-1, 6])");
+					"Value out of range! (ARANGE: {2, 4, 8, 16}, AFILT: [-1, 7], GRANGE: {250, 500, 1000, 2000}, GFILT=[-2, 7])");
 
 			*pnRespLen = strend - acRespData;
 		}

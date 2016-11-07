@@ -174,7 +174,11 @@ bool imuMPU9250_setConf(IMUDevice_t* this, const IMUConf_t* const conf)
 
 		switch (conf->gyrofilt)
 		{
-			case MPU9250GYROFILTER_BW3600:
+			case MPU9250GYROFILTER_BW8800_FS32K:
+				vald = CONFIG_DLPFCFG_GYROBW8800_FS32k;
+				valf = GYROCONFIG_FCHOICEB_GYROBW8800_FS32k;
+				break;
+			case MPU9250GYROFILTER_BW3600_FS32K:
 				vald = CONFIG_DLPFCFG_GYROBW3600_FS32k;
 				valf = GYROCONFIG_FCHOICEB_GYROBW3600_FS32k;
 				break;
@@ -205,6 +209,10 @@ bool imuMPU9250_setConf(IMUDevice_t* this, const IMUConf_t* const conf)
 			case MPU9250GYROFILTER_BW5:
 				vald = CONFIG_DLPFCFG_GYROBW5_FS1k;
 				valf = GYROCONFIG_FCHOICEB_GYROBW5_FS1k;
+				break;
+			case MPU9250GYROFILTER_BW3600:
+				vald = CONFIG_DLPFCFG_GYROBW3600_FS8k;
+				valf = GYROCONFIG_FCHOICEB_GYROBW3600_FS8k;
 				break;
 
 			default:
