@@ -112,6 +112,9 @@ void car_init()
 	initPWM();
 	initBats();
 
+	// Kinect: ON after start
+	VEXT_PORT->BSRR = VEXT_PIN;
+
 	daq_provideChannel("VDBAT", "drive battery voltage", "mV", DAQVALUETYPE_UINT16, 1000, &f_daqDrvBatVoltage);
 	daq_provideChannel("VSBAT", "system battery voltage", "mV", DAQVALUETYPE_UINT16, 1000, &f_daqCarBatVoltage);
 
