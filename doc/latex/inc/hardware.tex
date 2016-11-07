@@ -270,26 +270,26 @@ Auf der hinteren rechten Ecke des ucboards befindet sich ein Beschleunigungs- un
 
 Die $x$-Achse zeigt nach vorne, die $y$-Achse nach links und die $z$-Achse nach oben.
 
-Der Sensor gibt die Messwerte als \texttt{int16\_t}-Werte aus. Die Umrechnung eines Sensorwertes $x$ in eine physikalische Einheit hängt von dem gewählten Messbereich ab. Für Beschleunigungswerte gilt
+Der Sensor gibt die Messwerte als \texttt{int16\_t}-Werte aus. Die Umrechnung eines Sensorwertes \texttt{val} in eine physikalische Einheit hängt von dem gewählten Messbereich ab. Für Beschleunigungswerte gilt
 \begin{align*}
-	a(x)
+	a(\mathtt{val})
 		=
 			\begin{cases}
-				\frac{x}{16\,384} g & \tn{wenn Messbereich } \pm 2\,g \\
-				\frac{x}{8\,192} g & \tn{wenn Messbereich } \pm 4\,g \\
-				\frac{x}{4\,096} g & \tn{wenn Messbereich } \pm 8\,g \\
-				\frac{x}{2\,048} g & \tn{wenn Messbereich } \pm 16\,g 
+				\frac{\mathtt{val}}{16\,384} g & \tn{wenn Messbereich } \pm 2\,g \\
+				\frac{\mathtt{val}}{8\,192} g & \tn{wenn Messbereich } \pm 4\,g \\
+				\frac{\mathtt{val}}{4\,096} g & \tn{wenn Messbereich } \pm 8\,g \\
+				\frac{\mathtt{val}}{2\,048} g & \tn{wenn Messbereich } \pm 16\,g 
 			\end{cases}
 \end{align*}
 und für Drehratenwerte gilt
 \begin{align*}
-	\omega(x)
+	\omega(\mathtt{val})
 		=
 			\begin{cases}
-				\frac{x}{131} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{250}{\degree / s} \\
-				\frac{x}{65,5} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{500}{\degree / s} \\
-				\frac{x}{32.8} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{1000}{\degree / s} \\
-				\frac{x}{16.4} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{2000}{\degree / s}\;.
+				\frac{\mathtt{val}}{131} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{250}{\degree / s} \\
+				\frac{\mathtt{val}}{65,5} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{500}{\degree / s} \\
+				\frac{\mathtt{val}}{32.8} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{1000}{\degree / s} \\
+				\frac{\mathtt{val}}{16.4} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{2000}{\degree / s}\;.
 			\end{cases}
 \end{align*}
 
@@ -298,7 +298,11 @@ Standardmäßig sind die Messbereiche $\pm 4\,g$ und $\pm \valunit{500}{\degree 
 
 \paragraph{Filterung}
 
-Die IMU verfügt über digitale Filter, die vor der sensorinternen Unterabtastung angewendet werden. (Der genaue Aufbau der Filter ist nicht dokumentiert. Die Angabe über Bandbreite und Verzögerung ("`delay"') lassen aber darauf schließen, dass es sich im Wesentlichen um eine Mittelwertbildung handelt.) Die möglichen Einstellungen, die über die ucboard-Befehle vorgenommen werden können, sind in \tabref{tab:hw:imufilters} aufgeführt. Diese Werte sind den Einträgen in der "`Register Map"'-Dokumentation des MPU-9250 entnommen. Dabei ist zu beachten, dass die Abtastung (das Abfragen des Sensorwerte) seitens des ucboard unabhängig von der dort genannten Sensorabtastzeit immer mit \valunit{1}{kHz} erfolgt.
+Die IMU verfügt über digitale Filter, die vor der sensorinternen Unterabtastung angewendet werden. (Der genaue Aufbau der Filter ist nicht dokumentiert. Die Angabe über Bandbreite und Verzögerung ("`delay"') lassen aber darauf schließen, dass es sich im Wesentlichen um eine Mittelwertbildung handelt.) Die möglichen Einstellungen, die über die ucboard-Befehle vorgenommen werden können, sind in \tabref{tab:hw:imufilters} aufgeführt. Diese Werte sind den Einträgen in der "`Register Map"'-Dokumentation des MPU-9250 entnommen. 
+
+\textbf{Hinweis:} Es ist zu beachten, dass die Abtastung (das Abfragen des Sensorwerte) seitens des ucboard unabhängig von der in \tabref{tab:hw:imufilters} \bzw im Sensordatenblatt genannten Abtastszeit immer mit \valunit{1}{kHz} erfolgt! Auch deshalb sollten die in \tabref{tab:hw:imufilters} grau geschriebenen Einstellungen nur zu Informationszwecken verwendet und nicht für den Normalbetrieb vorgesehen werden.
+
+Die Standardeinstellung der Filter ist jeweils \verb|0|.
 
 \begin{table}%
 	\centering
@@ -306,37 +310,41 @@ Die IMU verfügt über digitale Filter, die vor der sensorinternen Unterabtastun
 	\label{tab:hw:imufilters}
 	\subfloat[Gyroskop \label{tab:hw:imufilters:gyro}]
 	{%
-		\begin{tabular}{ccc}
+		\begin{tabular}{cccc}
 			\mytoprule
-			Value & Bandbreite [Hz] & Verzögerung [ms] \\
+			\texttt{GFILT} & Bandbreite [Hz] & Verzögerung [ms] &  Interne Sensor- \\
+			& & & abtastzeit [kHz] \\
 			\mymidrule
-			\texttt{-1} & 3\,600   & 0,11 \\
-			\texttt{0} & 250 & 0,97 \\
-			\texttt{1} & 184 & 2,9 \\
-			\texttt{2} & 92   & 3,9 \\
-			\texttt{3} & 41  & 5,9 \\
-			\texttt{4} & 20  & 9,9 \\
-			\texttt{5} & 10  & 17,85 \\
-			\texttt{6} & 5  & 33,38 \\
+			\color[rgb]{0.5,0.5,0.5}{\texttt{-2}} & \color[rgb]{0.5,0.5,0.5}{8\,800}   & \color[rgb]{0.5,0.5,0.5}{0,064} & \color[rgb]{0.5,0.5,0.5}{32}\\
+			\color[rgb]{0.5,0.5,0.5}{\texttt{-1}} & \color[rgb]{0.5,0.5,0.5}{3\,600}   & \color[rgb]{0.5,0.5,0.5}{0,11} & \color[rgb]{0.5,0.5,0.5}{32} \\
+			\texttt{0} & 250 & 0,97 & 8 \\
+			\texttt{1} & 184 & 2,9 & 1 \\
+			\texttt{2} & 92   & 3,9 & 1 \\
+			\texttt{3} & 41  & 5,9 & 1 \\
+			\texttt{4} & 20  & 9,9 & 1 \\
+			\texttt{5} & 10  & 17,85 & 1 \\
+			\texttt{6} & 5  & 33,38 & 1 \\
+			\color[rgb]{0.5,0.5,0.5}{\texttt{7}} & \color[rgb]{0.5,0.5,0.5}{3\,600}  & \color[rgb]{0.5,0.5,0.5}{0,17} & \color[rgb]{0.5,0.5,0.5}{8} \\
 			\mybottomrule
 		\end{tabular}%
 		}
 	\\[10mm]
 	\subfloat[Beschleunigungssensor \label{tab:hw:imufilters:acc}]
 	{%
-		\begin{tabular}{ccc}
+		\begin{tabular}{cccc}
 			\mytoprule
-			Value & Bandbreite [Hz] & Verzögerung [ms] \\
+			\texttt{AFILT} & Bandbreite [Hz] & Verzögerung [ms] &  Interne Sensor- \\
+			& & & abtastzeit [kHz] \\
 			\mymidrule
-			\texttt{-1} & 1\,046 & 0,503 \\
-			\texttt{0} & 218,1 & 1,88 \\
-			\texttt{1} & 218,1 & 1,88 \\
-			\texttt{2} & 99    & 2,88 \\
-			\texttt{3} & 44,8  & 4,88 \\
-			\texttt{4} & 21,2  & 8,87 \\
-			\texttt{5} & 10,2  & 16,83 \\
-			\texttt{6} & 5,05  & 32,48 \\
-			\texttt{7} & 420   & 1,38 \\
+			\color[rgb]{0.5,0.5,0.5}{\texttt{-1}} & \color[rgb]{0.5,0.5,0.5}{1\,046} & \color[rgb]{0.5,0.5,0.5}{0,503} & \color[rgb]{0.5,0.5,0.5}{4} \\
+			\texttt{0} & 218,1 & 1,88 & 1 \\
+			\texttt{1} & 218,1 & 1,88 & 1 \\
+			\texttt{2} & 99    & 2,88 & 1 \\
+			\texttt{3} & 44,8  & 4,88 & 1 \\
+			\texttt{4} & 21,2  & 8,87 & 1 \\
+			\texttt{5} & 10,2  & 16,83 & 1 \\
+			\texttt{6} & 5,05  & 32,48 & 1 \\
+			\texttt{7} & 420   & 1,38 & 1 \\
 			\mybottomrule
 			\multicolumn{3}{p{8cm}}{\color[rgb]{1,0,0} \tiny Die Einstellungen \texttt{0} und \texttt{1} sind in der Dokumentation tatsächlich identisch angegeben. Das könnte man mal überprüfen.}
 		\end{tabular}
