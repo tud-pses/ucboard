@@ -3,9 +3,74 @@
 \chapter{Flashen}
 
 
-\textbf{Hinweis:} Bisher wird hier nur die Variante des Flashens unter Windows mit dem "`STM32 ST-Link Utility"' beschrieben.
+\section{Linux}
 
-\section{Vorbereitung}
+\subsection{Vorbereitung}
+
+STM stellt für den ST-Link/V2-Programmer keine Software für Linux zur Verfügung. Dieser Adapter kann aber dennoch zum Flashen über Linux benutzt werden, wenn das auf GitHub verfügbare Programm \texttt{stlink} verwendet wird. Dieses kann wie folgt installiert werden.\footnote{Vorgehen nach Nicloas Acero.}
+
+\begin{enumerate}
+	\item Für Installation benötigte Pakete installieren
+		\begin{verbatim}
+			sudo apt-get install libusb-1.0-0-dev git unzip libgtk-3-dev
+		\end{verbatim}
+	\item stlink herunterladen (hier Version 1.2.0, \ggf neuere Version nehmen)
+		\begin{verbatim}
+			wget https://github.com/texane/stlink/archive/1.2.0.zip
+		\end{verbatim}
+	\item Datei entpacken und in das Verzeichnis wechseln
+		\begin{verbatim}
+			# Unzip the file
+			unzip 1.2.0.zip
+			cd stlink-1.2.0
+		\end{verbatim}
+	\item Programm kompilieren
+		\begin{verbatim}
+			mkdir build && cd build
+			cmake -DCMAKE_BUILD_TYPE=Debug ..
+			make		
+		\end{verbatim}
+	\item stlink installieren
+		\begin{verbatim}
+			sudo make install
+		\end{verbatim}
+	\item udev-Regeln so einstellen, dass st-flash ohne "`sudo"' verwendet werden kann
+		\begin{verbatim}
+			cd ..
+			sudo cp *.rules /etc/udev/rules.d
+			sudo restart udev
+		\end{verbatim}
+	\item Prorgamm sollte sich jetzt öffnen lassen
+		\begin{verbatim}
+			stlink-gui
+		\end{verbatim}
+\end{enumerate}
+
+
+\subsection{Flashen}
+
+
+\begin{enumerate}
+	\item ST-Link/V2 an Platine anschließen. Fahrzeug einschalten.
+	\item Öffnen der grafischen Oberfläche von \texttt{stlink}
+		\begin{verbatim}
+			stlink-gui
+		\end{verbatim}
+	\item Auf "`Connect"'-Icon klicken. Es sollten die Daten des Mikrocontrollers angezeigt werden.
+	\item Auf "`Open File"'-Icon klicken und bin-Datei auswählen.
+		\begin{itemize}
+			\item Im Repository unter \verb|fw_releases\| liegen die "`offiziellen"' Versionen.
+		\end{itemize}
+	\item Auf "`Program"'-Icon klicken.
+		\begin{itemize}
+			\item Start-Adresse ist ist \verb|0x08000000|. (Sollte voreingestellt sein.)
+		\end{itemize}
+\end{enumerate}
+
+
+\section{Windows}
+
+\subsection{Vorbereitung}
 
 "`STM32 ST-Link Utility"' von der STM-Homepage herunterladen und installieren (beinhaltet auch die Treiber). 
 
@@ -13,7 +78,7 @@
 
 
 
-\section{Flashen}
+\subsection{Flashen}
 
 \begin{enumerate}
 	\item ST-Link/V2 an Platine anschließen. Fahrzeug einschalten.
