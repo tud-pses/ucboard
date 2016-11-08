@@ -44,6 +44,7 @@ inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen);
 #define SATURATION_U(value, ulimit) (value>ulimit) ? ulimit : value
 #define SATURATION_LU(value, llimit, ulimit) (value<llimit) ? llimit : ( (value>ulimit) ? ulimit : value)
 
+#define ABS(value) (value<0) ? -value : value
 
 
 inline uint32_t copystring(char* szTarget, char* szSource, uint32_t uMaxLen)
