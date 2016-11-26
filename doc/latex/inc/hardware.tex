@@ -266,7 +266,7 @@ Im Gegensatz zu einem "`klassischen"' Encoder kann die Drehrichtung nicht festge
 
 \subsection{IMU}
 
-Auf der hinteren rechten Ecke des ucboards befindet sich ein Beschleunigungs- und Drehratensensor (IMU -- Inertial Measurement Unit) des Typs MPU-9250A. \textcolor[rgb]{0.75,0.75,0.75}{Dieser beinhaltet auch ein Magnetometer, welches jedoch noch nicht angesprochen wird.}
+Auf der hinteren rechten Ecke des ucboards befindet sich ein Beschleunigungs- und Drehratensensor (IMU -- Inertial Measurement Unit) des Typs MPU-9250A.
 
 Die $x$-Achse zeigt nach vorne, die $y$-Achse nach links und die $z$-Achse nach oben.
 
@@ -351,6 +351,46 @@ Die Standardeinstellung der Filter ist jeweils \verb|0|.
 		}
 \end{table}
 
+
+
+\subsection{Magnetometer}
+
+Das Magnetometer vom Typ AK8963C ist im Gehäuse der IMU integriert. (Prinzipiell empfiehlt es sich, direkt das Datenblatt des AK8963 zu verwenden, und nicht in die entsprechenden Passagen des Datenblattes der IMU zu schauen.)
+
+Die Achsenanordnung des Magnetometers unterscheidet sich von der der IMU \bzw damit auch der Achsenanordnung des Fahrzeugs. So zeigt die $x$-Achse zeigt nach links, die $y$-Achse nach vorne und die $z$-Achse nach unten. \textbf{\emph{Alle} ausgegebenen Werte werden jedoch in Fahrzeug- oder IMU-Koordinaten angegeben!}
+
+Es liegt \ca alle \valunit{10}{ms} neue Messwerte vor. (Ungefähr, da die Taktrate des Mikrocontrollers und die des Sensors leicht abweichen können.)
+
+
+\paragraph{Korrektur der Sensorempfindlichkeit}
+
+Im Magnetometer ist intern für jede Achse ein Korrekturwert für die Sensitivität gespeichert (\texttt{ASAX}, \texttt{ASAY} und \texttt{ASAZ}). Dieser wird beim Starten ausgelesen und zur Korrektur der Messwerte verwendet. Diese Korrektur kann auch abgeschaltet werden (\verb|!MAG OPT ~USEASA=0|).
+
+Der korrigierte Wert $H'_{\{\mrm{x,y,z}\}}$ ergibt sich aus dem Sensorwert $H_{\{\mrm{x,y,z}\}}$ und dem jeweiligen Korrekturfaktor \texttt{ASA}\{\texttt{X},\texttt{Y},\texttt{Z}\} über
+\begin{align*}
+	H'_{\{\mrm{x,y,z}\}} = H_{\{\mrm{x,y,z}\}} \cdot \left( \frac{(\mathtt{ASA}\{\mathtt{X},\mathtt{Y},\mathtt{Z}\} - 128) \cdot 0,5}{128} + 1 \right)\;.
+\end{align*}
+
+
+\paragraph{Kalibrierung des eingebauten Sensors}
+
+Eine weitere Kalibrierung des Magnetometers ist für die Zukunft vorgesehen. Aktuell muss dies aber, wenn gewünscht \bzw notwendig, selber auf dem PC realisiert werden.
+
+
+\paragraph{Berechnung des Kurswinkels}
+
+Unter der Annahme, dass das Fahrzeug eben steht, kann aus dem Messwert der magnetischen Feldstärke in $x$- und $y$-Richtung der im(!) Uhrzeigersinn gezählte Kurswinkel $\psi_\mrm{h}$ über
+\begin{align*}
+	\psi_\mrm{h} = \mrm{atan2}(\mathtt{MY},\ \mathtt{MX})
+\end{align*}
+in Radiant bestimmt werden. Die Funktion atan2 gibt einen Wert zwischen $-\uppi$ und $\uppi$ zurück. Einen typischen "`Kompasswert"' in Grad erhält man daher nach dem Pseudocode
+\begin{verbatimtab}[4]
+	heading = atan2(MY, MX) * 180 / pi
+	
+	if heading < 0
+		heading = 360 + heading
+	end
+\end{verbatimtab}
 
 
 

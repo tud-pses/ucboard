@@ -108,6 +108,7 @@ Die Parameter der Schnittstellen sind in \tabref{tab:Comm:UARTParam} zusammengef
 		\verb|DAQ| & Datenerfassung \\
 		\verb|VOUT| & Ein- und Ausschalten \valunit{12}{V}-Ausgang (Kinect) \\
 		\texttt{IMU} & Zum Parametrieren der IMU \\
+		\texttt{MAG} & Zum Parametrieren des Magnetometers \\
 		\texttt{US} & Zum Parametrieren der US-Sensoren \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{EEPROM}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Auslesen des EEPROM-Inhalts}\\
 		\mybottomrule
@@ -329,11 +330,11 @@ Die Sensorsignale werden dabei hier als "`Kanäle"' bezeichnet. Die aktuell defi
 
 \begin{table}[htbp]%
 	\centering
-	\caption{Signale}
+	\caption{DAQ-Kanäle (Signale)}
 	\label{tab:Comm:DAQ:Signals}
 	\begin{tabular}{lp{8cm}lll}
 		\mytoprule
-		Signal & Beschreibung & Einheit & Datentyp & Länge \\
+		Kanal & Beschreibung & Einheit & Datentyp & Länge \\
 		\mymidrule
 		\verb|AX| & Beschleunigung $x$-Richtung &  & \verb|int16_t| & 2 \\
 		\verb|AY| & Beschleunigung $y$-Richtung &  & \verb|int16_t| & 2 \\
@@ -341,6 +342,9 @@ Die Sensorsignale werden dabei hier als "`Kanäle"' bezeichnet. Die aktuell defi
 		\verb|GX| & Drehrate um $x$-Achse & & \verb|int16_t| & 2 \\
 		\verb|GY| & Drehrate um $y$-Achse & & \verb|int16_t| & 2 \\
 		\verb|GZ| & Drehrate um $z$-Achse & & \verb|int16_t| & 2 \\
+		\verb|MX| & Magnetische Flussdichte in $x$-Achse & \valunit{0,15}{\upmu T} & \verb|int16_t| & 2\\
+		\verb|MY| & Magnetische Flussdichte in $y$-Achse & \valunit{0,15}{\upmu T}  & \verb|int16_t| & 2\\
+		\verb|MZ| & Magnetische Flussdichte in $z$-Achse & \valunit{0,15}{\upmu T}  & \verb|int16_t| & 2\\
 		\verb|USF| & Abstand vorne & \valunit{0,1}{mm} & \verb|uint16_t| & 2 \\
 		\verb|USL| & Abstand links & \valunit{0,1}{mm} & \verb|uint16_t| & 2 \\
 		\verb|USR| & Abstand rechts & \valunit{0,1}{mm} & \verb|uint16_t| & 2 \\
@@ -750,3 +754,33 @@ Abfragen der aktuellen Einstellungen:
 	?IMU OPT
 	:~ARANGE=8 ~AFILT=3 ~GRANGE=1000 ~GFILT=0   [A: 45 Hz, G: 250 Hz]
 \end{verbatim}
+
+
+
+
+\subsubsection{MAG}
+
+Setzen der Einstellungen:
+\begin{verbatim}
+	!MAG OPT ~USEASA=1
+	:~USEASA=1
+\end{verbatim}
+
+\verb|USEASA| gibt an, ob die im Magnetometer fest gespeicherten Korrekturwerte für die Sensitivität verwendet werden sollen. Dabei bedeutet der Wert \verb|1|, dass die Werte verwendet werden und der Wert \verb|0|, dass die Werte nicht verwendet werden. Der Wert nach einem Neustart ist \verb|1|.
+
+Abfragen der aktuellen Einstellungen:
+\begin{verbatim}
+	?MAG OPT
+	:~USEASA=1
+\end{verbatim}
+
+Abfrage der Korrekturwerte:
+\begin{verbatim}
+	?MAG ASA
+	:176 176 165
+\end{verbatim}
+Diese Werte entsprechen der Reihenfolge nach den Korrekturwerten der $x$-, $y$- und $z$-Achse, gezählt in Fahrzeugkoordinaten. (Damit entsprechen diese Werte den Registern \verb|ASAY|, \verb|ASAX| und \verb|ASAZ| des Magnetometers.)
+
+Da es sich bei den Korrekturwerten um fest gespeicherte Werte im Magnetometer handelt, können diese nicht verändert werden. {\color[rgb]{0.75,0.75,0.75} Eine Vorgabe von eigenen Kalibrierungswerten ist für die Zukunft vorgesehen. Momentan muss eine Kalibrierung des eingebauten Sensors, wenn gewünscht, aber noch auf dem PC erfolgen.}
+
+
