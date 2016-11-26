@@ -51,7 +51,7 @@ Für Weiterentwicklungen innerhalb der Gruppen sollte dem Versionsstring noch de
 
 \tabref{tab:repo:fw_versions} gibt eine Übersicht über die Firmware-Versionen.
 
-\begin{table}%
+\begin{table}[htbp]%
 	\centering
 	\caption{Übersicht über Firmware-Versionen}
 	\label{tab:repo:fw_versions}
@@ -76,6 +76,33 @@ Für Weiterentwicklungen innerhalb der Gruppen sollte dem Versionsstring noch de
 		0.9.0
 			& 25.10.2016
 			& Grundfunktionalität weitgehend vorhanden. (Es fehlen noch die Befehle zum Parametrieren und Kalibrieren der Sensoren und der Treiber für das Magnetometer.) \\
+		\mybottomrule
+	\end{tabular}
+\end{table}
+
+
+
+\paragraph{Roadmap}
+
+
+\begin{table}[htbp]%
+	\centering
+	\caption{Roadmap Firmware}
+	\label{tab:repo:fw_roadmap}
+	\begin{tabular}{lp{10cm}}
+		\mytoprule
+		Version & Kommentar \\
+		\mymidrule
+		x
+			& -- [intern] Auf"|teilen Kommunikationsstack in Befehlsbearbeitung und UART-Treiber \\
+		x
+			& -- [intern] Umstellen der UART-Kommunikation auf DMA \\
+		1.0.0
+			& -- Befehlsbasierte (= textbasierte) benutzerdefinierte Initialisierung über EEPROM \\
+		1.1.0
+			& -- Kalibrierungsroutinen \\
+		x
+			& -- [intern] Code-Review, Gleiche/Ähnliche Funktionen zusammenfassen, \ldots \\
 		\mybottomrule
 	\end{tabular}
 \end{table}
