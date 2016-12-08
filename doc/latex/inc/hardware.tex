@@ -214,8 +214,8 @@ Das ucboard bietet zur Ansteuerung zwei Möglichkeiten. Zum einen kann der Fahrt
 
 Die für die Umschaltung von Vorwärts- auf Rückwärtsfahrt notwendige Bestimmung des Ist-Zustandes des Fahrtenreglers erfolgt dabei über einen Zustandsautomaten, der die Zustandswechsel des Fahrtenreglers nachbildet. Für den normalen Betrieb sollte dies sicher funktionieren. Fehler können nur dann auf"|treten, wenn
 \begin{itemize}
-	\item Sehr schnell zwischen Vor- und Rückwärtsfahrt gewechselt wird (weniger als \valunit{200}{ms} zwischen aufeinanderfolgenden Wechsel).
-	\item Im Direktmodus Werte gestellt werden, die an den Rändern des Toleranzbereichs für die Neutralstellung liegen.
+	\item sehr schnell zwischen Vor- und Rückwärtsfahrt gewechselt wird (weniger als \valunit{200}{ms} zwischen aufeinanderfolgenden Wechsel) oder
+	\item im Direktmodus Werte gestellt werden, die an den Rändern des Toleranzbereichs für die Neutralstellung liegen.
 \end{itemize}
 Erfolgt eine Vorwärtsfahrt (länger als \valunit{100}{ms}) stimmen die Zustände wieder überein.
 
@@ -273,7 +273,7 @@ Auf dem ucboard wird die Zeit zwischen den Impulsen auf eine Mikrosekunde genau 
 Im Gegensatz zu einem "`klassischen"' Encoder kann die Drehrichtung nicht festgestellt werden!
 
 \begin{itemize}
-	\item Der Abstand zwischen Rad und Aufbau darf nicht zu groß sein. Ist das Fahrzeug beispielsweise aufgebockt, so werden in der Regler keine Impulse mehr gezählt.\footnote{Vom Hersteller gibt es noch einen Hall-Sensor aus der gleichen Baureihe (HAL 502), der jedoch etwas empfindlicher (die notwendige Flussdichte beträgt \ca ein Drittel im Vergleich zum HAL 503) ist. Sollten häufig Probleme mit übersprungenen Impulsen auf"|treten, wäre dies eine mögliche Lösung.}
+	\item Der Abstand zwischen Rad und Aufbau darf nicht zu groß sein. Ist das Fahrzeug beispielsweise aufgebockt, so werden in der Regel keine Impulse mehr gezählt.\footnote{Vom Hersteller gibt es noch einen Hall-Sensor aus der gleichen Baureihe (HAL 502), der jedoch etwas empfindlicher (die notwendige Flussdichte beträgt \ca ein Drittel im Vergleich zum HAL 503) ist. Sollten häufig Probleme mit übersprungenen Impulsen auf"|treten, wäre dies eine mögliche Lösung.}
 \end{itemize}
 
 
