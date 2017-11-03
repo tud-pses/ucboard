@@ -32,7 +32,10 @@ namespace ucterm
         public delegate void NewDisplayDataHandler(object sender, String data);
         public event NewDisplayDataHandler NewDisplayData;
 
-        private System.IO.Ports.SerialPort m_serialPort;
+		public delegate void NewCorruptDataHandler(object sender, String data);
+		public event NewCorruptDataHandler NewCorruptData;
+
+		private System.IO.Ports.SerialPort m_serialPort;
 
 
         private bool m_bDoDisconnect = false;
@@ -62,7 +65,7 @@ namespace ucterm
             return;
         }
 
-        public void connect(String portName, UInt32 baudRate)
+        public void Connect(String portName, UInt32 baudRate)
         {
             if (m_bConnected)
             {
@@ -109,10 +112,11 @@ namespace ucterm
                 }
             }
 
-            m_connectorThread = new Thread(new ThreadStart(connectorthread));
-
-            m_connectorThread.Name = "Connector_connectorthread";
-            m_connectorThread.Start();
+			m_connectorThread = new Thread(new ThreadStart(Connectorthread))
+			{
+				Name = "Connector_connectorthread"
+			};
+			m_connectorThread.Start();
 
             return;
         }
@@ -120,7 +124,7 @@ namespace ucterm
         private Boolean m_bTxQueueEmpty = true;
         private String m_szTxMsg;
 
-        public void send(String msg)
+        public void Send(String msg)
         {
             if (!m_bConnected)
             {
@@ -137,7 +141,7 @@ namespace ucterm
         }
 
 
-        public void disconnect()
+        public void Disconnect()
         {
             m_bDoDisconnect = true;
 
@@ -147,7 +151,7 @@ namespace ucterm
             return;
         }
 
-        private void connectorthread()
+        private void Connectorthread()
         {
             StringBuilder rx = new StringBuilder(10000);
             Boolean bRxInProgress = false;
@@ -206,7 +210,10 @@ namespace ucterm
                             {
                                 NewDAQData?.Invoke(this, msg);
                             }
-
+							else
+							{
+								NewCorruptData?.Invoke(this, msg);
+							}
                         }
                     }
                 }

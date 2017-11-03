@@ -17,8 +17,9 @@ namespace ucterm
         private StringBuilder m_sbDAQData;
         private StringBuilder m_sbDisplayData;
         private StringBuilder m_sbCmdRespData;
+		private StringBuilder m_sbCorruptData;
 
-        private System.Timers.Timer m_updateTimer;
+		private System.Timers.Timer m_updateTimer;
 
         private Boolean m_bClearText = false;
 
@@ -31,20 +32,22 @@ namespace ucterm
             m_sbDAQData = new StringBuilder(10000);
             m_sbDisplayData = new StringBuilder(10000);
             m_sbCmdRespData = new StringBuilder(10000);
+			m_sbCorruptData = new StringBuilder(10000);
 
-            m_connector = new UCConnector();
-            m_connector.ConnectionStateChange += connector_ConnectionStateChange;
-            m_connector.NewDisplayData += connector_NewDisplayData;
-            m_connector.NewDAQData += connector_NewDAQData;
-            m_connector.NewRespData += connector_NewRespData;
+			m_connector = new UCConnector();
+            m_connector.ConnectionStateChange += Connector_ConnectionStateChange;
+            m_connector.NewDisplayData += Connector_NewDisplayData;
+            m_connector.NewDAQData += Connector_NewDAQData;
+            m_connector.NewRespData += Connector_NewRespData;
+			m_connector.NewCorruptData += Connector_NewCorruptData;
 
-            cmdRefreshCOMList_Click(this, null);
+			CmdRefreshCOMList_Click(this, null);
 
             txtBaudrate.Text = "921600";
-            connector_ConnectionStateChange(this, null);
+            Connector_ConnectionStateChange(this, null);
 
             m_updateTimer = new System.Timers.Timer();
-            m_updateTimer.Elapsed += new System.Timers.ElapsedEventHandler(updatetimer_Elapsed);
+            m_updateTimer.Elapsed += new System.Timers.ElapsedEventHandler(Updatetimer_Elapsed);
             m_updateTimer.AutoReset = false;
             m_updateTimer.Interval = 200;
             m_updateTimer.Start();
@@ -52,7 +55,7 @@ namespace ucterm
             return;
         }
 
-        private void cmdRefreshCOMList_Click(object sender, EventArgs e)
+        private void CmdRefreshCOMList_Click(object sender, EventArgs e)
         {
             lstCOMPorts.Items.Clear();
             lstCOMPorts.Items.AddRange(System.IO.Ports.SerialPort.GetPortNames());
@@ -61,20 +64,19 @@ namespace ucterm
             return;
         }
 
-        private void cmdConnect_Click(object sender, EventArgs e)
+        private void CmdConnect_Click(object sender, EventArgs e)
         {
             if (m_connector.ConnectionState == UCConnector.EnConnState.CONNECTED)
             {
-                m_connector.disconnect();
+                m_connector.Disconnect();
             }
             else
             {
                 String portName;
-                UInt32 baudRate;
 
-                portName = (String)lstCOMPorts.SelectedItem;
+				portName = (String)lstCOMPorts.SelectedItem;
 
-                if (portName == null)
+				if (portName == null)
                 {
                     System.Windows.Forms.MessageBox.Show("Kein Portname ausgewählt!", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
@@ -82,7 +84,7 @@ namespace ucterm
                 }
 
 
-                if (!UInt32.TryParse(txtBaudrate.Text, out baudRate))
+                if (!UInt32.TryParse(txtBaudrate.Text, out UInt32 baudRate))
                 {
                     System.Windows.Forms.MessageBox.Show("Ungültige Baudrate!", "", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
@@ -95,13 +97,13 @@ namespace ucterm
                     return;
                 }
 
-                m_connector.connect(portName, baudRate);
+                m_connector.Connect(portName, baudRate);
             }
 
             return;
         }
 
-        private void lstBaudrates_Click(object sender, EventArgs e)
+        private void LstBaudrates_Click(object sender, EventArgs e)
         {
             String text;
 
@@ -115,7 +117,7 @@ namespace ucterm
             return;
         }
 
-        private void cmdSend_Click(object sender, EventArgs e)
+        private void CmdSend_Click(object sender, EventArgs e)
         {
             String cmd = txtTxCommand.Text;
 
@@ -126,12 +128,12 @@ namespace ucterm
 
             System.Threading.Monitor.Exit(m_sbCmdRespData);
 
-            m_connector.send(cmd);
+            m_connector.Send(cmd);
 
             return;
         }
 
-        private void connector_NewRespData(object sender, String data)
+        private void Connector_NewRespData(object sender, String data)
         {
             System.Threading.Monitor.Enter(m_sbCmdRespData);
 
@@ -143,7 +145,7 @@ namespace ucterm
             return;
         }
 
-        private void connector_NewDisplayData(object sender, String data)
+        private void Connector_NewDisplayData(object sender, String data)
         {
             System.Threading.Monitor.Enter(m_sbDisplayData);
 
@@ -155,7 +157,7 @@ namespace ucterm
             return;
         }
 
-        private void connector_NewDAQData(object sender, String data)
+        private void Connector_NewDAQData(object sender, String data)
         {
             System.Threading.Monitor.Enter(m_sbDAQData);
 
@@ -168,14 +170,27 @@ namespace ucterm
         }
 
 
-        private void updatetimer_Elapsed(object source, System.Timers.ElapsedEventArgs e)
+		private void Connector_NewCorruptData(object sender, String data)
+		{
+			System.Threading.Monitor.Enter(m_sbCorruptData);
+
+			m_sbDAQData.Append("\n");
+			m_sbDAQData.Append(m_sbCorruptData);
+
+			System.Threading.Monitor.Exit(m_sbCorruptData);
+
+			return;
+		}
+		
+		private void Updatetimer_Elapsed(object source, System.Timers.ElapsedEventArgs e)
         {
             String szCmdRespData = null;
             String szDisplayData = null;
             String szDAQData = null;
+			String szCorruptData = null;
 
 
-            System.Threading.Monitor.Enter(m_sbCmdRespData);
+			System.Threading.Monitor.Enter(m_sbCmdRespData);
 
             if (m_sbCmdRespData.Length > 0)
             {
@@ -208,8 +223,18 @@ namespace ucterm
             System.Threading.Monitor.Exit(m_sbDAQData);
 
 
+			System.Threading.Monitor.Enter(m_sbCorruptData);
 
-            MethodInvoker updater;
+			if (m_sbCorruptData.Length > 0)
+			{
+				szCorruptData = m_sbCorruptData.ToString();
+				m_sbCorruptData.Clear();
+			}
+
+			System.Threading.Monitor.Exit(m_sbCorruptData);
+
+
+			MethodInvoker updater;
 
             updater = delegate
             {
@@ -218,6 +243,7 @@ namespace ucterm
                     rtbCommands.Clear();
                     rtbDisplay.Clear();
                     rtbDAQ.Clear();
+					rtbCorruptData.Clear();
 
                     m_bClearText = false;
                 }
@@ -225,9 +251,9 @@ namespace ucterm
                 {
                     if (szCmdRespData != null)
                     {
-                        if (rtbCommands.TextLength + szCmdRespData.Length > 10 * 1024 * 1024)
+                        if (rtbCommands.TextLength + szCmdRespData.Length > 1024 * 1024)
                         {
-                            rtbCommands.Text = rtbCommands.Text.Remove(0, 5 * 1024 * 1024) + szCmdRespData;
+                            rtbCommands.Text = rtbCommands.Text.Remove(0, 512 * 1024) + szCmdRespData;
                         }
                         else
                         {
@@ -240,9 +266,9 @@ namespace ucterm
 
                     if (szDisplayData != null)
                     {
-                        if (rtbDisplay.TextLength + szDisplayData.Length > 10 * 1024 * 1024)
+                        if (rtbDisplay.TextLength + szDisplayData.Length > 1024 * 1024)
                         {
-                            rtbDisplay.Text = rtbDisplay.Text.Remove(0, 5 * 1024 * 1024) + szDisplayData;
+                            rtbDisplay.Text = rtbDisplay.Text.Remove(0, 512 * 1024) + szDisplayData;
                         }
                         else
                         {
@@ -255,9 +281,9 @@ namespace ucterm
 
                     if (szDAQData != null)
                     {
-                        if (rtbDAQ.TextLength + szDAQData.Length > 10 * 1024 * 1024)
+                        if (rtbDAQ.TextLength + szDAQData.Length > 1024 * 1024)
                         {
-                            rtbDAQ.Text = rtbDAQ.Text.Remove(0, 5 * 1024 * 1024) + szDAQData;
+                            rtbDAQ.Text = rtbDAQ.Text.Remove(0, 512 * 1024) + szDAQData;
                         }
                         else
                         {
@@ -267,7 +293,22 @@ namespace ucterm
                         rtbDAQ.SelectionStart = rtbDAQ.Text.Length;
                         rtbDAQ.ScrollToCaret();
                     }
-                }
+
+					if (szCorruptData != null)
+					{
+						if (rtbCorruptData.TextLength + szCorruptData.Length > 1024 * 1024)
+						{
+							rtbCorruptData.Text = rtbCorruptData.Text.Remove(0, 512 * 1024) + szCorruptData;
+						}
+						else
+						{
+							rtbCorruptData.AppendText(szCorruptData);
+						}
+
+						rtbCorruptData.SelectionStart = rtbCorruptData.Text.Length;
+						rtbCorruptData.ScrollToCaret();
+					}
+				}
             };
 
             if (this.InvokeRequired)
@@ -285,7 +326,7 @@ namespace ucterm
         }
 
 
-        private void connector_ConnectionStateChange(object sender, EventArgs data)
+        private void Connector_ConnectionStateChange(object sender, EventArgs data)
         {
             MethodInvoker updater;
             UCConnector.EnConnState state = m_connector.ConnectionState;
@@ -358,11 +399,11 @@ namespace ucterm
         }
 
 
-        private void txtTxCommand_KeyDown(object sender, KeyEventArgs e)
+        private void TxtTxCommand_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                cmdSend_Click(this, null);
+                CmdSend_Click(this, null);
             }
 
             return;
@@ -370,13 +411,13 @@ namespace ucterm
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            m_connector.disconnect();
+            m_connector.Disconnect();
             m_updateTimer.Enabled = false;
 
             return;
         }
 
-        private void cmdClearText_Click(object sender, EventArgs e)
+        private void CmdClearText_Click(object sender, EventArgs e)
         {
             m_bClearText = true;
 

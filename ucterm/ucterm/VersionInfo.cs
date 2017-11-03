@@ -8,6 +8,6 @@ namespace ucterm
 {
     class VersionInfo
     {
-        static public String VersionString { get; } = "1.0.0";
+        static public String VersionString { get; } = "1.0.0+";
     }
 }
