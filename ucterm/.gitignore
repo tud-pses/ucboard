@@ -1,3 +1,4 @@
 /ucterm/bin
 /ucterm/obj
 *.suo
+/.vs
