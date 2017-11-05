@@ -115,10 +115,10 @@ inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen)
 	while (uLen--)
 	{
 		if (*pA++ != *pB++)
-			return FALSE;
+			return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 

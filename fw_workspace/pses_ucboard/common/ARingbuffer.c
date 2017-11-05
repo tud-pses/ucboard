@@ -39,8 +39,8 @@ void ARingbuffer_init(ARingbuffer_t* this,
 	this->atomicput.pPut = NULL;
 	this->atomicput.pBegin = NULL;
 	this->atomicput.uFailedMarkLen = 0;
-	this->atomicput.bFailed = FALSE;
-	this->atomicput.bPrevPutFailed = FALSE;
+	this->atomicput.bFailed = false;
+	this->atomicput.bPrevPutFailed = false;
 
 	this->uFailed = 0;
 
@@ -60,8 +60,8 @@ void ARingbuffer_clear(ARingbuffer_t* this)
 	this->atomicput.pPut = NULL;
 	this->atomicput.pBegin = NULL;
 	this->atomicput.uFailedMarkLen = 0;
-	this->atomicput.bFailed = FALSE;
-	this->atomicput.bPrevPutFailed = FALSE;
+	this->atomicput.bFailed = false;
+	this->atomicput.bPrevPutFailed = false;
 
 	this->uFailed = 0;
 
@@ -80,12 +80,12 @@ bool ARingbuffer_atomicput_start(ARingbuffer_t* this,
 		if ( !writeFailedMark(this) )
 		{
 			//LED_RED_ON();
-			return FALSE;
+			return false;
 		}
 		else
 		{
-			this->atomicput.bFailed = FALSE;
-			this->atomicput.bPrevPutFailed = TRUE;
+			this->atomicput.bFailed = false;
+			this->atomicput.bPrevPutFailed = true;
 
 			this->atomicput.pPut = NULL;
 			this->atomicput.pBegin = NULL;
@@ -97,7 +97,7 @@ bool ARingbuffer_atomicput_start(ARingbuffer_t* this,
 	// begonnen werden
 	if (this->atomicput.pPut)
 	{
-		return FALSE;
+		return false;
 	}
 
 
@@ -122,9 +122,9 @@ bool ARingbuffer_atomicput_start(ARingbuffer_t* this,
 		this->atomicput.pBegin = this->pPut;
 		this->atomicput.pPut = this->pPut;
 
-		this->atomicput.bFailed = TRUE;
+		this->atomicput.bFailed = true;
 
-		return FALSE;
+		return false;
 	}
 
 	this->atomicput.pBegin = this->pPut +
@@ -138,7 +138,7 @@ bool ARingbuffer_atomicput_start(ARingbuffer_t* this,
 
 	this->atomicput.pPut = this->atomicput.pBegin;
 
-	return TRUE;
+	return true;
 }
 
 
@@ -148,12 +148,12 @@ bool ARingbuffer_atomicputX(ARingbuffer_t* this, uint8_t* pData, uint8_t uDataLe
 	// kann.
 	if (!this->atomicput.pPut)
 	{
-		return FALSE;
+		return false;
 	}
 
 	if (this->atomicput.bFailed)
 	{
-		return FALSE;
+		return false;
 	}
 
 	//GMcom_display_printlnUIntval("Frei: ", ARingbuffer_getFreeSpace(this));
@@ -161,14 +161,14 @@ bool ARingbuffer_atomicputX(ARingbuffer_t* this, uint8_t* pData, uint8_t uDataLe
 	if (ARingbuffer_getFreeSpace(this) < uDataLen)
 	{
 		//GMcom_display_println("FAILED!");
-		this->atomicput.bFailed = TRUE;
-		return FALSE;
+		this->atomicput.bFailed = true;
+		return false;
 	}
 
 	this->atomicput.pPut =
 				putX(this->atomicput.pPut, this->pBegin, this->pEnd,
 															pData, uDataLen);
-	return TRUE;
+	return true;
 }
 
 bool ARingbuffer_atomicput_putS(ARingbuffer_t* this, char* S, bool bWriteNull)
@@ -252,7 +252,7 @@ bool ARingbuffer_atomicput_end(ARingbuffer_t* this)
 
 	if (!this->atomicput.pPut)
 	{
-		return FALSE;
+		return false;
 	}
 
 	if (this->atomicput.bFailed)
@@ -263,8 +263,8 @@ bool ARingbuffer_atomicput_end(ARingbuffer_t* this)
 		{
 			if (writeFailedMark(this))
 			{
-				this->atomicput.bFailed = FALSE;
-				this->atomicput.bPrevPutFailed = TRUE;
+				this->atomicput.bFailed = false;
+				this->atomicput.bPrevPutFailed = true;
 
 				this->atomicput.pBegin = NULL;
 				this->atomicput.pPut = NULL;
@@ -272,14 +272,14 @@ bool ARingbuffer_atomicput_end(ARingbuffer_t* this)
 		}
 		else
 		{
-			this->atomicput.bFailed = FALSE;
-			this->atomicput.bPrevPutFailed = TRUE;
+			this->atomicput.bFailed = false;
+			this->atomicput.bPrevPutFailed = true;
 
 			this->atomicput.pPut = NULL;
 			this->atomicput.pBegin = NULL;
 		}
 
-		bRes = FALSE;
+		bRes = false;
 	}
 	else
 	{
@@ -296,8 +296,8 @@ bool ARingbuffer_atomicput_end(ARingbuffer_t* this)
 		this->atomicput.pPut = NULL;
 		this->atomicput.pBegin = NULL;
 
-		this->atomicput.bPrevPutFailed = FALSE;
-		bRes = TRUE;
+		this->atomicput.bPrevPutFailed = false;
+		bRes = true;
 	}
 
 
@@ -313,7 +313,7 @@ static inline bool writeFailedMark(ARingbuffer_t* this)
 	if (this->atomicput.bSuppressConsectutiveFailedMarks &&
 										this->atomicput.bPrevPutFailed)
 	{
-		bRes = TRUE;
+		bRes = true;
 	}
 	else
 	{
@@ -327,7 +327,7 @@ static inline bool writeFailedMark(ARingbuffer_t* this)
 
 		if ( getFree(this, this->pPut) < nReqSpace )
 		{
-			bRes = FALSE;
+			bRes = false;
 		}
 		else
 		{
@@ -344,7 +344,7 @@ static inline bool writeFailedMark(ARingbuffer_t* this)
 			this->pPut = putX(this->pPut, this->pBegin, this->pEnd,
 												this->atomicput.acFailedMark,
 												this->atomicput.uFailedMarkLen);
-			bRes = TRUE;
+			bRes = true;
 		}
 	}
 
@@ -359,7 +359,7 @@ bool ARingbuffer_glanceX(ARingbuffer_t* this, uint8_t* pData,
 
 	if ( ARingbuffer_getCount(this) < (uOffset + uCount) )
 	{
-		return FALSE;
+		return false;
 	}
 
 	pGet = this->pGet + uOffset;
@@ -371,7 +371,7 @@ bool ARingbuffer_glanceX(ARingbuffer_t* this, uint8_t* pData,
 
 	getX(pGet, this->pBegin, this->pEnd, pData, uCount);
 
-	return TRUE;
+	return true;
 }
 
 
@@ -381,7 +381,7 @@ bool ARingbuffer_dropX(ARingbuffer_t* this, uint32_t uCount)
 
 	if ( ARingbuffer_getCount(this) < uCount )
 	{
-		return FALSE;
+		return false;
 	}
 
 	pGet = this->pGet + uCount;
@@ -393,7 +393,7 @@ bool ARingbuffer_dropX(ARingbuffer_t* this, uint32_t uCount)
 
 	this->pGet = pGet;
 
-	return TRUE;
+	return true;
 }
 
 
@@ -401,12 +401,12 @@ bool ARingbuffer_getX(ARingbuffer_t* this, uint8_t* pTarget, uint16_t uCount)
 {
 	if (ARingbuffer_getCount(this) < uCount)
 	{
-		return FALSE;
+		return false;
 	}
 
 	this->pGet = getX(this->pGet, this->pBegin, this->pEnd, pTarget, uCount);
 
-	return TRUE;
+	return true;
 }
 
 

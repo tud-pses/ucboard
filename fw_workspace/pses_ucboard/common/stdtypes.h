@@ -9,23 +9,19 @@
 #define STDTYPES_H_
 
 #include <stdint.h>
-
 #include <stdbool.h>
 
-#ifndef FALSE
-#define FALSE false
-#endif
-#ifndef TRUE
-#define TRUE true
-#endif
 
-
-//#define NULL 0
 //#include <stdio.h>
+#ifndef NULL
+	#define NULL (void*)0
+	typedef unsigned size_t;
+#endif
 
 
 #define UNUSED_(x) UNUSED_ ## x __attribute__((unused))
 
+#define _INLINE inline __attribute__((always_inline))
 
 
 #endif /* STDTYPES_H_ */
