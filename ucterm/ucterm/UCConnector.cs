@@ -35,23 +35,30 @@ namespace ucterm
 		public delegate void NewCorruptDataHandler(object sender, String data);
 		public event NewCorruptDataHandler NewCorruptData;
 
+		public delegate void AsyncSendCompletedHandler(object sender);
+		public event AsyncSendCompletedHandler AsyncSendCompleted;
+
 		private System.IO.Ports.SerialPort m_serialPort;
 
 
         private bool m_bDoDisconnect = false;
         private bool m_bConnected = false;
         private Thread m_connectorThread;
+		private Thread m_sendThread;
 
-        public EnConnState ConnectionState { get; private set; }
+		public EnConnState ConnectionState { get; private set; }
 
         public UCConnector()
         {
-            m_serialPort = new System.IO.Ports.SerialPort();
+			m_txmsgs = new Queue<string>();
+
+			m_serialPort = new System.IO.Ports.SerialPort();
             m_connectorThread = null;
+			m_sendThread = null;
 
             ConnectionState = EnConnState.DISCONNECTED;
 
-            return;
+			return;
         }
 
 
@@ -121,27 +128,125 @@ namespace ucterm
             return;
         }
 
-        private Boolean m_bTxQueueEmpty = true;
-        private String m_szTxMsg;
+		private Queue<String> m_txmsgs;
 
-        public void Send(String msg)
+		public Boolean IsTxBufferEmpty { get { return (m_txmsgs.Count == 0); } }
+
+		private uint m_rxdebit = 0;
+
+		public Boolean IsCmdCompleted { get { return (m_rxdebit == 0); } }
+
+		public void ClearRxDebit()
+		{
+			System.Threading.Monitor.Enter(m_txmsgs);
+			m_rxdebit = 0;
+			System.Threading.Monitor.Exit(m_txmsgs);
+
+			return;
+		}
+
+		public void Send(String msg)
         {
             if (!m_bConnected)
             {
                 return;
             }
 
-            if (m_bTxQueueEmpty)
-            {
-                m_szTxMsg = msg;
-                m_bTxQueueEmpty = false;
-            }
+			System.Threading.Monitor.Enter(m_txmsgs);
+			m_txmsgs.Enqueue(msg);
+			++m_rxdebit;
+			System.Threading.Monitor.Exit(m_txmsgs);
 
             return;
         }
 
+		private Boolean m_bAbortAsyncSend = false;
 
-        public void Disconnect()
+		public void AsyncSend(List<String> msgs, UInt32 Nreps, Boolean bWait)
+		{
+			if (!m_bConnected)
+			{
+				AsyncSendCompleted?.Invoke(this);
+				return;
+			}
+
+			if (m_sendThread != null)
+			{
+				if ((m_sendThread.ThreadState == ThreadState.Unstarted)
+						|| (m_sendThread.ThreadState == ThreadState.Stopped))
+				{
+					m_sendThread = null;
+				}
+			}
+
+			m_bAbortAsyncSend = false;
+
+			m_sendThread = new Thread(new ThreadStart(() => AsyncSendThread(msgs, Nreps, bWait)))
+			{
+				Name = "Connector_AsyncSendThread"
+			};
+
+			m_sendThread.Start();
+
+			return;
+		}
+
+		public void AbortAsyncSend()
+		{
+			m_bAbortAsyncSend = true;
+
+			return;
+		}
+
+		private void AsyncSendThread(List<String> msgs, UInt32 Nreps, Boolean bWait)
+		{
+			for (uint k = 0; k < Nreps; ++k)
+			{
+				foreach (String cmd in msgs)
+				{
+					if (cmd.Trim() == "")
+					{
+						continue;
+					}
+
+					if (bWait)
+					{
+						uint w = 0;
+
+						while (!IsCmdCompleted && !m_bAbortAsyncSend)
+						{
+							System.Threading.Thread.Sleep(100);
+
+							if (++w == 10)
+							{
+								ClearRxDebit();
+
+								NewRespData?.Invoke(this, "[[giving up on answer]]");
+								break;
+							}
+						}
+					}
+
+					if (m_bAbortAsyncSend)
+					{
+						break;
+					}
+
+					Send(cmd.Trim());
+				}
+
+				if (m_bAbortAsyncSend)
+				{
+					break;
+				}
+			}
+
+			AsyncSendCompleted?.Invoke(this);
+
+			return;
+		}
+
+		public void Disconnect()
         {
             m_bDoDisconnect = true;
 
@@ -200,7 +305,14 @@ namespace ucterm
 
                             if (msg[0] == ':')
                             {
-                                NewRespData?.Invoke(this, msg);
+								NewRespData?.Invoke(this, msg);
+
+								System.Threading.Monitor.Enter(m_txmsgs);
+								if (m_rxdebit > 0)
+								{
+									--m_rxdebit;
+								}
+								System.Threading.Monitor.Exit(m_txmsgs);
                             }
                             else if (msg[0] == '\'')
                             {
@@ -218,16 +330,26 @@ namespace ucterm
                     }
                 }
 
-                if (!m_bTxQueueEmpty)
-                {
-                    Byte[] tmp = Encoding.ASCII.GetBytes(m_szTxMsg);
-                    Byte[] tx = new Byte[tmp.Length + 1];
-                    tmp.CopyTo(tx, 0);
-                    tx[tx.Length - 1] = 10;
+				String txmsg = null;
 
-                    m_serialPort.Write(tx, 0, tx.Length);
-                    m_bTxQueueEmpty = true;
-                }
+				System.Threading.Monitor.Enter(m_txmsgs);
+				if (m_txmsgs.Count > 0)
+				{
+					txmsg = m_txmsgs.Dequeue();
+				}
+				System.Threading.Monitor.Exit(m_txmsgs);
+
+				if (txmsg != null)
+				{
+					NewRespData?.Invoke(this, txmsg);
+
+					Byte[] tmp = Encoding.ASCII.GetBytes(txmsg);
+					Byte[] tx = new Byte[tmp.Length + 1];
+					tmp.CopyTo(tx, 0);
+					tx[tx.Length - 1] = 10;
+
+					m_serialPort.Write(tx, 0, tx.Length);
+				}
             }
 
             if (m_serialPort.IsOpen)
@@ -242,6 +364,5 @@ namespace ucterm
 
             return;
         }
-
     }
 }

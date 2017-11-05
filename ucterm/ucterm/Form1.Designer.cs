@@ -45,9 +45,12 @@
 			this.grpDisplay = new System.Windows.Forms.GroupBox();
 			this.grpDAQ = new System.Windows.Forms.GroupBox();
 			this.grpCommands = new System.Windows.Forms.GroupBox();
-			this.cmdClearText = new System.Windows.Forms.Button();
-			this.rtbCorruptData = new System.Windows.Forms.RichTextBox();
 			this.label3 = new System.Windows.Forms.Label();
+			this.rtbCorruptData = new System.Windows.Forms.RichTextBox();
+			this.cmdClearText = new System.Windows.Forms.Button();
+			this.txtRepetitions = new System.Windows.Forms.TextBox();
+			this.chkWaitForAnswer = new System.Windows.Forms.CheckBox();
+			this.label4 = new System.Windows.Forms.Label();
 			this.grpConnection.SuspendLayout();
 			this.grpDisplay.SuspendLayout();
 			this.grpDAQ.SuspendLayout();
@@ -150,25 +153,26 @@
 			// txtTxCommand
 			// 
 			this.txtTxCommand.Location = new System.Drawing.Point(6, 19);
+			this.txtTxCommand.Multiline = true;
 			this.txtTxCommand.Name = "txtTxCommand";
-			this.txtTxCommand.Size = new System.Drawing.Size(263, 20);
+			this.txtTxCommand.Size = new System.Drawing.Size(263, 77);
 			this.txtTxCommand.TabIndex = 8;
 			this.txtTxCommand.KeyDown += new System.Windows.Forms.KeyEventHandler(this.TxtTxCommand_KeyDown);
 			// 
 			// rtbCommands
 			// 
 			this.rtbCommands.Font = new System.Drawing.Font("Consolas", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			this.rtbCommands.Location = new System.Drawing.Point(6, 46);
+			this.rtbCommands.Location = new System.Drawing.Point(6, 102);
 			this.rtbCommands.Name = "rtbCommands";
 			this.rtbCommands.ReadOnly = true;
-			this.rtbCommands.Size = new System.Drawing.Size(338, 327);
+			this.rtbCommands.Size = new System.Drawing.Size(338, 271);
 			this.rtbCommands.TabIndex = 9;
 			this.rtbCommands.Text = "";
 			this.rtbCommands.WordWrap = false;
 			// 
 			// cmdSend
 			// 
-			this.cmdSend.Location = new System.Drawing.Point(275, 17);
+			this.cmdSend.Location = new System.Drawing.Point(275, 19);
 			this.cmdSend.Name = "cmdSend";
 			this.cmdSend.Size = new System.Drawing.Size(69, 23);
 			this.cmdSend.TabIndex = 10;
@@ -220,6 +224,9 @@
 			// 
 			// grpCommands
 			// 
+			this.grpCommands.Controls.Add(this.label4);
+			this.grpCommands.Controls.Add(this.chkWaitForAnswer);
+			this.grpCommands.Controls.Add(this.txtRepetitions);
 			this.grpCommands.Controls.Add(this.label3);
 			this.grpCommands.Controls.Add(this.rtbCorruptData);
 			this.grpCommands.Controls.Add(this.txtTxCommand);
@@ -232,15 +239,14 @@
 			this.grpCommands.TabStop = false;
 			this.grpCommands.Text = "Befehle/Antworten";
 			// 
-			// cmdClearText
+			// label3
 			// 
-			this.cmdClearText.Location = new System.Drawing.Point(999, 548);
-			this.cmdClearText.Name = "cmdClearText";
-			this.cmdClearText.Size = new System.Drawing.Size(75, 23);
-			this.cmdClearText.TabIndex = 15;
-			this.cmdClearText.Text = "Löschen";
-			this.cmdClearText.UseVisualStyleBackColor = true;
-			this.cmdClearText.Click += new System.EventHandler(this.CmdClearText_Click);
+			this.label3.AutoSize = true;
+			this.label3.Location = new System.Drawing.Point(6, 385);
+			this.label3.Name = "label3";
+			this.label3.Size = new System.Drawing.Size(121, 13);
+			this.label3.TabIndex = 12;
+			this.label3.Text = "Fehlerhafte Nachrichten";
 			// 
 			// rtbCorruptData
 			// 
@@ -253,14 +259,45 @@
 			this.rtbCorruptData.Text = "";
 			this.rtbCorruptData.WordWrap = false;
 			// 
-			// label3
+			// cmdClearText
 			// 
-			this.label3.AutoSize = true;
-			this.label3.Location = new System.Drawing.Point(6, 385);
-			this.label3.Name = "label3";
-			this.label3.Size = new System.Drawing.Size(121, 13);
-			this.label3.TabIndex = 12;
-			this.label3.Text = "Fehlerhafte Nachrichten";
+			this.cmdClearText.Location = new System.Drawing.Point(999, 548);
+			this.cmdClearText.Name = "cmdClearText";
+			this.cmdClearText.Size = new System.Drawing.Size(75, 23);
+			this.cmdClearText.TabIndex = 15;
+			this.cmdClearText.Text = "Löschen";
+			this.cmdClearText.UseVisualStyleBackColor = true;
+			this.cmdClearText.Click += new System.EventHandler(this.CmdClearText_Click);
+			// 
+			// txtRepetitions
+			// 
+			this.txtRepetitions.Location = new System.Drawing.Point(295, 48);
+			this.txtRepetitions.Name = "txtRepetitions";
+			this.txtRepetitions.Size = new System.Drawing.Size(49, 20);
+			this.txtRepetitions.TabIndex = 13;
+			this.txtRepetitions.Text = "1";
+			this.txtRepetitions.KeyDown += new System.Windows.Forms.KeyEventHandler(this.TxtRepetitions_KeyDown);
+			// 
+			// chkWaitForAnswer
+			// 
+			this.chkWaitForAnswer.AutoSize = true;
+			this.chkWaitForAnswer.Checked = true;
+			this.chkWaitForAnswer.CheckState = System.Windows.Forms.CheckState.Checked;
+			this.chkWaitForAnswer.Location = new System.Drawing.Point(275, 74);
+			this.chkWaitForAnswer.Name = "chkWaitForAnswer";
+			this.chkWaitForAnswer.Size = new System.Drawing.Size(56, 17);
+			this.chkWaitForAnswer.TabIndex = 14;
+			this.chkWaitForAnswer.Text = "Pause";
+			this.chkWaitForAnswer.UseVisualStyleBackColor = true;
+			// 
+			// label4
+			// 
+			this.label4.AutoSize = true;
+			this.label4.Location = new System.Drawing.Point(275, 51);
+			this.label4.Name = "label4";
+			this.label4.Size = new System.Drawing.Size(15, 13);
+			this.label4.TabIndex = 15;
+			this.label4.Text = "N";
 			// 
 			// Form1
 			// 
@@ -309,6 +346,9 @@
         private System.Windows.Forms.Button cmdClearText;
 		private System.Windows.Forms.RichTextBox rtbCorruptData;
 		private System.Windows.Forms.Label label3;
+		private System.Windows.Forms.CheckBox chkWaitForAnswer;
+		private System.Windows.Forms.TextBox txtRepetitions;
+		private System.Windows.Forms.Label label4;
 	}
 }
 

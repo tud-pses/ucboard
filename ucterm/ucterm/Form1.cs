@@ -40,6 +40,7 @@ namespace ucterm
             m_connector.NewDAQData += Connector_NewDAQData;
             m_connector.NewRespData += Connector_NewRespData;
 			m_connector.NewCorruptData += Connector_NewCorruptData;
+			m_connector.AsyncSendCompleted += Connector_AsyncSendCompleted;
 
 			CmdRefreshCOMList_Click(this, null);
 
@@ -55,7 +56,32 @@ namespace ucterm
             return;
         }
 
-        private void CmdRefreshCOMList_Click(object sender, EventArgs e)
+		private void Connector_AsyncSendCompleted(object sender)
+		{
+			MethodInvoker updater;
+
+			updater = delegate
+			{
+				cmdSend.Text = "Senden";
+				cmdSend.Enabled = true;
+				txtRepetitions.Enabled = true;
+				txtTxCommand.Enabled = true;
+				txtTxCommand.Focus();
+			};
+
+			if (this.InvokeRequired)
+			{
+				this.BeginInvoke(updater);
+			}
+			else
+			{
+				updater();
+			}
+
+			return;
+		}
+
+		private void CmdRefreshCOMList_Click(object sender, EventArgs e)
         {
             lstCOMPorts.Items.Clear();
             lstCOMPorts.Items.AddRange(System.IO.Ports.SerialPort.GetPortNames());
@@ -119,18 +145,32 @@ namespace ucterm
 
         private void CmdSend_Click(object sender, EventArgs e)
         {
-            String cmd = txtTxCommand.Text;
+            String cmdinput = txtTxCommand.Text;
+			String szN = txtRepetitions.Text;
 
-            System.Threading.Monitor.Enter(m_sbCmdRespData);
+			if (cmdSend.Text == "Senden")
+			{
+				cmdSend.Text = "Abbrechen";
+				txtTxCommand.Enabled = false;
+				txtRepetitions.Enabled = false;
 
-            m_sbCmdRespData.Append("\n");
-            m_sbCmdRespData.Append(cmd);
+				if (!uint.TryParse(szN, out uint N))
+				{
+					N = 1;
+				}
 
-            System.Threading.Monitor.Exit(m_sbCmdRespData);
+				List<String> cmds = cmdinput.Split(new[] { '\r', '\n' }).ToList();
+				cmds.RemoveAll((s) => (s.Trim() == ""));
 
-            m_connector.Send(cmd);
+				m_connector.AsyncSend(cmds, N, chkWaitForAnswer.Checked);
+			}
+			else
+			{
+				cmdSend.Enabled = false;
+				m_connector.AbortAsyncSend();
+			}
 
-            return;
+			return;
         }
 
         private void Connector_NewRespData(object sender, String data)
@@ -403,8 +443,13 @@ namespace ucterm
         {
             if (e.KeyCode == Keys.Enter)
             {
-                CmdSend_Click(this, null);
-            }
+				if (!e.Control)
+				{
+					txtRepetitions.Text = "1";
+					CmdSend_Click(this, null);
+					e.SuppressKeyPress = true;
+				}
+			}
 
             return;
         }
@@ -423,5 +468,16 @@ namespace ucterm
 
             return;
         }
-    }
+
+		private void TxtRepetitions_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.KeyCode == Keys.Enter)
+			{
+				CmdSend_Click(this, null);
+				e.SuppressKeyPress = true;
+			}
+
+			return;
+		}
+	}
 }
