@@ -401,8 +401,11 @@ namespace ucterm
 
                     cmdSend.Enabled = true;
                     txtTxCommand.Enabled = true;
+					txtRepetitions.Enabled = true;
+					lblRepetitions.Enabled = true;
+					chkWaitForAnswer.Enabled = true;
 
-                    cmdConnect.Text = "Trennen";
+					cmdConnect.Text = "Trennen";
                 }
                 else if ( (state == UCConnector.EnConnState.DISCONNECTED) || (state == UCConnector.EnConnState.FAILED_TO_CONNECTED) )
                 {
@@ -415,16 +418,23 @@ namespace ucterm
 
                     cmdSend.Enabled = false;
                     txtTxCommand.Enabled = false;
+					txtRepetitions.Enabled = false;
+					lblRepetitions.Enabled = false;
+					chkWaitForAnswer.Enabled = false;
 
-                    cmdConnect.Text = "Verbinden";
+					cmdConnect.Text = "Verbinden";
                 }
                 else
                 {
                     grpConnection.Enabled = false;
 
                     cmdSend.Enabled = false;
-                }
-            };
+					txtTxCommand.Enabled = false;
+					txtRepetitions.Enabled = false;
+					lblRepetitions.Enabled = false;
+					chkWaitForAnswer.Enabled = false;
+				}
+			};
 
             if (this.InvokeRequired)
             {

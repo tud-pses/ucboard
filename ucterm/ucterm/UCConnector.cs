@@ -209,6 +209,13 @@ namespace ucterm
 						continue;
 					}
 
+					if (m_bAbortAsyncSend)
+					{
+						break;
+					}
+
+					Send(cmd.Trim());
+
 					if (bWait)
 					{
 						uint w = 0;
@@ -226,13 +233,6 @@ namespace ucterm
 							}
 						}
 					}
-
-					if (m_bAbortAsyncSend)
-					{
-						break;
-					}
-
-					Send(cmd.Trim());
 				}
 
 				if (m_bAbortAsyncSend)
