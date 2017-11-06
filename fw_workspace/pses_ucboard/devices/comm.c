@@ -396,7 +396,7 @@ void comm_do()
 
 			if (s_bIncompleteRespStreamMsg)
 			{
-				f_pRespStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				f_pRespStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
 				s_bIncompleteRespStreamMsg = !bMsgComplete;
 
 				if (bMsgComplete)
@@ -406,12 +406,12 @@ void comm_do()
 			}
 			else if (s_bIncompletePriorityStreamMsg)
 			{
-				f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
 				s_bIncompletePriorityStreamMsg = !bMsgComplete;
 			}
 			else
 			{
-				f_streams[s_uCurStreamID]((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+				f_streams[s_uCurStreamID]((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
 				s_bIncompleteStreamMsg = !bMsgComplete;
 			}
 
@@ -446,7 +446,7 @@ void comm_do()
 
 				if (f_pRespStream != NULL)
 				{
-					res = f_pRespStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+					res = f_pRespStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
 
 					if (res)
 					{
@@ -461,7 +461,7 @@ void comm_do()
 
 				if ( (!res) && (f_priorityStream != NULL) )
 				{
-					res = f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+					res = f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
 
 					if (res)
 					{
@@ -482,7 +482,7 @@ void comm_do()
 							i = 0;
 						}
 
-						res = f_streams[i]((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - 1);
+						res = f_streams[i]((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
 
 						if (res == true)
 						{

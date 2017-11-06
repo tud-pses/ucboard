@@ -28,6 +28,7 @@
 
 #define RXMAXMSGLEN	1000
 #define TXMAXMSGLEN	1000
+#define MAXEOTLEN	2
 
 typedef enum EnCmdSpec_
 {
