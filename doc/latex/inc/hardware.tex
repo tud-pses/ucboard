@@ -284,7 +284,7 @@ Auf der hinteren rechten Ecke des ucboards befindet sich ein Beschleunigungs- un
 Die $x$-Achse zeigt nach vorne, die $y$-Achse nach links und die $z$-Achse nach oben.
 
 Der Sensor gibt die Messwerte als \texttt{int16\_t}-Werte aus. Die Umrechnung eines Sensorwertes \texttt{val} in eine physikalische Einheit hängt von dem gewählten Messbereich ab. Für Beschleunigungswerte gilt
-\begin{align*}
+\begin{align}
 	a(\mathtt{val})
 		=
 			\begin{cases}
@@ -293,18 +293,20 @@ Der Sensor gibt die Messwerte als \texttt{int16\_t}-Werte aus. Die Umrechnung ei
 				\frac{\mathtt{val}}{4\,096} g & \tn{wenn Messbereich } \pm 8\,g \\
 				\frac{\mathtt{val}}{2\,048} g & \tn{wenn Messbereich } \pm 16\,g 
 			\end{cases}
-\end{align*}
+	\label{eq:hw:IMU:ACCScale}
+\end{align}
 und für Drehratenwerte gilt
-\begin{align*}
+\begin{align}
 	\omega(\mathtt{val})
 		=
 			\begin{cases}
 				\frac{\mathtt{val}}{131} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{250}{\degree / s} \\
 				\frac{\mathtt{val}}{65,5} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{500}{\degree / s} \\
-				\frac{\mathtt{val}}{32.8} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{1000}{\degree / s} \\
-				\frac{\mathtt{val}}{16.4} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{2000}{\degree / s}\;.
+				\frac{\mathtt{val}}{32,8} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{1000}{\degree / s} \\
+				\frac{\mathtt{val}}{16,4} \mrm{\degree / s} & \tn{wenn Messbereich } \pm \valunit{2000}{\degree / s}\;.
 			\end{cases}
-\end{align*}
+	\label{eq:hw:IMU:GYROScale}
+\end{align}
 
 Standardmäßig sind die Messbereiche $\pm 4\,g$ und $\pm \valunit{500}{\degree / s}$ eingestellt. Diese können jedoch über entsprechende Befehle geändert werden.
 
