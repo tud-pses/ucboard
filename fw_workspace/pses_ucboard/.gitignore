@@ -1,2 +1,6 @@
-/Debug/
+/Debug
 /stlinkflash.bat
+/bin
+/obj
+/*.depend
+/*.elay
