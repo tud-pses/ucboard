@@ -202,43 +202,43 @@ void ARingbuffer_clear(ARingbuffer_t* this);
 uint16_t ARingbuffer_getFreeSpace(ARingbuffer_t* this);
 
 
-inline bool ARingbuffer_isempty(ARingbuffer_t* this);
-inline uint16_t ARingbuffer_getCount(ARingbuffer_t* this);
+static inline bool ARingbuffer_isempty(ARingbuffer_t* this);
+static inline uint16_t ARingbuffer_getCount(ARingbuffer_t* this);
 
-inline uint16_t ARingbuffer_getContiguousCount(ARingbuffer_t* this);
-inline uint8_t* ARingbuffer_getReadPtr(ARingbuffer_t* this);
+static inline uint16_t ARingbuffer_getContiguousCount(ARingbuffer_t* this);
+static inline uint8_t* ARingbuffer_getReadPtr(ARingbuffer_t* this);
 
 
-inline bool ARingbuffer_isempty(ARingbuffer_t* this)
+static inline bool ARingbuffer_isempty(ARingbuffer_t* this)
 {
 	return (ARingbuffer_getCount(this) == 0);
 }
 
 
-inline uint16_t ARingbuffer_getCount(ARingbuffer_t* this)
+static inline uint16_t ARingbuffer_getCount(ARingbuffer_t* this)
 {
 	return RINGBUFFER_COUNT(this->pPut, this->pGet, this->pBegin, this->pEnd);
 }
 
 
-inline uint16_t ARingbuffer_getContiguousCount(ARingbuffer_t* this)
+static inline uint16_t ARingbuffer_getContiguousCount(ARingbuffer_t* this)
 {
 	return (this->pPut >= this->pGet) ? (this->pPut - this->pGet) : (this->pEnd - this->pGet);
 }
 
 
-inline uint8_t* ARingbuffer_getReadPtr(ARingbuffer_t* this)
+static inline uint8_t* ARingbuffer_getReadPtr(ARingbuffer_t* this)
 {
 	return this->pGet;
 }
 
 
-inline uint32_t ARingbuffer_getFailedCount(ARingbuffer_t* this)
+static inline uint32_t ARingbuffer_getFailedCount(ARingbuffer_t* this)
 {
 	return this->uFailed;
 }
 
-inline uint32_t ARingbuffer_resetFailedCount(ARingbuffer_t* this)
+static inline uint32_t ARingbuffer_resetFailedCount(ARingbuffer_t* this)
 {
 	uint32_t uFailed;
 	

@@ -410,7 +410,7 @@ bool ARingbuffer_getX(ARingbuffer_t* this, uint8_t* pTarget, uint16_t uCount)
 }
 
 
-inline uint16_t getAtomicLen(ARingbuffer_t* this)
+static inline uint16_t getAtomicLen(ARingbuffer_t* this)
 {
 	uint8_t* pAPut;
 	uint8_t* pABegin;
@@ -447,7 +447,7 @@ uint16_t ARingbuffer_getFreeSpace(ARingbuffer_t* this)
 }
 
 
-inline uint16_t getFree(ARingbuffer_t* this, uint8_t* pPut)
+static inline uint16_t getFree(ARingbuffer_t* this, uint8_t* pPut)
 {
 	return RINGBUFFER_FREE(pPut, this->pGet, this->pBegin, this->pEnd);
 }

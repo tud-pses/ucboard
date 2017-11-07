@@ -99,7 +99,7 @@ static uint8_t f_daqDrvBatVoltage = 0xFF;
 static uint8_t f_daqCarBatVoltage = 0xFF;
 
 
-inline static int32_t linearmapping(int32_t x, int32_t xa, int32_t xb, int32_t ya, int32_t yb)
+static inline int32_t linearmapping(int32_t x, int32_t xa, int32_t xb, int32_t ya, int32_t yb)
 {
 	return ((yb - ya) * (x - xa)) / (xb - xa) + ya;
 }

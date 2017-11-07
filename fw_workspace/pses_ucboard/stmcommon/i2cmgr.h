@@ -190,7 +190,7 @@ EnI2CMgrRes_t i2cmgr_enqueueAsynchMsgs(uint8_t uDeviceID,
 												I2CMGR_Msg_t* pMsgs);
 
 
-inline void i2cmgr_setupMsgStruct(I2CMGR_Msg_t* pMsg, EnI2CMgr_MsgDir_t eDir,
+static inline void i2cmgr_setupMsgStruct(I2CMGR_Msg_t* pMsg, EnI2CMgr_MsgDir_t eDir,
 									uint16_t nCount, uint8_t* pBuffer);
 
 EnI2C_MsgState_t i2cmgr_getMsgState(uint8_t uDeviceID);
@@ -204,7 +204,7 @@ EnI2CMgrRes_t i2cmgr_getMsgRes(uint8_t uDeviceID);
 // Definitionen der inline-Funktionen
 // =========================================================================
 
-inline void i2cmgr_setupMsgStruct(I2CMGR_Msg_t* pMsg, EnI2CMgr_MsgDir_t eDir,
+static inline void i2cmgr_setupMsgStruct(I2CMGR_Msg_t* pMsg, EnI2CMgr_MsgDir_t eDir,
 									uint16_t nCount, uint8_t* pBuffer)
 {
 	pMsg->eDir = eDir;

@@ -20,16 +20,16 @@ extern bool isPositiveInteger(const char *s);
 
 extern int atoi(const char* p);
 
-inline uint32_t copystring(char* szTarget, char* szSource, uint32_t uMaxLen);
+static inline uint32_t copystring(char* szTarget, char* szSource, uint32_t uMaxLen);
 
 
-inline void memcpyX(uint8_t* pTarget, uint8_t* pSource, uint16_t uLen);
-inline void memcpy8(uint8_t* pTarget, uint8_t* pSource);
-inline void memcpy16(uint8_t* pTarget, uint8_t* pSource);
-inline void memcpy32(uint8_t* pTarget, uint8_t* pSource);
-inline void memcpy64(uint8_t* pTarget, uint8_t* pSource);
+static inline void memcpyX(uint8_t* pTarget, uint8_t* pSource, uint16_t uLen);
+static inline void memcpy8(uint8_t* pTarget, uint8_t* pSource);
+static inline void memcpy16(uint8_t* pTarget, uint8_t* pSource);
+static inline void memcpy32(uint8_t* pTarget, uint8_t* pSource);
+static inline void memcpy64(uint8_t* pTarget, uint8_t* pSource);
 
-inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen);
+static inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen);
 
 
 #define MEMCPYX(t, s, len) memcpyX((uint8_t*)t, (uint16_t*)s, len)
@@ -47,7 +47,7 @@ inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen);
 #define ABS(value) (value<0) ? -value : value
 
 
-inline uint32_t copystring(char* szTarget, char* szSource, uint32_t uMaxLen)
+static inline uint32_t copystring(char* szTarget, char* szSource, uint32_t uMaxLen)
 {
 	uint32_t uLen = 1;
 
@@ -67,7 +67,7 @@ inline uint32_t copystring(char* szTarget, char* szSource, uint32_t uMaxLen)
 }
 
 
-inline void memcpyX(uint8_t* pTarget, uint8_t* pSource, uint16_t uLen)
+static inline void memcpyX(uint8_t* pTarget, uint8_t* pSource, uint16_t uLen)
 {
 	while(uLen--)
 		*pTarget++ = *pSource++;
@@ -75,34 +75,21 @@ inline void memcpyX(uint8_t* pTarget, uint8_t* pSource, uint16_t uLen)
 	return;
 }
 
-inline void memcpy8(uint8_t* pTarget, uint8_t* pSource)
+static inline void memcpy8(uint8_t* pTarget, uint8_t* pSource)
 {
 	*pTarget = *pSource;
 	return;
 }
 
-inline void memcpy16(uint8_t* pTarget, uint8_t* pSource)
+static inline void memcpy16(uint8_t* pTarget, uint8_t* pSource)
 {
 	*pTarget++ = *pSource++;
 	*pTarget = *pSource;
 	return;
 }
 
-inline void memcpy32(uint8_t* pTarget, uint8_t* pSource)
+static inline void memcpy32(uint8_t* pTarget, uint8_t* pSource)
 {
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget = *pSource;
-	return;
-}
-
-inline void memcpy64(uint8_t* pTarget, uint8_t* pSource)
-{
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
 	*pTarget++ = *pSource++;
 	*pTarget++ = *pSource++;
 	*pTarget++ = *pSource++;
@@ -110,7 +97,20 @@ inline void memcpy64(uint8_t* pTarget, uint8_t* pSource)
 	return;
 }
 
-inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen)
+static inline void memcpy64(uint8_t* pTarget, uint8_t* pSource)
+{
+	*pTarget++ = *pSource++;
+	*pTarget++ = *pSource++;
+	*pTarget++ = *pSource++;
+	*pTarget++ = *pSource++;
+	*pTarget++ = *pSource++;
+	*pTarget++ = *pSource++;
+	*pTarget++ = *pSource++;
+	*pTarget = *pSource;
+	return;
+}
+
+static inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen)
 {
 	while (uLen--)
 	{

@@ -61,10 +61,10 @@ static bool getNextMsg(EnI2C_PORT_t eI2C, uint8_t* puDeviceID, uint8_t* puMsg,
 static void startComm(EnI2C_PORT_t eI2C, uint8_t uDeviceID, uint8_t uMsg);
 static void finishCurComm(EnI2C_PORT_t eI2C);
 
-inline void startTimer(uint16_t us);
-inline void stopTimer();
+static inline void startTimer(uint16_t us);
+static inline void stopTimer();
 
-inline void initBusResetStruct(BusResetData_t* pData);
+static inline void initBusResetStruct(BusResetData_t* pData);
 
 
 static void stateMachine_TXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent);
@@ -72,14 +72,14 @@ static void stateMachine_RXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent);
 //static void stateMachine_TXDMA(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent);
 //static void stateMachine_RXDMA(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent);
 
-inline void initDebugPins();
+static inline void initDebugPins();
 
 
 //#define DEACTIVATEBUS(b) I2C_ITConfig( b, I2C_IT_ERR | I2C_IT_EVT | I2C_IT_BUF, DISABLE )
 
 
 #ifdef DEBUG_I2C
-inline void initDebugPins()
+static inline void initDebugPins()
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
 
@@ -111,7 +111,7 @@ inline void initDebugPins()
 #define SETDEBUG_C() GPIO_SetBits(GPIOE, GPIO_Pin_7)
 #define RESETDEBUG_C() GPIO_ResetBits(GPIOE, GPIO_Pin_7)
 #else
-inline void initDebugPins() {}
+static inline void initDebugPins() {}
 
 #define SETDEBUGPINS(u)
 #define SETDEBUG_A()
@@ -1285,7 +1285,7 @@ void TIM6_DAC_IRQHandler( void )
 }
 
 
-inline void initBusResetStruct(BusResetData_t* pData)
+static inline void initBusResetStruct(BusResetData_t* pData)
 {
 	pData->uTic = 0;
 	pData->uToggleCount = 0;
@@ -1294,7 +1294,7 @@ inline void initBusResetStruct(BusResetData_t* pData)
 	return;
 }
 
-inline void startTimer(uint16_t us)
+static inline void startTimer(uint16_t us)
 {
 	TIM6->CNT = 0xFFFF - us;
 	//TIM6->ARR = us;
@@ -1308,7 +1308,7 @@ inline void startTimer(uint16_t us)
 }
 
 
-inline void stopTimer()
+static inline void stopTimer()
 {
 	__TIM_DISABLE(TIM6);
 

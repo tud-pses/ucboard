@@ -95,18 +95,18 @@ EnUSDataAvailableQueryResult_t usonic_getDataAvailableQueryResult(USdevice_t* th
 bool usonic_startDataQuery(USdevice_t* this);
 EnUSDataQueryResult_t usonic_getDataQueryResult(USdevice_t* this, uint16_t* pVal);
 
-inline bool usonic_hasNewData(USdevice_t* this);
-inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance);
+static inline bool usonic_hasNewData(USdevice_t* this);
+static inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance);
 void usonic_copyData(USdevice_t* this, uint16_t* pData);
 void usonic_do(USdevice_t* this);
 void usonic_trigger(USdevice_t* this);
 
-inline bool usonic_hasNewData(USdevice_t* this)
+static inline bool usonic_hasNewData(USdevice_t* this)
 {
 	return this->bNewData;
 }
 
-inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance)
+static inline bool usonic_getData(USdevice_t* this, uint16_t* pDistance)
 {
 	if (!this->bNewData)
 	{
