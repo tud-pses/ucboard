@@ -52,7 +52,27 @@ classdef ucboard < handle
             fclose(obj.ser);
         end % function delete
         
-        function resp = sendCmd(obj, cmd, bDisp)
+        function sendRaw(obj, cmd, bDisp)
+            
+            if (nargin < 3)
+                bEchoCmd = obj.bEchoCmds;
+            else
+                bEchoCmd = bDisp;
+            end
+            
+            if (bEchoCmd)
+                disp(cmd);
+            end
+
+            cmd = sprintf([cmd, '\n']);
+            
+            flushinput(obj.ser);
+
+            fwrite(obj.ser, cmd);
+
+        end % function sendCmd
+
+		function resp = sendCmd(obj, cmd, bDisp)
             
             if (nargin < 3)
                 bDispRx = obj.bDispCmdResps;
