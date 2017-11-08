@@ -1028,6 +1028,9 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 }
 
 
+static uint32_t f_orecnt2 = 0;
+static uint32_t f_orecnt3 = 0;
+
 
 void USART2_IRQHandler(void)
 {
@@ -1076,6 +1079,15 @@ void USART2_IRQHandler(void)
 				USART2->TDR = BUFFER_READ(*f_pbufUART2Tx);
 			}
 		}
+	}
+
+	// Interrupt ORE is active if EITHER EIE or RXNEIE is set. As RXNEIE is set
+	// we have to check and if necessary reset interrupt ORE to avoid infinity
+	// calls of this IRQ handler.
+	if (__USART_GET_IT_STATUS(USART2, USART_ISR_ORE) != RESET)
+	{
+		++f_orecnt2;
+		USART2->ICR = USART_ICR_ORECF;
 	}
 
 	return;
@@ -1133,5 +1145,70 @@ void USART3_IRQHandler(void)
 		}
 	}
 
+	// Interrupt ORE is active if EITHER EIE or RXNEIE is set. As RXNEIE is set
+	// we have to check and if necessary reset interrupt ORE to avoid infinity
+	// calls of this IRQ handler.
+	if (__USART_GET_IT_STATUS(USART3, USART_ISR_ORE) != RESET)
+	{
+		++f_orecnt3;
+		USART3->ICR = USART_ICR_ORECF;
+	}
+
 	return;
+}
+
+
+bool cmd_commstats(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
+					char* acRespData, uint16_t* pnRespLen,
+					void* pRespStream,
+					void* pDirectCallback)
+{
+	SplittedStr_t sstr;
+
+	*(CommStreamFctPtr*)pRespStream = NULL;
+	*(CommDirectFctPtr*)pDirectCallback = NULL;
+
+	strsplit(&sstr, acData, ' ', '"', 10);
+
+	if (eSpec == CMDSPEC_SET)
+	{
+		char* strend = createErrStr_returnend(
+				acRespData,
+				acRespData + RXMAXMSGLEN - 1,
+				SOT_RXRESP, ERRCODE_COMM_READONLY,
+				"ID is a read-only parameter!");
+
+		*pnRespLen = strend - acRespData;
+	}
+	else
+	{
+		if (sstr.cnt != 0)
+		{
+			char* strend = createErrStr_returnend(
+					acRespData,
+					acRespData + RXMAXMSGLEN - 1,
+					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+					"Usage: ?COMMSTATS");
+
+			*pnRespLen = strend - acRespData;
+		}
+		else
+		{
+			char tmp[10];
+
+			char* const bufend = acRespData + TXMAXMSGLEN;
+
+			acRespData[0] = SOT_RXRESP;
+
+			char* strend = acRespData + 1;
+			strend = strcpy_returnend(strend, bufend, "ORE2=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_orecnt2, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " ORE3=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_orecnt3, tmp, 10));
+
+			*pnRespLen = strend - acRespData;
+		}
+	}
+
+	return true;
 }

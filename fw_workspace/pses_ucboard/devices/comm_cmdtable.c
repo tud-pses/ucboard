@@ -22,6 +22,7 @@ extern bool cmd_tics(COMMCMDFCT_ARGS);
 extern bool cmd_us(COMMCMDFCT_ARGS);
 extern bool cmd_version(COMMCMDFCT_ARGS);
 extern bool cmd_vout12v(COMMCMDFCT_ARGS);
+extern bool cmd_commstats(COMMCMDFCT_ARGS);
 
 
 // The entries must be sorted alphabetically!
@@ -29,6 +30,7 @@ extern bool cmd_vout12v(COMMCMDFCT_ARGS);
 
 CommCmdTableEntry_t g_commCmdFctTable[] =
 {
+		{"COMMSTATS",  &cmd_commstats},
 		{"DAQ",  &cmd_daq},
 		{"DRV",  &cmd_drv},
 		{"EEPROM",  &cmd_eeprom},
