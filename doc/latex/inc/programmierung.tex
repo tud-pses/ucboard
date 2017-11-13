@@ -82,4 +82,45 @@ Standardmäßig speichert die IDE die geänderten Dateien vor einem neuen Build 
 
 \section{Belegung der Ressourcen}
 
+In \tabref{tab:used_uc_ressources} sind die aktuell verwendeten Ressourcen (ohne einzelne GPIOs) aufgeführt. In \tabref{tab:free_uc_ressources} sind die noch freien Ressourcen gelistet, wobei sich die Aufzählung nur auf die Ressourcen beschränkt, die direkt mit Pins des ucboards verknüpft sind.
+
+\begin{table}[htb]%
+	\centering
+	\caption{Verwendete Ressourcen}
+	\label{tab:used_uc_ressources}
+	\begin{tabular}{ll}
+		\mytoprule
+		Ressource & Verwendung \\
+		\mymidrule
+		\verb|TIM2|   & PWM-Erzeugung für Fahrtenregler und Lenkservo \\
+		\verb|SPI1|   & Kommunikation mit IMU und Eeprom \\
+		\verb|I2C1|   & Kommunikation mit Ultraschallsensoren \\
+		\verb|USART2| & Kommunikation mit PC über USB \\
+		\verb|USART3| & Kommunikation mit PC über RS232 \\
+		\verb|EXTI15| & Externer Interrupt zur Auswertung Hal-Sensor \\
+		\verb|TIM6|   & Timer für \verb|i2cmgr| \\
+		\verb|TIM15|  & Timer für \verb|stopwatch| \\
+		\verb|TIM20|  & Timer für \verb|stopwatch| \\
+		\mybottomrule
+	\end{tabular}
+\end{table}
+
+
+\begin{table}[htb]%
+	\centering
+	\caption{Freie Ressourcen (über Pins "`zugreifbar"')}
+	\label{tab:free_uc_ressources}
+	\begin{tabular}{ll}
+		\mytoprule
+		Ressource & Anmerkung \\
+		\mymidrule
+		\verb|ADC1|, \verb|ADC3|, \verb|ADC4| & \\
+		\verb|TIM1|, \verb|TIM8| &  \\
+		\verb|I2C2|, \verb|I2C3| &  \\
+		\verb|SPI2|, \verb|SPI4| & \\
+		\verb|UART4| & \\
+		\mybottomrule
+	\end{tabular}
+\end{table}
+
 
