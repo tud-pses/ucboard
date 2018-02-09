@@ -1,22 +1,26 @@
 
 #include "stm32f3xx.h"
 
-#include "i2cmgr.h"
-#include "i2cmgr_privatedefs.h"
-
 #include "stm32f3xx_hal_i2c.h"
 #include "stm32f3xx_hal_tim.h"
+
+#include "stm32_llm.h"
+
+#include "i2cmgr.h"
+#include "i2cmgr_privatedefs.h"
 
 #include "common_fcts.h"
 #include "stopwatch.h"
 
-#include "stm32_llm.h"
-
 #include "comm_public.h"
+
+
+#include "ucboard_hwfcts.h"
+#include "display.h"
+
 
 extern void Error_Handler(void);
 
-//#define DEBUG_I2C
 
 // Anzahl der verwalteten I2C-Busse
 #define NI2C 3
@@ -74,68 +78,52 @@ static void stateMachine_RXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent);
 //static void stateMachine_TXDMA(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent);
 //static void stateMachine_RXDMA(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent);
 
-static inline void initDebugPins();
 
-
-//#define DEACTIVATEBUS(b) I2C_ITConfig( b, I2C_IT_ERR | I2C_IT_EVT | I2C_IT_BUF, DISABLE )
-
-
-#ifdef DEBUG_I2C
-static inline void initDebugPins()
+_INLINE static void initBusResetStruct(BusResetData_t* pData)
 {
-	GPIO_InitTypeDef GPIO_InitStructure;
-
-	GPIO_InitStructure.GPIO_Pin =
-			GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 |
-			GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 |
-			GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
-	GPIO_Init(GPIOE, &GPIO_InitStructure);
-
-
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
-	GPIO_Init(GPIOG, &GPIO_InitStructure);
-
-	GPIO_ResetBits(GPIOG, 0xFF80);
-	GPIO_ResetBits(GPIOE, 0x0003);
+	pData->uTic = 0;
+	pData->uToggleCount = 0;
+	pData->eState = BUSRESETSTATE_INIT;
 
 	return;
 }
 
-#define SETDEBUGPINS(u) GPIO_SetBits(GPIOE, (u<<8)); GPIO_ResetBits(GPIOE, ((~u)<<8))
-#define SETDEBUG_A() GPIO_SetBits(GPIOG, GPIO_Pin_0)
-#define RESETDEBUG_A() GPIO_ResetBits(GPIOG, GPIO_Pin_0)
-#define SETDEBUG_B() GPIO_SetBits(GPIOG, GPIO_Pin_1)
-#define RESETDEBUG_B() GPIO_ResetBits(GPIOG, GPIO_Pin_1)
-#define SETDEBUG_C() GPIO_SetBits(GPIOE, GPIO_Pin_7)
-#define RESETDEBUG_C() GPIO_ResetBits(GPIOE, GPIO_Pin_7)
-#else
-static inline void initDebugPins() {}
+_INLINE static void startTimer(uint16_t us)
+{
+	TIM6->CNT = 0xFFFF - us;
+	//TIM6->ARR = us;
 
-#define SETDEBUGPINS(u)
-#define SETDEBUG_A()
-#define RESETDEBUG_A()
-#define SETDEBUG_B()
-#define RESETDEBUG_B()
-#define SETDEBUG_C()
-#define RESETDEBUG_C()
+	// Interrupt aktivieren
+	TIM6->DIER |= 0x1;
 
-#endif
+	__TIM_ENABLE(TIM6);
 
-#include "ucboard_hwfcts.h"
-#include "display.h"
+	return;
+}
+
+
+_INLINE static void stopTimer()
+{
+	__TIM_DISABLE(TIM6);
+
+	// Interrupt deaktivieren
+	TIM6->DIER &= ~0x1;
+
+	// Interruptflag löschen
+	TIM6->SR &= ~0x1;
+
+	return;
+}
+
+
+_INLINE static void asyncInvoke_MsgMgr() {startTimer(1);}
+
 
 
 static TIM_HandleTypeDef htim6;
 
 void i2cmgr_init()
 {
-	uint8_t u;
-
-
 	__HAL_RCC_TIM6_CLK_ENABLE();
 
     HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 2, 0);
@@ -159,13 +147,7 @@ void i2cmgr_init()
 
 	__TIM_CLEAR_FLAG( TIM6, TIM_FLAG_UPDATE );
 
-	startTimer(1);
-
-
-	initDebugPins();
-
-
-	for (u = 0; u < NI2C; u++)
+	for (uint8_t u = 0; u < NI2C; ++u)
 	{
 		f_aI2C[u].pI2C = f_aI2CPTR[u];
 
@@ -183,7 +165,7 @@ void i2cmgr_init()
 		configPins(u, true);
 	}
 
-	for (u = 0; u < MAXDEVICES; u++)
+	for (uint8_t u = 0; u < MAXDEVICES; ++u)
 	{
 		f_aDevices[u].bInit = false;
 		f_aDevices[u].eMsgState = I2CMSGSTATE_IDLE;
@@ -191,7 +173,7 @@ void i2cmgr_init()
 		f_aDevices[u].nMsgs = 0;
 	}
 
-	for (u = 0; u < NI2C; u++)
+	for (uint8_t u = 0; u < NI2C; ++u)
 	{
 		if (f_aI2C[u].pI2C == NULL)
 		{
@@ -203,7 +185,7 @@ void i2cmgr_init()
 		f_aI2C[u].stBusResetData.uToggleCount = 0;
 		f_aI2C[u].state = STATE_RESETBUSINIT;
 
-		startTimer(1);
+		asyncInvoke_MsgMgr();
 
 		while ( f_aI2C[u].state != STATE_IDLE )
 		{
@@ -216,12 +198,11 @@ void i2cmgr_init()
 
 static void configPins(EnI2C_PORT_t eI2CPort, bool bI2CFunc)
 {
-	GPIO_InitTypeDef GPIO_InitStruct;
-
 	if (eI2CPort == I2CPORT_1)
 	{
 		if (bI2CFunc)
 		{
+			GPIO_InitTypeDef GPIO_InitStruct;
 			GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
 			GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
 			GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -231,6 +212,7 @@ static void configPins(EnI2C_PORT_t eI2CPort, bool bI2CFunc)
 		}
 		else
 		{
+			GPIO_InitTypeDef GPIO_InitStruct;
 			GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
 			GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
 			GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -242,6 +224,7 @@ static void configPins(EnI2C_PORT_t eI2CPort, bool bI2CFunc)
 	{
 		if (bI2CFunc)
 		{
+			GPIO_InitTypeDef GPIO_InitStruct;
 		    GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
 		    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
 		    GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -251,6 +234,7 @@ static void configPins(EnI2C_PORT_t eI2CPort, bool bI2CFunc)
 		}
 		else
 		{
+			GPIO_InitTypeDef GPIO_InitStruct;
 		    GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
 		    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
 		    GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -262,6 +246,7 @@ static void configPins(EnI2C_PORT_t eI2CPort, bool bI2CFunc)
 	{
 		if (bI2CFunc)
 		{
+			GPIO_InitTypeDef GPIO_InitStruct;
 		    GPIO_InitStruct.Pin = GPIO_PIN_8;
 		    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
 		    GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -278,6 +263,7 @@ static void configPins(EnI2C_PORT_t eI2CPort, bool bI2CFunc)
 		}
 		else
 		{
+			GPIO_InitTypeDef GPIO_InitStruct;
 		    GPIO_InitStruct.Pin = GPIO_PIN_8;
 		    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
 		    GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -298,15 +284,8 @@ static void configPins(EnI2C_PORT_t eI2CPort, bool bI2CFunc)
 
 static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 {
-	GPIO_TypeDef* pSCLPort;
-	uint16_t uSCLPin;
-	GPIO_TypeDef* pSDLPort;
-	uint16_t uSDLPin;
-	I2C_TypeDef* pI2C;
-	BusResetData_t* pBusResetData;
-
-	pI2C = f_aI2C[eI2CPort].pI2C;
-	pBusResetData = (BusResetData_t*)&f_aI2C[eI2CPort].stBusResetData;
+	I2C_TypeDef* pI2C = f_aI2C[eI2CPort].pI2C;
+	BusResetData_t* pBusResetData = (BusResetData_t*)&f_aI2C[eI2CPort].stBusResetData;
 
 	// Es müssen zwischen zwei einzelnen Aufrufen mindestens 100 us liegen!
 	if (stopwatch_getDeltaTime_us(pBusResetData->uTic) < 100)
@@ -316,10 +295,10 @@ static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 
 	pBusResetData->uTic = stopwatch_getTic();
 
-	pSCLPort = f_aI2CPINS[eI2CPort].portSCL;
-	uSCLPin = f_aI2CPINS[eI2CPort].pinSCL;
-	pSDLPort = f_aI2CPINS[eI2CPort].portSDL;
-	uSDLPin = f_aI2CPINS[eI2CPort].pinSDL;
+	GPIO_TypeDef* pSCLPort = f_aI2CPINS[eI2CPort].portSCL;
+	uint16_t uSCLPin = f_aI2CPINS[eI2CPort].pinSCL;
+	GPIO_TypeDef* pSDLPort = f_aI2CPINS[eI2CPort].portSDL;
+	uint16_t uSDLPin = f_aI2CPINS[eI2CPort].pinSDL;
 
 
 	switch (pBusResetData->eState)
@@ -327,8 +306,6 @@ static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 		case BUSRESETSTATE_INIT:
 			// Deaktivieren des Bustreibers
 			__I2C_DISABLE(pI2C);
-			// Software-Reset setzen
-			//pI2C->CR1 |= I2C_CR1_SWRST;
 
 			configPins(eI2CPort, false);
 
@@ -378,9 +355,6 @@ static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 			__GPIO_SET_BITS(pSDLPort, uSDLPin);
 			configPins(eI2CPort, true);
 
-			// Bustreiber aus Reset nehmen
-			//pI2C->CR1 &= ~I2C_CR1_SWRST;
-
 			// Hardware-Bustreiber aktivieren
 			if (f_aI2C[eI2CPort].bInit)
 			{
@@ -399,7 +373,6 @@ static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 
 	if (pBusResetData->eState != BUSRESETSTATE_NORESET)
 	{
-		// Timer wieder aktivieren
 		return true;
 	}
 
@@ -411,8 +384,6 @@ EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig
 									uint8_t uAddress,
 									uint8_t* puDeviceID)
 {
-	uint8_t d;
-
 	if (eI2CPort >= NI2C)
 	{
 		return I2CMGRRES_INVALIDPORT;
@@ -425,6 +396,7 @@ EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig
 
 
 	// Freien Platz für Gerät suchen
+	uint8_t d;
 	for (d = 0; d < MAXDEVICES; d++)
 	{
 		if (!f_aDevices[d].bInit)
@@ -461,24 +433,13 @@ EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig
 
 static bool setI2CConfig(EnI2C_PORT_t eI2CPort, const I2C_InitTypeDef* pstConfig)
 {
-	I2C_InitTypeDef* pCurConfig;
-	I2C_TypeDef* pI2C;
-	bool bReconfig;
-
-	pI2C = f_aI2C[eI2CPort].pI2C;
-	pCurConfig = (I2C_InitTypeDef*)&f_aI2C[eI2CPort].stConfig;
-	bReconfig = true;
+	I2C_TypeDef* pI2C = f_aI2C[eI2CPort].pI2C;
+	I2C_InitTypeDef* pCurConfig = (I2C_InitTypeDef*)&f_aI2C[eI2CPort].stConfig;
+	bool bReconfig = true;
 
 	if (!f_aI2C[eI2CPort].bInit)
 	{
-		pCurConfig->AddressingMode = pstConfig->AddressingMode;
-		pCurConfig->DualAddressMode = pstConfig->DualAddressMode;
-		pCurConfig->GeneralCallMode = pstConfig->GeneralCallMode;
-		pCurConfig->NoStretchMode = pstConfig->NoStretchMode;
-		pCurConfig->OwnAddress1 = pstConfig->OwnAddress1;
-		pCurConfig->OwnAddress2 = pstConfig->OwnAddress2;
-		pCurConfig->OwnAddress2Masks = pstConfig->OwnAddress2Masks;
-		pCurConfig->Timing = pstConfig->Timing;
+		*pCurConfig = *pstConfig;
 	}
 	else
 	{
@@ -579,7 +540,7 @@ EnI2CMgrRes_t i2cmgr_enqueueAsynchRead(uint8_t uDeviceID,
 	// Kopieren der Daten in Device-Struktur
 	f_aMsgs[uDeviceID][0].eDir = I2CMGRMSG_RX;
 	f_aMsgs[uDeviceID][0].pBuffer = paRxdata;
-	f_aMsgs[uDeviceID][0].pBufferEnd1 = paRxdata + nRxCount;
+	f_aMsgs[uDeviceID][0].pBufferEnd = paRxdata + nRxCount;
 	f_aMsgs[uDeviceID][0].pBufferCur = paRxdata;
 
 	return enqueueAsynchMsgs(uDeviceID, 1, &f_aMsgs[uDeviceID][0]);
@@ -605,7 +566,7 @@ EnI2CMgrRes_t i2cmgr_enqueueAsynchWrite(uint8_t uDeviceID,
 	// Kopieren der Daten in Device-Struktur
 	f_aMsgs[uDeviceID][0].eDir = I2CMGRMSG_TX;
 	f_aMsgs[uDeviceID][0].pBuffer = (uint8_t*)paTxdata;
-	f_aMsgs[uDeviceID][0].pBufferEnd1 = (uint8_t*)paTxdata + nTxCount;
+	f_aMsgs[uDeviceID][0].pBufferEnd = (uint8_t*)paTxdata + nTxCount;
 	f_aMsgs[uDeviceID][0].pBufferCur = (uint8_t*)paTxdata;
 
 	return enqueueAsynchMsgs(uDeviceID, 1, &f_aMsgs[uDeviceID][0]);
@@ -634,12 +595,12 @@ EnI2CMgrRes_t i2cmgr_enqueueAsynchWriteRead(uint8_t uDeviceID,
 	// Kopieren der Daten in Device-Struktur
 	f_aMsgs[uDeviceID][0].eDir = I2CMGRMSG_TX;
 	f_aMsgs[uDeviceID][0].pBuffer = (uint8_t*)paTxdata;
-	f_aMsgs[uDeviceID][0].pBufferEnd1 = (uint8_t*)paTxdata + nTxCount;
+	f_aMsgs[uDeviceID][0].pBufferEnd = (uint8_t*)paTxdata + nTxCount;
 	f_aMsgs[uDeviceID][0].pBufferCur = (uint8_t*)paTxdata;
 
 	f_aMsgs[uDeviceID][1].eDir = I2CMGRMSG_RX;
 	f_aMsgs[uDeviceID][1].pBuffer = paRxdata;
-	f_aMsgs[uDeviceID][1].pBufferEnd1 = paRxdata + nRxCount;
+	f_aMsgs[uDeviceID][1].pBufferEnd = paRxdata + nRxCount;
 	f_aMsgs[uDeviceID][1].pBufferCur = paRxdata;
 
 
@@ -677,9 +638,7 @@ static EnI2CMgrRes_t enqueueAsynchMsgs(uint8_t uDeviceID,
 	f_aDevices[uDeviceID].eMsgRes = I2CMGRRES_OK;
 	f_aDevices[uDeviceID].eMsgState = I2CMSGSTATE_WAITING;
 
-	SETDEBUG_C();
-
-	startTimer(1);
+	asyncInvoke_MsgMgr();
 
 	return I2CMGRRES_OK;
 }
@@ -687,25 +646,19 @@ static EnI2CMgrRes_t enqueueAsynchMsgs(uint8_t uDeviceID,
 
 static void startComm(EnI2C_PORT_t eI2C, uint8_t uDeviceID, uint8_t uMsg)
 {
-	bool bDMA;
-	I2CMGR_Msg_t* pMsg;
-
-
 	f_aDevices[uDeviceID].eMsgState = I2CMSGSTATE_PROCESSING;
 
-	pMsg = &(f_aDevices[uDeviceID].pMsgs[uMsg]);
+	I2CMGR_Msg_t* pMsg = &(f_aDevices[uDeviceID].pMsgs[uMsg]);
 
 	f_aDevices[uDeviceID].uCurMsg = uMsg;
 
 	// DMA oder Events?
 	// Erstmal nur Events
-	bDMA = false;
+	bool bDMA = false;
 
 	f_aI2C[eI2C].pCurMsg = pMsg;
 	f_aI2C[eI2C].uCurMsgDevice = uDeviceID;
 	f_aI2C[eI2C].eCurMsgRes = I2CMGRRES_OK;
-
-	__I2C_ENABLE_IT( f_aI2C[eI2C].pI2C, I2C_IT_ERRI );// | I2C_IT_MASTER );
 
 	if ( (pMsg->eDir == I2CMGRMSG_TX) && !bDMA )
 	{
@@ -733,25 +686,21 @@ static void startComm(EnI2C_PORT_t eI2C, uint8_t uDeviceID, uint8_t uMsg)
 
 static void finishCurComm(EnI2C_PORT_t eI2C)
 {
-	uint8_t uNextDevice, uNextMsg;
-	uint8_t uDevice; //, uMsg;
-	bool bMoreMsgs;
 	bool bSkipCurDevice = false;
 
 	// Welche Nachricht wurde gerade beendet?
-	uDevice = f_aI2C[eI2C].uCurMsgDevice;
-	//uMsg = f_aDevices[uDevice].uCurMsg;
+	uint8_t uDevice = f_aI2C[eI2C].uCurMsgDevice;
 
 	if (f_aI2C[eI2C].eCurMsgRes != I2CMGRRES_OK)
 	{
-		//display_println_hex("msg res: ", f_aI2C[eI2C].eCurMsgRes);
 		f_aDevices[uDevice].eMsgState = I2CMSGSTATE_ERROR;
 		f_aDevices[uDevice].eMsgRes = f_aI2C[eI2C].eCurMsgRes;
 		bSkipCurDevice = true;
 	}
 
 	// Prüfen, ob eine weitere Nachricht vorliegt
-	bMoreMsgs = getNextMsg(eI2C, &uNextDevice, &uNextMsg, bSkipCurDevice);
+	uint8_t uNextDevice, uNextMsg;
+	bool bMoreMsgs = getNextMsg(eI2C, &uNextDevice, &uNextMsg, bSkipCurDevice);
 
 	// Falls keine Nachrichten mehr vorliegen, oder zumindestens
 	// alle Nachrichten eines Gerätes abgearbeitet sind, dann
@@ -774,12 +723,7 @@ static void finishCurComm(EnI2C_PORT_t eI2C)
 		f_aI2C[eI2C].uCurMsgDevice = 0;
 		f_aI2C[eI2C].stateMachine = NULL;
 		f_aI2C[eI2C].eCurMsgRes = I2CMGRRES_OK;
-
-		RESETDEBUG_C();
 	}
-
-
-	SETDEBUGPINS(f_aI2C[eI2C].state);
 
 	return;
 }
@@ -788,11 +732,7 @@ static void finishCurComm(EnI2C_PORT_t eI2C)
 static bool getNextMsg(EnI2C_PORT_t eI2C, uint8_t* puDeviceID, uint8_t* puMsg,
 																bool bSkipCurDevice)
 {
-	uint8_t uCurDevice, d;
-	bool bMsgFound;
-
-
-	uCurDevice = f_aI2C[eI2C].uCurMsgDevice;
+	uint8_t uCurDevice = f_aI2C[eI2C].uCurMsgDevice;
 
 	if (!bSkipCurDevice)
 	{
@@ -819,8 +759,8 @@ static bool getNextMsg(EnI2C_PORT_t eI2C, uint8_t* puDeviceID, uint8_t* puMsg,
 	// abzuarbeiten ist.
 	// (Dabei von dem aktuellen Device ausgehen, damit verhindert wird, das
 	// die Messages von Devices mit hoher ID nie ausgeführt werden.)
-	d = uCurDevice + 1;
-	bMsgFound = false;
+	uint8_t d = uCurDevice + 1;
+	bool bMsgFound = false;
 
 	while (true)
 	{
@@ -851,313 +791,355 @@ static bool getNextMsg(EnI2C_PORT_t eI2C, uint8_t* puDeviceID, uint8_t* puMsg,
 	return bMsgFound;
 }
 
+static uint32_t f_i2ctxerrevents = 0;
+static uint32_t f_i2ctx_buserr = 0;
+static uint32_t f_i2ctx_nack = 0;
+static uint32_t f_i2ctx_timeout = 0;
+static uint32_t f_i2ctx_sm = 0;
+static uint32_t f_i2crxerrevents = 0;
+static uint32_t f_i2crx_buserr = 0;
+static uint32_t f_i2crx_nack = 0;
+static uint32_t f_i2crx_timeout = 0;
+static uint32_t f_i2crx_sm = 0;
+
+
+
+#define I2C_ISR_UNEXPECTEDFLAGS (I2C_ISR_ALERT | I2C_ISR_ADDR )
+#define I2C_ISR_ERRORFLAGS (I2C_ISR_BERR | I2C_ISR_ARLO | I2C_ISR_OVR \
+								| I2C_ISR_PECERR | I2C_ISR_TIMEOUT)
 
 void stateMachine_TXEvents(EnI2C_PORT_t eI2C, EnI2CEvent_t eEvent)
 {
-	bool bUnexpectedEvent;
-	I2C_TypeDef* pI2C;
-	I2CMGR_I2C_t* pI2CM;
+	bool bUnexpectedEvent = false;
 
-	SETDEBUGPINS(f_aI2C[eI2C].state);
+	I2CMGR_I2C_t* pI2CM = (I2CMGR_I2C_t*)&f_aI2C[eI2C];
+	I2C_TypeDef* pI2C = pI2CM->pI2C;
 
-	pI2CM = (I2CMGR_I2C_t*)&f_aI2C[eI2C];
-	pI2C = pI2CM->pI2C;
-
-	bUnexpectedEvent = false;
-
-	switch (f_aI2C[eI2C].state)
+	if (eEvent & (I2C_ISR_UNEXPECTEDFLAGS | I2C_ISR_ERRORFLAGS) )
 	{
-		case STATE_IDLE:
-			break;
-
-		case STATE_ERROR:
-			break;
-
-		case STATE_COMMREQ:
+		++f_i2ctxerrevents;
+		bUnexpectedEvent = true;
+	}
+	else
+	{
+		switch (pI2CM->state)
 		{
-			uint32_t cr2tmp = 0;
-			uint32_t nbytes;
+			case STATE_IDLE:
+				break;
 
-			cr2tmp = pI2C->CR2;
+			case STATE_ERROR:
+				break;
 
-			cr2tmp &= ~I2C_CR2_SADD_Msk;
-			cr2tmp |= (I2C_CR2_SADD_Msk & f_aDevices[pI2CM->uCurMsgDevice].uAddress);
-
-			nbytes = (pI2CM->pCurMsg->pBufferEnd1 - pI2CM->pCurMsg->pBuffer);
-			cr2tmp &= ~I2C_CR2_NBYTES_Msk;
-			cr2tmp |= (I2C_CR2_NBYTES_Msk & (nbytes << 16));
-
-			cr2tmp &= ~I2C_CR2_RD_WRN;
-
-			cr2tmp &= ~I2C_CR2_AUTOEND;
-
-			pI2C->CR2 = cr2tmp;
-
-			__I2C_SEND_START_AND_ADDR(pI2C);
-
-			pI2CM->state = STATE_DATATRANSFER;
-
-			__I2C_ENABLE_IT(pI2C, I2C_IT_TXI | I2C_IT_STOPI | I2C_IT_TCI | I2C_IT_NACKI);
-
-			break;
-		}
-		case STATE_DATATRANSFER:
-
-			if (eEvent & I2CEVENT_TXIS)
+			case STATE_COMMREQ:
 			{
-				// Data in DR
-				if (f_aI2C[eI2C].pCurMsg->pBufferCur ==
-											f_aI2C[eI2C].pCurMsg->pBufferEnd1)
+				uint32_t cr2tmp = pI2C->CR2;
+
+				cr2tmp &= ~I2C_CR2_SADD_Msk;
+				cr2tmp |= (I2C_CR2_SADD_Msk & f_aDevices[pI2CM->uCurMsgDevice].uAddress);
+
+				uint32_t nbytes = (pI2CM->pCurMsg->pBufferEnd - pI2CM->pCurMsg->pBuffer);
+				cr2tmp &= ~I2C_CR2_NBYTES_Msk;
+				cr2tmp |= (I2C_CR2_NBYTES_Msk & (nbytes << 16));
+
+				cr2tmp &= ~I2C_CR2_RD_WRN;
+
+				cr2tmp |= I2C_CR2_AUTOEND;
+
+				cr2tmp |= I2C_CR2_START;
+
+				pI2C->CR2 = cr2tmp;
+
+				pI2CM->state = STATE_DATATRANSFER;
+
+				__I2C_SETACTIVE_IT(pI2C, I2C_IT_TXI | I2C_IT_STOPI | I2C_IT_NACKI | I2C_IT_ERRI);
+
+				break;
+			}
+			case STATE_DATATRANSFER:
+
+				if (eEvent & I2CEVENT_TXIS)
 				{
-					bUnexpectedEvent = true;
+					// put new date in TXDR register
+					// check if source data buffer is not empty beforehand
+					// (even if this should never happen, as NBYTES was set
+					// to the buffer length)
+					if (pI2CM->pCurMsg->pBufferCur ==
+												pI2CM->pCurMsg->pBufferEnd)
+					{
+						bUnexpectedEvent = true;
+					}
+					else
+					{
+						pI2C->TXDR = *(pI2CM->pCurMsg->pBufferCur)++;
+					}
+				}
+				else if (eEvent & I2CEVENT_NACKF)
+				{
+					// clear NACKF bit and set state accordingly
+					// (don't invoke the message-manager yet, as
+					// the STOPF signal is yet to come)
+					pI2C->ICR = I2C_ICR_NACKCF;
+
+					pI2CM->eCurMsgRes = I2CMGRRES_NOADDRACK;
+
+					pI2CM->state = STATE_DATATRANSFER_NACKF;
+
+					++f_i2ctx_nack;
+				}
+				else if (eEvent & I2CEVENT_STOPF)
+				{
+					// ok, transmission is complete
+					// deactivate all interrupts, clear STOPF bit
+					// and invoke message manager.
+					__I2C_DISABLE_IT( pI2C, I2C_IT_ALL );
+					pI2C->ICR = I2C_ICR_STOPCF;
+
+					pI2CM->state = STATE_TRANSFERCOMPLETED;
+
+					asyncInvoke_MsgMgr();
 				}
 				else
 				{
-					pI2C->TXDR = *(pI2CM->pCurMsg->pBufferCur)++;
+					bUnexpectedEvent = true;
 				}
-			}
-			else if (eEvent & I2CEVENT_TC)
-			{
-				__I2C_SEND_STOP(pI2C);
 
-				pI2CM->state = STATE_STOPREQ;
-				//__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
+				break;
 
-				//startTimer(100);
-			}
-			else
-			{
-				bUnexpectedEvent = true;
-			}
+			case STATE_DATATRANSFER_NACKF:
+				if (eEvent & I2CEVENT_STOPF)
+				{
+					// this is the STOPF after the NACK, the
+					// communication cycle ends
+					// do the same as above: deactivate all
+					// interrupts, clear STOPF bit and invoke
+					// message manager
+					__I2C_DISABLE_IT( pI2C, I2C_IT_ALL );
+					pI2C->ICR = I2C_ICR_STOPCF;
 
-			break;
+					pI2CM->state = STATE_TRANSFERCOMPLETED;
 
-		case STATE_STOPREQ:
-			if (eEvent & I2CEVENT_STOPF)
-			{
-				__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
-				pI2C->ICR = I2C_ISR_STOPF;
+					asyncInvoke_MsgMgr();
+				}
+				else
+				{
+					bUnexpectedEvent = true;
+				}
 
-				finishCurComm(eI2C);
-			}
-			else
-			{
-				bUnexpectedEvent = true;
-			}
+				break;
 
-			break;
-
-
-		default: //ADDRSENT, RESETBUSINIT, RESETBUSERROR
-			break;
+			default: //RESETBUSINIT, RESETBUSERROR
+				break;
+		}
 	}
 
 	if (bUnexpectedEvent)
 	{
-		//display_println_bits("tx event: ", eEvent);
-		//display_println_hex("tx state: ", pI2CM->state);
-
-		__I2C_DISABLE_IT( f_aI2C[eI2C].pI2C, I2C_IT_ALL );
-
-		f_aI2C[eI2C].pI2C->ISR &= 0x00FF;
+		// If something unexpected happens, deactivate all interrupts
+		// and initialize a bus reset. No interrupt flag bit has to
+		// be reseted manually here, as the bus reset will take care
+		// of this.
+		__I2C_DISABLE_IT( pI2C, I2C_IT_ALL );
 
 		pI2CM->state = STATE_ERROR;
 
+
 		if ( eEvent & (I2CEVENT_BERR | I2CEVENT_ARLO |
-								I2CEVENT_OVR | I2CEVENT_STOPF |
+								I2CEVENT_OVR |
+								I2CEVENT_NACKF | I2CEVENT_STOPF |
 								I2CEVENT_PECERR ) )
 		{
 			pI2CM->eCurMsgRes = I2CMGRRES_BUSERR;
-
-			initBusResetStruct(&pI2CM->stBusResetData);
-			pI2CM->state = STATE_RESETBUSERROR;
-			startTimer(1);
+			++f_i2ctx_buserr;
 		}
-		else if ( eEvent & I2CEVENT_NACKF )
-		{
-			pI2CM->eCurMsgRes = I2CMGRRES_NOADDRACK;
-			__I2C_SEND_STOP(pI2C);
-			startTimer(1);
-		}
-		else if ( eEvent & I2CEVENT_TIMEOUT )
+		else if (eEvent & I2CEVENT_TIMEOUT)
 		{
 			pI2CM->eCurMsgRes = I2CMGRRES_TIMEOUT;
-
-			initBusResetStruct(&pI2CM->stBusResetData);
-			pI2CM->state = STATE_RESETBUSERROR;
-			startTimer(1);
+			++f_i2ctx_timeout;
 		}
 		else
 		{
 			pI2CM->eCurMsgRes = I2CMGRRES_STATEMACHINEERR;
-
-			initBusResetStruct(&pI2CM->stBusResetData);
-			pI2CM->state = STATE_RESETBUSERROR;
-			startTimer(1);
+			++f_i2ctx_sm;
 		}
+
+		initBusResetStruct(&pI2CM->stBusResetData);
+		pI2CM->state = STATE_RESETBUSERROR;
+
+		asyncInvoke_MsgMgr();
 	}
 
-	SETDEBUGPINS(f_aI2C[eI2C].state);
 	return;
 }
 
-static uint64_t f_i2cerrevents = 0;
 
 void stateMachine_RXEvents(EnI2C_PORT_t ePort, EnI2CEvent_t eEvent)
 {
-	bool bUnexpectedEvent;
-	I2C_TypeDef* pI2C;
-	I2CMGR_I2C_t* pI2CM;
+	bool bUnexpectedEvent = false;
 
-	pI2CM = (I2CMGR_I2C_t*)&f_aI2C[ePort];
-	pI2C = pI2CM->pI2C;
+	I2CMGR_I2C_t* pI2CM = (I2CMGR_I2C_t*)&f_aI2C[ePort];
+	I2C_TypeDef* pI2C = pI2CM->pI2C;
 
-	SETDEBUGPINS(f_aI2C[ePort].state);
-
-	bUnexpectedEvent = false;
-
-	switch (pI2CM->state)
+	if (eEvent & (I2C_ISR_UNEXPECTEDFLAGS | I2C_ISR_ERRORFLAGS) )
 	{
-		case STATE_IDLE:
-			break;
-
-		case STATE_ERROR:
-			break;
-
-		case STATE_COMMREQ:
+		++f_i2crxerrevents;
+		bUnexpectedEvent = true;
+	}
+	else
+	{
+		switch (pI2CM->state)
 		{
-			// Request Start-Bit
-			uint32_t cr2tmp = 0;
-			uint32_t nbytes;
+			case STATE_IDLE:
+				break;
 
-			cr2tmp = pI2C->CR2;
+			case STATE_ERROR:
+				break;
 
-			cr2tmp &= ~I2C_CR2_SADD_Msk;
-			cr2tmp |= f_aDevices[pI2CM->uCurMsgDevice].uAddress;
-
-			nbytes = (pI2CM->pCurMsg->pBufferEnd1 - pI2CM->pCurMsg->pBuffer);
-			cr2tmp &= ~I2C_CR2_NBYTES_Msk;
-			cr2tmp |= (nbytes << 16);
-
-			cr2tmp |= I2C_CR2_RD_WRN;
-
-			cr2tmp &= ~I2C_CR2_AUTOEND;
-
-			pI2C->CR2 = cr2tmp;
-
-			__I2C_SEND_START_AND_ADDR(pI2C);
-
-			pI2CM->state = STATE_DATATRANSFER;
-
-			__I2C_ENABLE_IT(pI2C, I2C_IT_RXI | I2C_IT_STOPI | I2C_IT_TCI | I2C_IT_NACKI);
-
-			break;
-		}
-		case STATE_DATATRANSFER:
-			if (eEvent & I2CEVENT_RXNE)
+			case STATE_COMMREQ:
 			{
-				if (pI2CM->pCurMsg->pBufferEnd1 == pI2CM->pCurMsg->pBufferCur)
+				uint32_t cr2tmp = pI2C->CR2;
+
+				cr2tmp &= ~I2C_CR2_SADD_Msk;
+				cr2tmp |= f_aDevices[pI2CM->uCurMsgDevice].uAddress;
+
+				uint32_t nbytes = (pI2CM->pCurMsg->pBufferEnd - pI2CM->pCurMsg->pBuffer);
+				cr2tmp &= ~I2C_CR2_NBYTES_Msk;
+				cr2tmp |= (nbytes << 16);
+
+				cr2tmp |= I2C_CR2_RD_WRN;
+
+				cr2tmp |= I2C_CR2_AUTOEND;
+
+				cr2tmp |= I2C_CR2_START;
+
+				pI2C->CR2 = cr2tmp;
+
+
+				pI2CM->state = STATE_DATATRANSFER;
+
+				__I2C_SETACTIVE_IT(pI2C, I2C_IT_RXI | I2C_IT_STOPI | I2C_IT_NACKI | I2C_IT_ERRI);
+
+				break;
+			}
+			case STATE_DATATRANSFER:
+				if (eEvent & I2CEVENT_RXNE)
 				{
-					bUnexpectedEvent = true;
+					// read new date from RXDR register
+					// check if target data buffer is not full beforehand
+					// (even if this should never happen, as NBYTES was set
+					// to the buffer length)
+
+					if (pI2CM->pCurMsg->pBufferEnd == pI2CM->pCurMsg->pBufferCur)
+					{
+						bUnexpectedEvent = true;
+					}
+					else
+					{
+						*(pI2CM->pCurMsg->pBufferCur)++ = pI2C->RXDR;
+					}
+				}
+				else if (eEvent & I2CEVENT_NACKF)
+				{
+					// clear NACKF bit and set state accordingly
+					// (don't invoke the message-manager yet,
+					// as the STOPF signal is yet to come)
+					// Actually, this should only happen after
+					// the address is sent, as the remaining ACKs
+					// are set by the master in read mode.
+					// (However, in the uC reference manual, no NACKF bit
+					// reaction is mentioned for the master-receiver case)
+
+					pI2C->ICR = I2C_ICR_NACKCF;
+
+					pI2CM->eCurMsgRes = I2CMGRRES_NOADDRACK;
+					pI2CM->state = STATE_DATATRANSFER_NACKF;
+
+					++f_i2crx_nack;
+				}
+				else if (eEvent & I2CEVENT_STOPF)
+				{
+					// ok, transmission is complete
+					// deactivate all interrupts, clear STOPF bit
+					// and invoke message manager.
+					__I2C_DISABLE_IT( pI2C, I2C_IT_ALL );
+					pI2C->ICR = I2C_ICR_STOPCF;
+
+					pI2CM->state = STATE_TRANSFERCOMPLETED;
+
+					asyncInvoke_MsgMgr();
 				}
 				else
 				{
-					// Data from DR
-					*(pI2CM->pCurMsg->pBufferCur)++ = pI2C->RXDR;
+					bUnexpectedEvent = true;
 				}
-			}
-			else if (eEvent & I2CEVENT_TC)
-			{
-				__I2C_SEND_STOP(pI2C);
 
-				pI2CM->state = STATE_STOPREQ;
-				//__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
+				break;
 
-				//startTimer(100);
-			}
-			else
-			{
+			case STATE_DATATRANSFER_NACKF:
+				if (eEvent & I2CEVENT_STOPF)
+				{
+					// this is the STOPF after the NACK, the
+					// communication cycle ends
+					// do the same as above: deactivate all
+					// interrupts, clear STOPF bit and invoke
+					// message manager
+
+					__I2C_DISABLE_IT( pI2C, I2C_IT_ALL );
+					pI2C->ICR = I2C_ICR_STOPCF;
+
+					pI2CM->state = STATE_TRANSFERCOMPLETED;
+
+					asyncInvoke_MsgMgr();
+				}
+				else
+				{
+					bUnexpectedEvent = true;
+				}
+
+				break;
+
+			default:
 				bUnexpectedEvent = true;
-			}
 
-			break;
-
-		case STATE_STOPREQ:
-
-			if (eEvent & I2CEVENT_STOPF)
-			{
-				__I2C_DISABLE_IT( pI2C, I2C_IT_MASTER );
-				pI2C->ICR = I2C_ISR_STOPF;
-
-				finishCurComm(ePort);
-			}
-			else
-			{
-				bUnexpectedEvent = true;
-			}
-
-			break;
-
-		default:
-			bUnexpectedEvent = true;
-
-			break;
+				break;
+		}
 	}
 
 	if (bUnexpectedEvent)
 	{
-		display_println_bits("rx event: ", eEvent);
-		display_println_hex("rx state: ", pI2CM->state);
+		// If something unexpected happens, deactivate all interrupts
+		// and initialize a bus reset. No interrupt flag bit has to
+		// be reseted manually here, as the bus reset will take care
+		// of this.
+
+		__I2C_DISABLE_IT( pI2C, I2C_IT_ALL );
 
 		pI2CM->state = STATE_ERROR;
 
 		if ( eEvent & (I2CEVENT_BERR | I2CEVENT_ARLO |
-								I2CEVENT_OVR | I2CEVENT_STOPF |
+								I2CEVENT_OVR |
+								I2CEVENT_STOPF | I2CEVENT_NACKF |
 								I2CEVENT_PECERR) )
 		{
 			pI2CM->eCurMsgRes = I2CMGRRES_BUSERR;
-
-			initBusResetStruct(&pI2CM->stBusResetData);
-			pI2CM->state = STATE_RESETBUSERROR;
-			startTimer(1);
-		}
-		else if ( eEvent & I2CEVENT_NACKF )
-		{
-			pI2CM->eCurMsgRes = I2CMGRRES_NOADDRACK;
-
-			__I2C_SEND_STOP(pI2C);
-			startTimer(1);
+			++f_i2crx_buserr;
 		}
 		else if ( eEvent & I2CEVENT_TIMEOUT )
 		{
 			pI2CM->eCurMsgRes = I2CMGRRES_TIMEOUT;
-
-			initBusResetStruct(&pI2CM->stBusResetData);
-			pI2CM->state = STATE_RESETBUSERROR;
-			startTimer(1);
+			++f_i2crx_timeout;
 		}
 		else
 		{
 			pI2CM->eCurMsgRes = I2CMGRRES_STATEMACHINEERR;
-
-			initBusResetStruct(&pI2CM->stBusResetData);
-			pI2CM->state = STATE_RESETBUSERROR;
-			startTimer(1);
+			++f_i2crx_sm;
 		}
+
+		initBusResetStruct(&pI2CM->stBusResetData);
+		pI2CM->state = STATE_RESETBUSERROR;
+
+		asyncInvoke_MsgMgr();
 	}
 
-	// Any unhandled interrupts left?
-	if (pI2C->ISR & (I2C_ISR_ADDR | I2C_ISR_NACKF | I2C_ISR_STOPF
-							| I2C_ISR_BERR | I2C_ISR_ARLO | I2C_ISR_OVR
-							| I2C_ISR_PECERR | I2C_ISR_TIMEOUT | I2C_ISR_ALERT))
-	{
-		pI2C->ICR = (I2C_ICR_ADDRCF | I2C_ICR_NACKCF | I2C_ICR_STOPCF
-						| I2C_ICR_BERRCF | I2C_ICR_ARLOCF | I2C_ICR_OVRCF
-						| I2C_ICR_PECCF | I2C_ICR_TIMOUTCF | I2C_ICR_ALERTCF);
-		f_i2cerrevents++;
-	}
-
-	SETDEBUGPINS(f_aI2C[ePort].state);
 	return;
 }
 
@@ -1180,17 +1162,13 @@ void I2C1_ER_IRQHandler()
 #ifdef I2CMGR_MANAGEI2C_2
 void I2C2_EV_IRQHandler()
 {
-	SETDEBUG_B();
 	f_aI2C[I2CPORT_2].stateMachine(I2CPORT_2, (uint16_t)I2C2->ISR);
-	RESETDEBUG_B();
-
 	return;
 }
 
 void I2C2_ER_IRQHandler()
 {
 	f_aI2C[I2CPORT_2].stateMachine(I2CPORT_2, (uint16_t)I2C2->ISR);
-
 	return;
 }
 #endif
@@ -1199,34 +1177,26 @@ void I2C2_ER_IRQHandler()
 #ifdef I2CMGR_MANAGEI2C_2
 void I2C3_EV_IRQHandler()
 {
-	SETDEBUG_B();
 	f_aI2C[I2CPORT_3].stateMachine(I2CPORT_3, (uint16_t)I2C3->ISR);
-	RESETDEBUG_B();
-
 	return;
 }
 
 void I2C3_ER_IRQHandler()
 {
 	f_aI2C[I2CPORT_3].stateMachine(I2CPORT_3, (uint16_t)I2C3->ISR);
-
 	return;
 }
 #endif
 
 
+// TIM6_DAC_IRQHandler a.k.a. MessageManager (MsgMgr)
 void TIM6_DAC_IRQHandler( void )
 {
 	uint16_t uNextTimer = 0xFFFF;
-	uint16_t uCurNextTimer;
-	uint8_t uBus;
-	EnI2CState_t* pState;
 
 	stopTimer();
 
-	SETDEBUG_A();
-
-	for (uBus = 0; uBus < NI2C; uBus++)
+	for (uint8_t uBus = 0; uBus < NI2C; uBus++)
 	{
 		// Wenn Port nicht verwaltet wird, dann gleich zum nächsten
 		if (f_aI2CPTR[uBus] == NULL)
@@ -1234,9 +1204,9 @@ void TIM6_DAC_IRQHandler( void )
 			continue;
 		}
 
-		uCurNextTimer = 0xFFFF;
+		EnI2CState_t* pState = (EnI2CState_t*)&(f_aI2C[uBus].state);
 
-		pState = (EnI2CState_t*)&(f_aI2C[uBus].state);
+		uint16_t uCurNextTimer = 0xFFFF;
 
 		// Als erstes schauen, ob ein Bus-Reset durchgeführt wird
 		if ( (*pState == STATE_RESETBUSINIT)
@@ -1259,8 +1229,7 @@ void TIM6_DAC_IRQHandler( void )
 			}
 		}
 
-		if ( (*pState == STATE_STOPREQ)
-						 || (*pState == STATE_ERROR) )
+		if (*pState == STATE_ERROR)
 		{
 			if ( __I2C_IS_BUSY(f_aI2C[uBus].pI2C) )
 			{
@@ -1281,6 +1250,10 @@ void TIM6_DAC_IRQHandler( void )
 				startComm(uBus, uNextDevice, uNextMsg);
 			}
 		}
+		else if (*pState == STATE_TRANSFERCOMPLETED)
+		{
+			finishCurComm(uBus);
+		}
 
 		if (uCurNextTimer < uNextTimer)
 		{
@@ -1292,45 +1265,6 @@ void TIM6_DAC_IRQHandler( void )
 	{
 		startTimer(uNextTimer);
 	}
-
-	RESETDEBUG_A();
-
-	return;
-}
-
-
-static inline void initBusResetStruct(BusResetData_t* pData)
-{
-	pData->uTic = 0;
-	pData->uToggleCount = 0;
-	pData->eState = BUSRESETSTATE_INIT;
-
-	return;
-}
-
-static inline void startTimer(uint16_t us)
-{
-	TIM6->CNT = 0xFFFF - us;
-	//TIM6->ARR = us;
-
-	// Interrupt aktivieren
-	TIM6->DIER |= 0x1;
-
-	__TIM_ENABLE(TIM6);
-
-	return;
-}
-
-
-static inline void stopTimer()
-{
-	__TIM_DISABLE(TIM6);
-
-	// Interrupt deaktivieren
-	TIM6->DIER &= ~0x1;
-
-	// Interruptflag löschen
-	TIM6->SR &= ~0x1;
 
 	return;
 }
@@ -1379,8 +1313,27 @@ bool cmd_dbg(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			acRespData[0] = SOT_RXRESP;
 
 			char* strend = acRespData + 1;
-			strend = strcpy_returnend(strend, bufend, "I2CEVENTS=");
-			strend = strcpy_returnend(strend, bufend, utoa(f_i2cerrevents, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, "I2C TX EVENTS=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2ctxerrevents, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " BUSERR=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2ctx_buserr, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " TO=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2ctx_timeout, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " SM=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2ctx_sm, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " NACK=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2ctx_nack, tmp, 10));
+
+			strend = strcpy_returnend(strend, bufend, "\nI2C RX EVENTS=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2crxerrevents, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " BUSERR=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2crx_buserr, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " TO=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2crx_timeout, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " SM=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2crx_sm, tmp, 10));
+			strend = strcpy_returnend(strend, bufend, " NACK=");
+			strend = strcpy_returnend(strend, bufend, utoa(f_i2crx_nack, tmp, 10));
 
 			*pnRespLen = strend - acRespData;
 		}

@@ -93,7 +93,7 @@ typedef enum EnI2CEvent
 #define NOCOMM 0xFF
 
 
-// 
+//
 typedef struct I2CMGR_I2C_Pins
 {
 	GPIO_TypeDef* portSCL;
@@ -123,7 +123,8 @@ typedef enum EnI2CState
 	STATE_SBSENT,
 	STATE_ADDRSENT,
 	STATE_DATATRANSFER,
-	STATE_STOPREQ,
+	STATE_TRANSFERCOMPLETED,
+	STATE_DATATRANSFER_NACKF,
 	STATE_RESETBUSINIT,
 	STATE_RESETBUSERROR
 } EnI2CState_t;
@@ -134,7 +135,7 @@ typedef struct I2CMGR_Device
 	bool bInit;
 	EnI2C_PORT_t eI2CPort;
 	uint8_t uAddress;
-	EnI2C_MsgState_t eMsgState; 
+	EnI2C_MsgState_t eMsgState;
 	EnI2CMgrRes_t eMsgRes;
 	uint8_t nMsgs;
 	uint8_t uCurMsg;

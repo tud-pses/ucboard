@@ -4,28 +4,28 @@
 /*
  * In "i2cmgr" ist eine Verwaltung für den I2C-Bus implementiert.
  *
- * Diese Verwaltung übernimmt die Initialisierung der Busse und die Übertragung 
+ * Diese Verwaltung übernimmt die Initialisierung der Busse und die Übertragung
  * von Nachrichten (Messages) zu und von Geräten (Devices), die an die Busse
  * angeschlossen sind.
  * Unter Nachricht ist einfach die Übertragung einer bestimmten Anzahl von Bytes
  * zu einem Gerät (TX) oder von einem Gerät (RX) zu verstehen.
  * Die Nachrichten werden dabei grundsätzlich asynchron übermittelt, d.h. dass
- * mit den unten genannten Funktionen die Nachrichten zunächst nur an die 
+ * mit den unten genannten Funktionen die Nachrichten zunächst nur an die
  * Verwaltung übergeben und die Funktionen dann gleich wieder beendet werden, ohne
  * dass auf die Übertragung der Nachrichten gewartet wird.
  * Somit muss man auch bei mehreren Geräten an einem Bus nicht darauf achten, dass
  * diese sich den Bus gegenseitig "gerecht" teilen, da dies von i2cmgr übernommen
  * wird.
- * 
+ *
  * Fehlerbehandlung:
  * - Wenn das angesprochene Gerät kein Acknowledge sendet, so wird ein Stop-Bit
  * gesendet.
  * - In allen anderen Fällen wird der Bus resetet. D.h. es wird "manuell" ein
  * Null-Byte (inklusive Start- und Stop-Bit) auf den Bus geschrieben.
- * In beiden Fällen wird die Übertragung aller Nachrichten zu dem betroffenden 
- * Gerät abgebrochen und der Status auf I2CMSGSTATE_ERROR gesetzt. Dann wird mit 
+ * In beiden Fällen wird die Übertragung aller Nachrichten zu dem betroffenden
+ * Gerät abgebrochen und der Status auf I2CMSGSTATE_ERROR gesetzt. Dann wird mit
  * ggfs. vorhandenen Nachrichten anderer Geräte weitergemacht.
- * 
+ *
  *
  * Die verwalteten Busse sowie deren Pin-Konfigurationen werden in i2cmgr.c
  * gewählt. D.h. es müssen nicht alle Busse des uC über i2cmgr verwaltet werden.
@@ -60,7 +60,7 @@
  * Strukturen.
  *
  * Wenn eine oder mehrere Nachrichten über EINEN Aufruf einer der
- * i2cmgr_enqueueAsynch... Funktionen für ein Gerät hinzugefügt wurden, dann 
+ * i2cmgr_enqueueAsynch... Funktionen für ein Gerät hinzugefügt wurden, dann
  * können diesem Gerät keine weiteren Nachrichten mehr hinzugefügt werden, solange
  * diese nicht abgearbeitet sind. (Das ist eine Einschränkung der einfachen
  * Implementierung der "Liste" der abzuarbeitenden Nachrichten.)
@@ -92,11 +92,11 @@
  *		i2cmgr_resetMsg(...)
  * die Nachrichten des Gerätes zurückgesetzt werden, wodurch der Status wieder auf
  * I2CMSGSTATE_IDLE gesetzt wird. Dann können wieder Nachrichten übermittelt werden.
- * Sollte ein Fehler aufgetreten sein, so kann mit 
+ * Sollte ein Fehler aufgetreten sein, so kann mit
  *		i2cmgr_getMsgRes(...)
  * die Ursache des Fehlers abgefragt werden. (Dies muss vor i2cmgr_resetMsg(...)
  * erfolgen.)
- * 
+ *
  */
 
 
@@ -155,7 +155,7 @@ typedef struct I2CMGR_Msg
 {
 	EnI2CMgr_MsgDir_t eDir;
 	uint8_t* pBuffer;
-	uint8_t* pBufferEnd1;
+	uint8_t* pBufferEnd;
 	uint8_t* pBufferCur;
 } I2CMGR_Msg_t;
 
@@ -167,7 +167,7 @@ typedef struct I2CMGR_Msg
 
 void i2cmgr_init();
 
-EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig, 
+EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig,
 									uint8_t uAddress,
 									uint8_t* uDeviceID);
 
@@ -209,7 +209,7 @@ static inline void i2cmgr_setupMsgStruct(I2CMGR_Msg_t* pMsg, EnI2CMgr_MsgDir_t e
 {
 	pMsg->eDir = eDir;
 	pMsg->pBuffer = pBuffer;
-	pMsg->pBufferEnd1 = pBuffer + nCount;
+	pMsg->pBufferEnd = pBuffer + nCount;
 	pMsg->pBufferCur = pBuffer;
 	return;
 }

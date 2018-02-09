@@ -51,6 +51,8 @@ void __SPI_Init(SPI_TypeDef* SPIx, SPI_InitTypeDef* SPI_InitStruct);
 #define __I2C_DISABLE(__HANDLE__) ((__HANDLE__)->CR1 &= ~I2C_CR1_PE)
 #define __I2C_ENABLE_IT(__HANDLE__, __INTERRUPT__)          ((__HANDLE__)->CR1 |= (__INTERRUPT__))
 #define __I2C_DISABLE_IT(__HANDLE__, __INTERRUPT__)         ((__HANDLE__)->CR1 &= (~(__INTERRUPT__)))
+#define __I2C_SETACTIVE_IT(__HANDLE__, __INTERRUPT__)       ((__HANDLE__)->CR1 = ((__HANDLE__)->CR1 & ~I2C_IT_ALL) | (__INTERRUPT__))
+
 
 #define __I2C_SEND_START_AND_ADDR(__HANDLE__) ((__HANDLE__)->CR2 |= I2C_CR2_START)
 #define __I2C_SEND_STOP(__HANDLE__) ((__HANDLE__)->CR2 |= I2C_CR2_STOP)
