@@ -115,13 +115,13 @@ bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address, USParam_
 
 	if (!usonic_ping(this))
 	{
-		display_println("usonic ping failed!");
+		//display_println("usonic ping failed!");
 		return false;
 	}
 
 	if (!setConfig(this))
 	{
-		display_println("usonic config failed!");
+		//display_println("usonic config failed!");
 		return false;
 	}
 
@@ -129,23 +129,21 @@ bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address, USParam_
 
 	this->bStartNewMeasurement = false;
 
-	return false;
+	return true;
 }
 
 
 bool usonic_ping(USdevice_t* this)
 {
-	EnI2CMgrRes_t res;
-	uint8_t uRxByte;
-
 	if (i2cmgr_getMsgState(this->uI2CDeviceID) != I2CMSGSTATE_IDLE)
 	{
 		return false;
 	}
 
 	this->acTxBuffer[0] = 0;
+	//this->acRxBuffer[0] = 0;
 
-	res = i2cmgr_enqueueAsynchWriteRead(this->uI2CDeviceID, 1, this->acTxBuffer,
+	EnI2CMgrRes_t res = i2cmgr_enqueueAsynchWriteRead(this->uI2CDeviceID, 1, this->acTxBuffer,
 															1, this->acRxBuffer);
 
 	if (res != I2CMGRRES_OK)
@@ -159,7 +157,7 @@ bool usonic_ping(USdevice_t* this)
 		// * do nothing *
 	}
 
-	uRxByte = this->acRxBuffer[0];
+	uint8_t uRxByte = this->acRxBuffer[0];
 
 
 	if (i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_COMPLETED)

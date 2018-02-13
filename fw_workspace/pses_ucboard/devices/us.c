@@ -40,6 +40,9 @@ static USParam_t f_usparam = {US_RANGE_INIT, US_GAIN_INIT};
 static bool f_bSetNewParams = false;
 
 static bool f_bUSOn = true;
+static bool f_bDevOk[NDEVICES] = {false};
+
+
 
 // Conversion sound run time T into distance d:
 // c = 343,2 m/s
@@ -50,28 +53,42 @@ static bool f_bUSOn = true;
 //
 // 56230 / 32768 = 1.716003
 
-
-
 #define CONV_VALUE(raw) ( (raw > 38190) ? 0xFFFF : (uint16_t)( ((uint32_t)(raw) * 56230) / 32768 ) )
 
 //#define CONV_VALUE(raw) ( raw )
 
 
-
 void us_init()
 {
-	uint8_t i;
-
 	usonicbc_init(&f_usbroadcaster, USPORT);
 
-	for (i = 0; i < NDEVICES; ++i)
+	for (uint8_t i = 0; i < NDEVICES; ++i)
 	{
-		usonic_init(&f_usdevices[i], USPORT, f_uADDRESSES[i], f_usparam);
+		f_bDevOk[i] = usonic_init(&f_usdevices[i], USPORT, f_uADDRESSES[i], f_usparam);
+
+		if (!f_bDevOk[i])
+		{
+			char buf[100];
+			char tmp[10];
+			strcat_returnend(buf, buf+99, "US device ", itoa(i, tmp, 10), " not found!", NULL);
+			display_println(buf);
+		}
 	}
 
-	daq_provideChannel("USL", "ultrasonic left distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[0]);
-	daq_provideChannel("USF", "ultrasonic front distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[1]);
-	daq_provideChannel("USR", "ultrasonic right distance", "0.1 mm", DAQVALUETYPE_UINT16, DAQSAMPLINGTIME_UNDEF, &f_auDAQChs[2]);
+	daq_provideChannel("USL", "ultrasonic left distance", "0.1 mm",
+							DAQVALUETYPE_UINT16,
+							DAQSAMPLINGTIME_UNDEF,
+							&f_auDAQChs[0]);
+
+	daq_provideChannel("USF", "ultrasonic front distance", "0.1 mm",
+							DAQVALUETYPE_UINT16,
+							DAQSAMPLINGTIME_UNDEF,
+							&f_auDAQChs[1]);
+
+	daq_provideChannel("USR", "ultrasonic right distance", "0.1 mm",
+							DAQVALUETYPE_UINT16,
+							DAQSAMPLINGTIME_UNDEF,
+							&f_auDAQChs[2]);
 
 	f_bUSOn = false;
 
@@ -139,6 +156,11 @@ void us_do_systick()
 		case USQUERYSTATE_TRIGGERED:
 			for (int i = 0; i < NDEVICES; ++i)
 			{
+				if (!f_bDevOk[i])
+				{
+					continue;
+				}
+
 				usonic_startDataAvailableQuery(&f_usdevices[i]);
 			}
 
@@ -153,6 +175,11 @@ void us_do_systick()
 
 				for (int i = 0; i < NDEVICES; ++i)
 				{
+					if (!f_bDevOk[i])
+					{
+						continue;
+					}
+
 					if (s_auTicEnd[i] != 0)
 					{
 						continue;
@@ -180,6 +207,11 @@ void us_do_systick()
 				{
 					for (int i = 0; i < NDEVICES; ++i)
 					{
+						if (!f_bDevOk[i])
+						{
+							continue;
+						}
+
 						usonic_startDataQuery(&f_usdevices[i]);
 					}
 
@@ -197,6 +229,17 @@ void us_do_systick()
 
 				for (int i = 0; i < NDEVICES; ++i)
 				{
+					if (!f_bDevOk[i])
+					{
+						s_auData[i] = ERRORFLAG;
+
+						daq_setChannelValue_uint16(f_auDAQChs[i],
+														DAQVALUEMOD_SENSORERROR,
+														s_auTicEnd[i],
+														0);
+						continue;
+					}
+
 					if ((s_auData[i] & NODATAFLAG) == 0)
 					{
 						continue;
@@ -236,6 +279,11 @@ void us_do_systick()
 
 					for (int i = 0; i < NDEVICES; ++i)
 					{
+						if (!f_bDevOk[i])
+						{
+							continue;
+						}
+
 						bool bResetParams = bSetNewParams;
 
 						if ((!bResetParams) && (s_auData[i] == 0))
@@ -274,6 +322,11 @@ void us_do_systick()
 
 				for (int i = 0; i < NDEVICES; ++i)
 				{
+					if (!f_bDevOk[i])
+					{
+						continue;
+					}
+
 					if (usonic_getConfigResult(&f_usdevices[i]) == USCONFIGRES_INPROGRESS)
 					{
 						bFinished = false;
