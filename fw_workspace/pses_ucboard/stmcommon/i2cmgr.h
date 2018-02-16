@@ -171,6 +171,8 @@ EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig
 									uint8_t uAddress,
 									uint8_t* uDeviceID);
 
+EnI2CMgrRes_t i2cmgr_removeDevice(uint8_t uDeviceID);
+
 EnI2CMgrRes_t i2cmgr_enqueueAsynchRead(uint8_t uDeviceID,
 											uint16_t nRxCount,
 											uint8_t* paRxdata);

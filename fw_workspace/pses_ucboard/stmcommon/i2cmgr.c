@@ -431,6 +431,20 @@ EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig
 }
 
 
+EnI2CMgrRes_t i2cmgr_removeDevice(uint8_t uDeviceID)
+{
+	// Prüfen, ob Device gültig und initialisiert
+	if ( (uDeviceID >= MAXDEVICES) || (!f_aDevices[uDeviceID].bInit) )
+	{
+		return I2CMSGSTATE_INVALIDDEVICE;
+	}
+
+	f_aDevices[uDeviceID].bInit = false;
+
+	return I2CMGRRES_OK;
+}
+
+
 static bool setI2CConfig(EnI2C_PORT_t eI2CPort, const I2C_InitTypeDef* pstConfig)
 {
 	I2C_TypeDef* pI2C = f_aI2C[eI2CPort].pI2C;
