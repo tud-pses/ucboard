@@ -167,8 +167,9 @@ typedef struct I2CMGR_Msg
 
 void i2cmgr_init();
 
-EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig,
-									uint8_t uAddress,
+EnI2CMgrRes_t i2cmgr_addDevice(const EnI2C_PORT_t eI2CPort,
+									const I2C_InitTypeDef* pstConfig,
+									const uint8_t uAddress,
 									uint8_t* uDeviceID);
 
 EnI2CMgrRes_t i2cmgr_removeDevice(uint8_t uDeviceID);

@@ -380,8 +380,9 @@ static bool resetBus_SM(EnI2C_PORT_t eI2CPort)
 }
 
 
-EnI2CMgrRes_t i2cmgr_addDevice(EnI2C_PORT_t eI2CPort, I2C_InitTypeDef* pstConfig,
-									uint8_t uAddress,
+EnI2CMgrRes_t i2cmgr_addDevice(const EnI2C_PORT_t eI2CPort,
+									const I2C_InitTypeDef* pstConfig,
+									const uint8_t uAddress,
 									uint8_t* puDeviceID)
 {
 	if (eI2CPort >= NI2C)
