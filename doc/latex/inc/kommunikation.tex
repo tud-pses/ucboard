@@ -737,6 +737,62 @@ Abfragen der aktuellen Einstellungen:
 
 
 
+\paragraph{Pingen der US-Sensoren}
+
+Mit 
+\begin{verbatim}
+	!US PING
+	:ok
+\end{verbatim}
+wird ein Ping für jede der sechzehn möglichen I2C-Adressen des Ultraschallmoduls ausgeführt.
+
+Das Ergebnis wird nicht direkt als Antwort auf den Befehl, sondern als Textausgabe über die Display-Funktion übertragen: 
+\begin{verbatim}
+	'ping:
+	224 = ok
+	226 = ok
+	228 = ok
+	230 = -
+	232 = -
+	[...]
+	254 = -
+\end{verbatim}
+
+
+\paragraph{Änderung der I2C-Bus-Adresse}
+
+Das Programm geht von der in \tabref{tab:usaddresses} aufgeführten Zuordnung der Sensoren (anhand der I2C-Bus-Adresse) zu deren Position aus. Wird ein Sensor ausgetauscht, muss dessen Adresse überprüft (\verb|!US PING|) und gegebenenfalls geändert werden.
+
+\begin{table}[htb]%
+	\centering
+	\caption{Zuordnung der I2C-Bus-Adressen zur Position der US-Sensoren}
+	\label{tab:usaddresses}
+	\begin{tabular}{lc}
+		\mytoprule
+		Position & Adresse \\
+		\mymidrule
+		links & 224 \\
+		vorne & 226 \\
+		rechts & 228 \\
+		\mybottomrule
+	\end{tabular}
+\end{table}
+
+Um die Adresse zu ändern, muss der betreffende Sensor nach dem Datenblatt alleine am Bus hängen. (Dies wird im Programm auch überprüft.) Die Adressänderung erfolgt mit
+\begin{verbatim}
+	!US CHGADDR old new
+\end{verbatim}
+Dabei ist \verb|old| die aktuelle (alte) Adresse und \verb|new| die neue Adresse, die gesetzt werden soll.
+
+Beispiel:
+\begin{verbatim}
+	!US CHGADDR 224 226
+	:ok
+\end{verbatim}
+
+Die Erfolgsmeldung \bzw mögliche Fehlermeldungen werden nicht direkt als Antwort auf den Befehl gesendet, sondern als Textausgabe über die Display-Funktion übertragen.
+
+
 \subsubsection{IMU}
 
 Setzen der Einstellungen:
