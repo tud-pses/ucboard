@@ -77,12 +77,30 @@ typedef struct USbroadcaster_
 	I2CMGR_Msg_t aMsgs[4];
 } USbroadcaster_t;
 
+typedef enum EnUSAddrChgState_
+{
+	USONIC_ADDRCHG_IDLE,
+	USONIC_ADDRCHG_RUNNING,
+	USONIC_ADDRCHG_SUCCESS,
+	USONIC_ADDRCHG_ERR_INVALIDPARAM,
+	USONIC_ADDRCHG_ERR_I2CERR,
+	USONIC_ADDRCHG_ERR_DEVICENOTFOUND,
+	USONIC_ADDRCHG_ERR_TOOMANYDEVICES,
+	USONIC_ADDRCHG_ERR_NOTFOUNDAFTER,
+} EnUSAddrChgState_t;
+
 
 bool usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort);
 bool usonicbc_trigger(USbroadcaster_t* this);
 
 bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address, USParam_t param);
 bool usonic_ping(USdevice_t* this);
+
+bool usonic_guestping_start(EnI2C_PORT_t ePort, uint8_t address);
+bool usonic_guestping_query(bool* pPingRes);
+
+bool usonic_changeDeviceI2CAddress_init(EnI2C_PORT_t ePort, uint8_t oldaddress, uint8_t newaddress);
+EnUSAddrChgState_t usonic_changeDeviceI2CAddress_do();
 
 void usonic_setConfig(USdevice_t* this, const USParam_t* const param);
 

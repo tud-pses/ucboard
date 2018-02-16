@@ -19,29 +19,29 @@
 #include "ucboard_hwfcts.h"
 
 
+static const I2C_InitTypeDef f_i2cconf_srf08 =
+{
+	.Timing = 0x2000090E,
+	.OwnAddress1 = 0,
+	.AddressingMode = I2C_ADDRESSINGMODE_7BIT,
+	.DualAddressMode = I2C_DUALADDRESS_DISABLE,
+	.OwnAddress2 = 0,
+	.OwnAddress2Masks = I2C_OA2_NOMASK,
+	.GeneralCallMode = I2C_GENERALCALL_DISABLE,
+	.NoStretchMode = I2C_NOSTRETCH_DISABLE
+};
+
+
 
 static bool setConfig(USdevice_t* this);
 
 bool usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort)
 {
-	EnI2CMgrRes_t res;
-	I2C_InitTypeDef stI2CConfig;
-
 	this->uI2CDeviceID = 0xFF;
 	this->eI2CPort = ePort;
 	this->uI2CAddress = 0x00;
 
-
-	stI2CConfig.Timing = 0x2000090E;
-	stI2CConfig.OwnAddress1 = 0;
-	stI2CConfig.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-	stI2CConfig.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-	stI2CConfig.OwnAddress2 = 0;
-	stI2CConfig.OwnAddress2Masks = I2C_OA2_NOMASK;
-	stI2CConfig.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-	stI2CConfig.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-
-	res = i2cmgr_addDevice(ePort, &stI2CConfig, this->uI2CAddress, &(this->uI2CDeviceID));
+	EnI2CMgrRes_t res = i2cmgr_addDevice(ePort, &f_i2cconf_srf08, this->uI2CAddress, &(this->uI2CDeviceID));
 
 	if (res != I2CMGRRES_OK)
 	{
@@ -55,8 +55,6 @@ bool usonicbc_init(USbroadcaster_t* this, EnI2C_PORT_t ePort)
 
 bool usonicbc_trigger(USbroadcaster_t* this)
 {
-	EnI2CMgrRes_t res;
-
 	if ( (i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_COMPLETED)
 			|| (i2cmgr_getMsgState(this->uI2CDeviceID) == I2CMSGSTATE_ERROR) )
 	{
@@ -69,7 +67,7 @@ bool usonicbc_trigger(USbroadcaster_t* this)
 
 	this->acTxBuffer[0] = US_ADDR_CMD;
 	this->acTxBuffer[1] = US_CMD_MEASUREMENT;
-	res = i2cmgr_enqueueAsynchWrite(this->uI2CDeviceID, 2, this->acTxBuffer);
+	EnI2CMgrRes_t res = i2cmgr_enqueueAsynchWrite(this->uI2CDeviceID, 2, this->acTxBuffer);
 
 	if (res != I2CMGRRES_OK)
 	{
@@ -83,7 +81,7 @@ bool usonicbc_trigger(USbroadcaster_t* this)
 bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address, USParam_t param)
 {
 	EnI2CMgrRes_t res;
-	I2C_InitTypeDef stI2CConfig;
+
 
 	this->bNewData = false;
 	this->bStartNewMeasurement = false;
@@ -97,16 +95,7 @@ bool usonic_init(USdevice_t* this, EnI2C_PORT_t ePort, uint8_t address, USParam_
 	this->param = param;
 
 
-	stI2CConfig.Timing = 0x2000090E;
-	stI2CConfig.OwnAddress1 = 0;
-	stI2CConfig.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-	stI2CConfig.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-	stI2CConfig.OwnAddress2 = 0;
-	stI2CConfig.OwnAddress2Masks = I2C_OA2_NOMASK;
-	stI2CConfig.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-	stI2CConfig.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-
-	res = i2cmgr_addDevice(ePort, &stI2CConfig, address, &(this->uI2CDeviceID));
+	res = i2cmgr_addDevice(ePort, &f_i2cconf_srf08, address, &(this->uI2CDeviceID));
 
 	if (res != I2CMGRRES_OK)
 	{
@@ -177,6 +166,358 @@ bool usonic_ping(USdevice_t* this)
 	}
 
 	return true;
+}
+
+
+static USdevice_t f_guestdevice;
+
+bool usonic_guestping_start(EnI2C_PORT_t ePort, uint8_t address)
+{
+	f_guestdevice.bNewData = false;
+	f_guestdevice.bStartNewMeasurement = false;
+	f_guestdevice.uI2CDeviceID = 0xFF;
+	f_guestdevice.uCommErrorCount = 0;
+	f_guestdevice.uCurData = 0;
+	f_guestdevice.eDataState = USONICDATA_IDLE;
+	f_guestdevice.eI2CPort = ePort;
+	f_guestdevice.uI2CAddress = address;
+	f_guestdevice.param.range = US_RANGE_INIT;
+	f_guestdevice.param.gain = US_GAIN_INIT;
+
+	EnI2CMgrRes_t res = i2cmgr_addDevice(ePort, &f_i2cconf_srf08, address, &(f_guestdevice.uI2CDeviceID));
+
+	if (res != I2CMGRRES_OK)
+	{
+		return false;
+	}
+
+	f_guestdevice.acTxBuffer[0] = 0;
+	//f_guestdevice.acRxBuffer[0] = 0;
+
+	res = i2cmgr_enqueueAsynchWriteRead(f_guestdevice.uI2CDeviceID,
+															1, f_guestdevice.acTxBuffer,
+															1, f_guestdevice.acRxBuffer);
+
+	if (res != I2CMGRRES_OK)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+
+bool usonic_guestping_query(bool* pPingRes)
+{
+	*pPingRes = false;
+
+	EnI2C_MsgState_t msgstate = i2cmgr_getMsgState(f_guestdevice.uI2CDeviceID);
+
+	if ( !( msgstate & (I2CMSGSTATE_COMPLETED | I2CMSGSTATE_ERROR)) )
+	{
+		return false;
+	}
+
+	uint8_t uRxByte = f_guestdevice.acRxBuffer[0];
+
+//	if (msgstate == I2CMSGSTATE_COMPLETED)
+//	{
+//		display_println_hex("us firmware version: ", uRxByte);
+//	}
+//	else
+//	{
+//		//display_println_hex("ping msgstate: ", i2cmgr_getMsgState(this->uI2CDeviceID));
+//	}
+
+	i2cmgr_resetMsg(f_guestdevice.uI2CDeviceID);
+
+	i2cmgr_removeDevice(f_guestdevice.uI2CDeviceID);
+
+
+	if ((msgstate != I2CMSGSTATE_COMPLETED) || (uRxByte == 0x00) || (uRxByte == 0xFF))
+	{
+		*pPingRes = false;
+	}
+	else
+	{
+		*pPingRes = true;
+	}
+
+	return true;
+}
+
+
+typedef enum EnAddrChgSM_
+{
+	ADDRCHGSM_IDLE = 0,
+	ADDRCHGSM_PENDING,
+	ADDRCHGSM_PINGING,
+	ADDRCHGSM_CHANGESEQ,
+	ADDRCHGSM_AFTERPING,
+	ADDRCHGSM_SUCCESS,
+	ADDRCHGSM_ERROR,
+} EnAddrChgSM_t;
+
+
+typedef struct AddrChgData_
+{
+	EnAddrChgSM_t smstate;
+	EnI2C_PORT_t port;
+	uint8_t oldaddress;
+	uint8_t newaddress;
+} AddrChgData_t;
+
+static AddrChgData_t f_addrchgdata = {ADDRCHGSM_IDLE, 0, 0, 0};
+
+#define ADDRCHG_SEQLEN 3
+static const uint8_t f_ADDRCHG_SEQ[ADDRCHG_SEQLEN] = {0xA0, 0xAA, 0xA5};
+#define ADDCHGSEQ_PAUSE_US 50000
+
+#define DEVICES_ADDRSPACE_BEGIN	0xE0
+#define DEVICES_ADDRSPACE_COUNT 16
+#define DEVICES_ADDRSPACE_INC   2
+
+#define DEVICES_ADDR(i) (DEVICES_ADDRSPACE_BEGIN + DEVICES_ADDRSPACE_INC * (i))
+
+#define DEVICES_ISADDRVALID(a) (((a) >= DEVICES_ADDRSPACE_BEGIN)		\
+									&& (((a) - DEVICES_ADDRSPACE_BEGIN) / DEVICES_ADDRSPACE_INC <= DEVICES_ADDRSPACE_COUNT)		\
+									&& ( !((a) & 0x01) ) )
+
+
+bool usonic_changeDeviceI2CAddress_init(EnI2C_PORT_t ePort, uint8_t oldaddress, uint8_t newaddress)
+{
+	f_addrchgdata.oldaddress = oldaddress;
+	f_addrchgdata.newaddress = newaddress;
+	f_addrchgdata.port = ePort;
+
+	f_addrchgdata.smstate = ADDRCHGSM_PENDING;
+
+	return true;
+}
+
+
+EnUSAddrChgState_t usonic_changeDeviceI2CAddress_do()
+{
+	static uint8_t s_uCurID = 0;
+	static bool s_bPingWait = false;
+	static bool s_abPingRes[DEVICES_ADDRSPACE_COUNT];
+	static uint8_t s_uCurSeqByte = 0;
+	static uint32_t s_uCurSeqTic = 0;
+
+	EnUSAddrChgState_t state = USONIC_ADDRCHG_IDLE;
+
+	if (f_addrchgdata.smstate == ADDRCHGSM_PENDING)
+	{
+		state = USONIC_ADDRCHG_RUNNING;
+
+		if ( (f_addrchgdata.oldaddress == f_addrchgdata.newaddress)
+				|| !DEVICES_ISADDRVALID(f_addrchgdata.oldaddress)
+				|| !DEVICES_ISADDRVALID(f_addrchgdata.newaddress) )
+		{
+			f_addrchgdata.smstate = ADDRCHGSM_ERROR;
+			state = USONIC_ADDRCHG_ERR_INVALIDPARAM;
+		}
+		else
+		{
+			for (int i = 0; i < DEVICES_ADDRSPACE_COUNT; ++i)
+			{
+				s_abPingRes[i] = false;
+			}
+			s_bPingWait = false;
+			s_uCurID = 0;
+
+			f_addrchgdata.smstate = ADDRCHGSM_PINGING;
+		}
+	}
+	else if (f_addrchgdata.smstate == ADDRCHGSM_PINGING)
+	{
+		state = USONIC_ADDRCHG_RUNNING;
+
+		if (!s_bPingWait)
+		{
+			if (usonic_guestping_start(f_addrchgdata.port, DEVICES_ADDR(s_uCurID)))
+			{
+				s_bPingWait = true;
+			}
+			else
+			{
+				f_addrchgdata.smstate = ADDRCHGSM_PINGING;
+				state = USONIC_ADDRCHG_ERR_I2CERR;
+			}
+		}
+		else
+		{
+			bool res;
+
+			if (usonic_guestping_query(&res))
+			{
+				s_bPingWait = false;
+				s_abPingRes[s_uCurID] = res;
+				++s_uCurID;
+			}
+		}
+
+		if (s_uCurID >= DEVICES_ADDRSPACE_COUNT)
+		{
+			uint8_t devcnt = 0;
+			bool olddevfound = false;
+
+			for (int i = 0; i < DEVICES_ADDRSPACE_COUNT; ++i)
+			{
+				if (s_abPingRes[i])
+				{
+					++devcnt;
+
+					if (DEVICES_ADDR(i) == f_addrchgdata.oldaddress)
+					{
+						olddevfound = true;
+					}
+				}
+			}
+
+			if (!olddevfound)
+			{
+				f_addrchgdata.smstate = ADDRCHGSM_ERROR;
+				state = USONIC_ADDRCHG_ERR_DEVICENOTFOUND;
+			}
+			else if (devcnt > 1)
+			{
+				f_addrchgdata.smstate = ADDRCHGSM_ERROR;
+				state = USONIC_ADDRCHG_ERR_TOOMANYDEVICES;
+			}
+			else
+			{
+				f_addrchgdata.smstate = ADDRCHGSM_CHANGESEQ;
+				s_uCurSeqByte = 0;
+				s_uCurSeqTic = 0;
+
+				f_guestdevice.bNewData = false;
+				f_guestdevice.bStartNewMeasurement = false;
+				f_guestdevice.uI2CDeviceID = 0xFF;
+				f_guestdevice.uCommErrorCount = 0;
+				f_guestdevice.uCurData = 0;
+				f_guestdevice.eDataState = USONICDATA_IDLE;
+				f_guestdevice.eI2CPort = f_addrchgdata.port;
+				f_guestdevice.uI2CAddress = f_addrchgdata.oldaddress;
+				f_guestdevice.param.range = US_RANGE_INIT;
+				f_guestdevice.param.gain = US_GAIN_INIT;
+
+				EnI2CMgrRes_t res = i2cmgr_addDevice(f_addrchgdata.port, &f_i2cconf_srf08,
+														f_addrchgdata.oldaddress, &(f_guestdevice.uI2CDeviceID));
+
+				if (res != I2CMGRRES_OK)
+				{
+					f_addrchgdata.smstate = ADDRCHGSM_ERROR;
+					state = USONIC_ADDRCHG_ERR_I2CERR;
+				}
+			}
+		}
+	}
+	else if (f_addrchgdata.smstate == ADDRCHGSM_CHANGESEQ)
+	{
+		state = USONIC_ADDRCHG_RUNNING;
+
+		if (s_uCurSeqTic == 0)
+		{
+			uint8_t byte;
+
+			if (s_uCurSeqByte < ADDRCHG_SEQLEN)
+			{
+				byte = f_ADDRCHG_SEQ[s_uCurSeqByte];
+			}
+			else if (s_uCurSeqByte == ADDRCHG_SEQLEN)
+			{
+				byte = f_addrchgdata.newaddress;
+			}
+			else
+			{
+				byte = 0;
+			}
+
+
+			if (byte != 0)
+			{
+				f_guestdevice.acTxBuffer[0] = 0;
+				f_guestdevice.acTxBuffer[1] = byte;
+
+				EnI2CMgrRes_t res = i2cmgr_enqueueAsynchWrite(f_guestdevice.uI2CDeviceID,
+																	2, f_guestdevice.acTxBuffer);
+
+				if (res != I2CMGRRES_OK)
+				{
+					i2cmgr_removeDevice(f_guestdevice.uI2CDeviceID);
+					f_addrchgdata.smstate = ADDRCHGSM_ERROR;
+					state = USONIC_ADDRCHG_ERR_I2CERR;
+				}
+
+				s_uCurSeqTic = stopwatch_getTic();
+			}
+			else
+			{
+				i2cmgr_removeDevice(f_guestdevice.uI2CDeviceID);
+				s_bPingWait = false;
+				f_addrchgdata.smstate = ADDRCHGSM_AFTERPING;
+			}
+		}
+		else
+		{
+			if (stopwatch_getDeltaTime_us(s_uCurSeqTic) >= ADDCHGSEQ_PAUSE_US)
+			{
+				EnI2C_MsgState_t msgstate = i2cmgr_getMsgState(f_guestdevice.uI2CDeviceID);
+
+				if (msgstate == I2CMSGSTATE_ERROR)
+				{
+					i2cmgr_resetMsg(f_guestdevice.uI2CDeviceID);
+					i2cmgr_removeDevice(f_guestdevice.uI2CDeviceID);
+					f_addrchgdata.smstate = ADDRCHGSM_ERROR;
+					state = USONIC_ADDRCHG_ERR_I2CERR;
+				}
+				else if (msgstate == I2CMSGSTATE_COMPLETED)
+				{
+					i2cmgr_resetMsg(f_guestdevice.uI2CDeviceID);
+					s_uCurSeqTic = 0;
+					++s_uCurSeqByte;
+				}
+			}
+		}
+	}
+	else if (f_addrchgdata.smstate == ADDRCHGSM_AFTERPING)
+	{
+		state = USONIC_ADDRCHG_RUNNING;
+
+		if (!s_bPingWait)
+		{
+			if (usonic_guestping_start(f_addrchgdata.port, f_addrchgdata.newaddress))
+			{
+				s_bPingWait = true;
+			}
+			else
+			{
+				f_addrchgdata.smstate = ADDRCHGSM_ERROR;
+				state = USONIC_ADDRCHG_ERR_I2CERR;
+			}
+		}
+		else
+		{
+			bool res;
+
+			if (usonic_guestping_query(&res))
+			{
+				if (res)
+				{
+					f_addrchgdata.smstate = ADDRCHGSM_SUCCESS;
+					state = USONIC_ADDRCHG_SUCCESS;
+				}
+				else
+				{
+					f_addrchgdata.smstate = ADDRCHGSM_ERROR;
+					state = USONIC_ADDRCHG_ERR_NOTFOUNDAFTER;
+				}
+			}
+		}
+	}
+
+	return state;
 }
 
 

@@ -42,6 +42,9 @@ static bool f_bSetNewParams = false;
 static bool f_bUSOn = true;
 static bool f_bDevOk[NDEVICES] = {false};
 
+static uint8_t f_auPingList[16] = {0};
+static bool f_abPingRes[16] = {0};
+
 
 
 // Conversion sound run time T into distance d:
@@ -96,6 +99,109 @@ void us_init()
 }
 
 
+typedef enum EnUSPingState_
+{
+	USPINGSTATE_IDLE = 0,
+	USPINGSTATE_PENDING,
+	USPINGSTATE_RUNNING,
+	USPINGSTATE_RUNNING_WAIT,
+	USPINGSTATE_FINISHED,
+} EnUSPingState_t;
+
+static EnUSPingState_t f_uspingstate = USPINGSTATE_IDLE;
+
+typedef enum EnUSChgAddrState_
+{
+	USCHGADDRSTATE_IDLE = 0,
+	USCHGADDRSTATE_RUNNING,
+	USCHGADDRSTATE_FINISHED,
+} EnUSChgAddrState_t;
+
+static EnUSChgAddrState_t f_uschgaddrstate = USCHGADDRSTATE_IDLE;
+
+
+void us_do_ping()
+{
+	static uint8_t s_curid = 0;
+
+	if (f_uspingstate == USPINGSTATE_PENDING)
+	{
+		s_curid = 0;
+		f_uspingstate = USPINGSTATE_RUNNING;
+	}
+
+	if (f_uspingstate == USPINGSTATE_RUNNING)
+	{
+		uint8_t address = f_auPingList[s_curid];
+
+		if (address == 0)
+		{
+			f_uspingstate = USPINGSTATE_FINISHED;
+		}
+		else
+		{
+			if (usonic_guestping_start(USPORT, address))
+			{
+				f_uspingstate = USPINGSTATE_RUNNING_WAIT;
+			}
+			else
+			{
+				f_abPingRes[s_curid] = false;
+				++s_curid;
+			}
+		}
+	}
+	else if (f_uspingstate == USPINGSTATE_RUNNING_WAIT)
+	{
+		bool bRes;
+
+		if (usonic_guestping_query(&bRes))
+		{
+			f_abPingRes[s_curid] = bRes;
+			++s_curid;
+			f_uspingstate = USPINGSTATE_RUNNING;
+		}
+	}
+
+	if (s_curid == 16)
+	{
+		f_uspingstate = USPINGSTATE_FINISHED;
+	}
+
+	return;
+}
+
+
+static char* getPingString_returnend(char* buf, char* const bufend)
+{
+	char tmp[10];
+
+	buf = strcpy_returnend(buf, bufend, "ping:\n");
+
+	for (int i = 0; i < 16; ++i)
+	{
+		if (f_auPingList[i] == 0)
+		{
+			break;
+		}
+
+		buf = strcpy_returnend(buf, bufend, utoa(f_auPingList[i], tmp, 10));
+
+		if (f_abPingRes[i])
+		{
+			buf = strcpy_returnend(buf, bufend, " = ok\n");
+		}
+		else
+		{
+			buf = strcpy_returnend(buf, bufend, " = -\n");
+		}
+	}
+
+	return buf;
+}
+
+
+
 typedef enum EnUSQueryState_
 {
 	USQUERYSTATE_IDLE = 0,
@@ -110,6 +216,7 @@ typedef enum EnUSQueryState_
 #define NODATAFLAG (1 << 31)
 #define ERRORFLAG (1 << 30)
 
+
 void us_do_systick()
 {
 	static EnUSQueryState_t s_eState = USQUERYSTATE_IDLE;
@@ -119,6 +226,55 @@ void us_do_systick()
 	static uint32_t s_auData[NDEVICES] = {0};
 
 	static uint16_t s_uNextStep_ms = 0;
+
+
+	if (f_uspingstate == USPINGSTATE_FINISHED)
+	{
+		char tmp[200];
+		getPingString_returnend(tmp, tmp+199);
+
+		display_println(tmp);
+
+		f_uspingstate = USPINGSTATE_IDLE;
+	}
+	else if (f_uspingstate != USPINGSTATE_IDLE)
+	{
+		us_do_ping();
+	}
+	else if (f_uschgaddrstate != USCHGADDRSTATE_IDLE)
+	{
+		EnUSAddrChgState_t state = usonic_changeDeviceI2CAddress_do();
+
+		if (state != USONIC_ADDRCHG_RUNNING)
+		{
+			f_uschgaddrstate = USCHGADDRSTATE_IDLE;
+
+			switch (state)
+			{
+				case USONIC_ADDRCHG_SUCCESS:
+					display_println("i2c address changed successfully");
+					break;
+				case USONIC_ADDRCHG_ERR_DEVICENOTFOUND:
+					display_println("i2c address change error:\ndevice not found!");
+					break;
+				case USONIC_ADDRCHG_ERR_TOOMANYDEVICES:
+					display_println("i2c address change error:\nmore than one device on bus!");
+					break;
+				case USONIC_ADDRCHG_ERR_INVALIDPARAM:
+					display_println("i2c address change error:\ninvalid addresses!");
+					break;
+				case USONIC_ADDRCHG_ERR_I2CERR:
+					display_println("i2c address change error:\ni2c error!");
+					break;
+				case USONIC_ADDRCHG_ERR_NOTFOUNDAFTER:
+					display_println("i2c address change error:\nping after change failed!");
+					break;
+				default:
+					break;
+			}
+		}
+	}
+
 
 	if ((s_eState == USQUERYSTATE_IDLE) && (f_bUSOn))
 	{
@@ -347,8 +503,6 @@ void us_do_systick()
 }
 
 
-
-
 static char* getParamString_returnend(char* buf, char* const bufend, USParam_t* param)
 {
 	char tmp[10];
@@ -387,21 +541,26 @@ bool cmd_us(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 	{
 		bool bWrongUsage = false;
 		bool bOutOfRange = false;
-		bool bSetOnOff = true;
+		bool bSetOnOff = false;
 
 		bool bSetRangeVal = false;
 		bool bSetGainVal = false;
 
+		bool bPing = false;
+		bool bChangeAddress = false;
+
 		uint8_t rangeval = 255;
 		uint8_t gainval = 31;
 
-		bWrongUsage = (cargs.nArgs != 1);
+		bWrongUsage = (cargs.nArgs == 0);
 
 		if (!bWrongUsage)
 		{
 			if (strcmpi(cargs.args[0], "OFF") == STRCMPRES_EQUAL)
 			{
-				if (cargs.nParams > 0)
+				bSetOnOff = true;
+
+				if ((cargs.nArgs > 1) || (cargs.nParams > 0))
 				{
 					bWrongUsage = true;
 				}
@@ -412,7 +571,9 @@ bool cmd_us(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			}
 			else if (strcmpi(cargs.args[0], "ON") == STRCMPRES_EQUAL)
 			{
-				if (cargs.nParams > 0)
+				bSetOnOff = true;
+
+				if ((cargs.nArgs > 1) || (cargs.nParams > 0))
 				{
 					bWrongUsage = true;
 				}
@@ -423,8 +584,10 @@ bool cmd_us(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 			}
 			else if (strcmpi(cargs.args[0], "OPT") == STRCMPRES_EQUAL)
 			{
-				bSetOnOff = false;
-
+				if (cargs.nArgs > 1)
+				{
+					bWrongUsage = true;
+				}
 				if (cargs.nParams == 0)
 				{
 					bWrongUsage = true;
@@ -501,6 +664,42 @@ bool cmd_us(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					}
 				}
 			}
+			else if (strcmpi(cargs.args[0], "PING") == STRCMPRES_EQUAL)
+			{
+				bPing = true;
+
+				if ((cargs.nArgs > 1) || (cargs.nParams != 0))
+				{
+					bWrongUsage = true;
+				}
+				else
+				{
+					for (int i = 0; i < 16; ++i)
+					{
+						f_auPingList[i] = 0xE0 + 2 * i;
+					}
+
+					f_uspingstate = USPINGSTATE_PENDING;
+				}
+			}
+			else if (strcmpi(cargs.args[0], "CHGADDR") == STRCMPRES_EQUAL)
+			{
+				bChangeAddress = true;
+
+				if ((cargs.nArgs != 3) || (cargs.nParams != 0))
+				{
+					bWrongUsage = true;
+				}
+				else
+				{
+					uint8_t oldaddress = atoi(cargs.args[1]);
+					uint8_t newaddress = atoi(cargs.args[2]);
+
+					usonic_changeDeviceI2CAddress_init(USPORT, oldaddress, newaddress);
+
+					f_uschgaddrstate = USCHGADDRSTATE_RUNNING;
+				}
+			}
 			else
 			{
 				bWrongUsage = true;
@@ -513,7 +712,12 @@ bool cmd_us(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 					acRespData,
 					acRespData + RXMAXMSGLEN - 1,
 					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: !US ON|OFF|OPT [~RANGE=value] [~GAIN=value]");
+					"Usage:\n"
+					"!US ON|OFF\n"
+					"!US OPT [~RANGE=value] [~GAIN=value]\n"
+					"!US PING\n"
+					"!US CHGADDR old new");
+
 
 			*pnRespLen = strend - acRespData;
 		}
@@ -541,6 +745,12 @@ bool cmd_us(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
 				}
 
 				acRespData[0] = SOT_RXRESP;
+				*pnRespLen = strlen(acRespData);
+			}
+			else if (bPing || bChangeAddress)
+			{
+				acRespData[0] = SOT_RXRESP;
+				strcpy(acRespData + 1, "ok");
 				*pnRespLen = strlen(acRespData);
 			}
 			else
