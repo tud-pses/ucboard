@@ -1,4 +1,5 @@
 EESchema Schematic File Version 2
+LIBS:drvbatswitch-rescue
 LIBS:power
 LIBS:device
 LIBS:transistors
@@ -29,6 +30,7 @@ LIBS:atmel
 LIBS:contrib
 LIBS:valves
 LIBS:Custom
+LIBS:drvbatswitch-cache
 EELAYER 25 0
 EELAYER END
 $Descr A4 11693 8268
@@ -364,7 +366,7 @@ F 3 "" H 6225 3275 50  0000 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L LED D1
+L LED-RESCUE-drvbatswitch D1
 U 1 1 57C81BD8
 P 5600 3550
 F 0 "D1" H 5600 3650 50  0000 C CNN
