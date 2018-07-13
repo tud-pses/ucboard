@@ -52,7 +52,7 @@ Einzelne Zeilenumbrüche außerhalb von Nachrichten sind zu ignorieren. (Diese w
 	\item Fehler bei der Abarbeitung von Befehlen beginnen mit \texttt{:ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{:ERR(code):Beschreibung} 
 	\item Textausgaben (Display-Funktion) beginnen (nach STX) mit \texttt{'}
 	\item Fehlermeldungen sind Textausgaben. Diese beginnen mit \texttt{'ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{'ERR(code):Beschreibung} 
-	\item Ohne Auf"|forderung versendete Messdaten beginnen (nach STX) mit \texttt{\#} (base64- oder hex-codiert) \bzw \texttt{\#\#} (lesbarer Text).
+	\item Ohne Auf"|forderung versendete Messdaten beginnen (nach STX) mit \texttt{\#}.
 	\item Wenn eine Nutzerinteraktion notwendig ist, dann sollte das letzte Zeichen vor dem Nachrichtendezeichen ein \texttt{?} oder \texttt{:} sein.
 	\item Alle Nachrichten vom ucboard haben ETX (0x03) als Endzeichen. (Dadurch ist es möglich, eine mehrzeilige Ausgabe auf dem Terminalprogramm zu erzeugen.)
 		\begin{itemize}
@@ -637,7 +637,7 @@ Die Neudefinition einer Gruppe erfolgt durch einfaches Überschreiben der Gruppe
 \paragraph{Binärdaten}
 Bei \verb|ENC| = \verb|B64| und \verb|HEX| werden die Daten als Binärdaten verschickt.
 
-Dabei ist das erste Byte des dekodierten Binärdatensatzes die Messgruppe. Darauf folgen ohne Leer- oder Trennzeichen die einzelnen Messdaten mit der jeweils für den Kanal gültigen Breite.
+Die Kanalnummer und der folgende Doppelpunkt immer in ASCII-Codierung versendet. Darauf folgen ohne Leer- oder Trennzeichen die einzelnen Messdaten mit der jeweils für den Kanal gültigen Breite.
 
 
 \begin{verbatim}
@@ -647,17 +647,20 @@ Dabei ist das erste Byte des dekodierten Binärdatensatzes die Messgruppe. Darau
 	:ok
 	!daq grp 3 usl usf usr ~all=20 ~enc=hex ~crc
 	:ok
-	!daq grp 4 usl usf usr ~all=20 ~enc=b64 ~crc
+	!daq grp 4 usl usf usr ~all=20 ~enc=b64
+	:ok
+	!daq grp 5 usl usf usr ~all=20 ~enc=b64 ~crc
 	:ok
 	!daq start
 	:started
 \end{verbatim}
 
 \begin{verbatim}
-	##1:7306 | 1887 | 3655
-	#028A1C5F07470E
-	#038A1C5F07470ECFA5
-	#BIocXwdHDou8
+	#1:806 | 4561 | 4075
+	#2:2603D111EB0F
+	#3:2603D111EB0F68CF
+	#4:JgPREesP
+	#5:JgPREesPaM8
 \end{verbatim}
 
 
