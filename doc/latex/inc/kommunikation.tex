@@ -111,6 +111,7 @@ Die Parameter der Schnittstellen sind in \tabref{tab:Comm:UARTParam} zusammengef
 		\texttt{MAG} & Zum Parametrieren des Magnetometers \\
 		\texttt{US} & Zum Parametrieren der US-Sensoren \\
 		\textcolor[rgb]{0.75,0.75,0.75}{\texttt{EEPROM}} & \textcolor[rgb]{0.75,0.75,0.75}{Zum Auslesen des EEPROM-Inhalts}\\
+		\verb|LED| & Ansteuerung der LEDs A und B auf dem Board \\
 		\mybottomrule
 	\end{tabular}
 \end{table}
@@ -353,6 +354,9 @@ Die Sensorsignale werden dabei hier als "`Kanäle"' bezeichnet. Die aktuell defi
 		\verb|HALL_DT| & Zeit zwischen den letzten beiden Impulsen des Hallsensors (eine Achtel Radumdrehung) & \valunit{0,1}{ms} & \verb|uint16_t| & 2\\
 		\verb|HALL_DT8| & Zeit zwischen den letzten acht Impulsen des Hallsensors (eine Radumdrehung) & \valunit{1}{ms} & \verb|uint16_t| & 2\\
 		\verb|HALL_CNT| & Anzahl der Sensorimpulse, Modulo 256 (Ein Sensorwert von "`1"' entspricht dabei immer eine ungeraden Zahl) & -- & \verb|uint8_t| & 1\\
+		\verb|PBA| & Zähler Betätigung Taster A, Modulo 256 (Gerade Werte: Unbetätigt, Ungerade Werte: Betätigt)  & -- & \verb|uint8_t| & 1\\
+		\verb|PBB| & wie \verb|PBA| für Taster B & -- & \verb|uint8_t| & 1\\
+		\verb|PBC| & wie \verb|PBA| für Taster C & -- & \verb|uint8_t| & 1\\
 		\mybottomrule
 	\end{tabular}
 \end{table}
@@ -840,3 +844,64 @@ Diese Werte entsprechen der Reihenfolge nach den Korrekturwerten der $x$-, $y$- 
 Da es sich bei den Korrekturwerten um fest gespeicherte Werte im Magnetometer handelt, können diese nicht verändert werden. {\color[rgb]{0.75,0.75,0.75} Eine Vorgabe von eigenen Kalibrierungswerten ist für die Zukunft vorgesehen. Momentan muss eine Kalibrierung des eingebauten Sensors, wenn gewünscht, aber noch auf dem PC erfolgen.}
 
 
+
+\subsubsection{LED}
+
+Setzen der LEDs:
+\begin{verbatim}
+!LED id seq [id2 seq]
+\end{verbatim}
+\verb|id| ist \verb|A| oder \verb|B| und bezeichnet die LED. Der gewünschte Modus der gewählten LED wird mit \verb|seq| angegeben. Dies kann entweder einfach \verb|ON|, \verb|OFF| oder \verb|TOG|, oder eine Sequenz von Ein- und Ausschaltdauern sein:
+\begin{verbatim}
+[0] ton toff [ton2 toff2 [ton3 toff3 [...]]]
+\end{verbatim}
+Die An- und Ausschaltzeiten sind dabei in \valunit{10}{ms} gegeben. Diese Sequenz muss aus einer geraden Anzahl von positiven Ganzzahlen bestehen. Es sind maximal zehn Paare an Ein- und Ausschaltdauer möglich, also maximal zwanzig Zahlen.\footnote{Es ist dabei zu beachten, dass in der aktuellen Implementierung ein Befehl maximal 22 Parameter/Optionen besitzen kann.} Die optionale führende \verb|0| invertiert An- und Ausschalten.
+
+Anschalten der LED A:
+\begin{verbatim}
+	!LED A ON
+	:ok
+\end{verbatim}
+Ausschalten der LED A und gleichzeitig Einschalten der LED B:
+\begin{verbatim}
+	!LED A OFF B ON
+	:ok
+\end{verbatim}
+Toggeln der LED A:
+\begin{verbatim}
+	!LED TOG
+	:ok
+\end{verbatim}
+(Wenn die LED A vorher im Sequenzmodus ist, wird diese ausgeschaltet.)
+
+Blinken der LED A mit \valunit{0,5}{Hz}, 50\,\%/50\,\%: 
+\begin{verbatim}
+	!LED A 100 100
+	:ok
+\end{verbatim}
+
+Verschiedene Befehle werden nicht synchronisiert. \Dah mit
+\begin{verbatim}
+	!LED A 100 100
+	:ok
+	
+	!LED B 100 100
+	:ok
+\end{verbatim}
+blinken A und B jeweils mit \valunit{0,5}{Hz}, 50\,\%/50\,\%, jedoch aller Wahrscheinlichkeit nach versetzt.
+
+Um ein synchrones Blinken zu erhalten, können die Sequenzen im gleichen Befehl gesetzt werden:
+\begin{verbatim}
+	!LED A 100 100 B 100 100
+	:ok
+\end{verbatim}
+
+Soll ein gegenphasiges Blinken erzeugt werden, kann die Sequenz der LED B invertiert werden:
+\begin{verbatim}
+	!LED A 50 50 B 0 50 50
+	:ok
+\end{verbatim}
+
+Werden mit einem Befehl für die gleiche LED mehrere Modi angegeben (\zB \verb|!LED A ON A 10 90|), so zählt der zuletzt angegebene Modus.
+
+Ist die Nachricht fehlerhaft, wird diese komplett verworfen. \Dah bei \verb|!LED A ON B 30| wird auch nicht die LED A eingeschaltet, obwohl dieser Teil der Nachricht noch korrekt wäre, da der zu B gehörende Teil fehlerhaft ist.

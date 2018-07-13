@@ -409,5 +409,16 @@ in Radiant bestimmt werden. Die Funktion atan2 gibt einen Wert zwischen $-\uppi$
 
 
 
+\section{Taster und LEDs}
 
+Auf dem Board sind drei Taster (A, B und C) und zwei LEDs (A und B) vorhanden, die über die serielle Schnittstelle abgefragt \bzw gesetzt werden können. Für die LEDs SYS, DRVBAT und 12V ON ist keine externe Steuerung vorgesehen.
+
+
+\paragraph{Abfrage Taster}
+
+Die Abfrage der Tasterzustände erfolgt über die DAQ-Kanäle \verb|PBA|, \verb|PBB| und \verb|PBC|. Jeder dieser Kanäle gibt einen Zählerwert der Tasterbetätigungen zurück. Dieser Zähler wird für jedes Herunterdrücken und jedes Loslassen des Tasters inkrementiert. Ein betätigter Taster ist dabei durch eine gerade, und ein unbetätigter Taster durch eine ungerade Zahl repräsentiert. Auf diese Weise lassen sich auch sehr kurze Betätigungen erfassen, ohne dass die Abtastzeit des Kanals sehr klein eingestellt werden muss. Die Zähler sind Modulo 256.
+
+\paragraph{LEDs}
+
+Die LEDs können über einen entsprechenden Befehl ein- und ausgeschaltet werden. Auch können Blinksequenzen vorgegeben werden. Siehe dazu die Befehlsbeschreibung des Befehls \verb|LED|.
 
