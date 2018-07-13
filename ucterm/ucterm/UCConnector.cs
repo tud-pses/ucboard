@@ -284,11 +284,10 @@ namespace ucterm
                 {
                     if (!bRxInProgress)
                     {
-                        if ( (rxbyte == (Byte)':') || (rxbyte == (Byte)'\'') || (rxbyte == (Byte)'#'))
+						if (rxbyte == 0x02)
                         {
                             bRxInProgress = true;
                             rx.Clear();
-                            rx.Append((Char)rxbyte);
                         }
                     }
                     else

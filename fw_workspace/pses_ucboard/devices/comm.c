@@ -93,21 +93,21 @@ typedef struct Buffer_
 static volatile  Buffer_t* f_pbufUART2Tx = 0;
 static volatile  Buffer_t* f_pbufUART3Tx = 0;
 
-static uint8_t f_acTxRespBuf[TXMAXMSGLEN];
+static uint8_t f_acTxRespBuf[TXMAXMSGLEN+1];
 static volatile Buffer_t f_bufTxResp = {f_acTxRespBuf,
 									f_acTxRespBuf + TXMAXMSGLEN - 1,
 									f_acTxRespBuf,
 									f_acTxRespBuf};
 
 
-static uint8_t f_acTxOutstreamBuf[TXMAXMSGLEN];
+static uint8_t f_acTxOutstreamBuf[TXMAXMSGLEN+1];
 static volatile Buffer_t f_bufTxOutstream = {f_acTxOutstreamBuf,
 									f_acTxOutstreamBuf + TXMAXMSGLEN - 1,
 									f_acTxOutstreamBuf,
 									f_acTxOutstreamBuf};
 
 
-static uint8_t f_acTxSecondaryBuf[TXMAXMSGLEN];
+static uint8_t f_acTxSecondaryBuf[TXMAXMSGLEN+1];
 static volatile Buffer_t f_bufTxSec = {f_acTxSecondaryBuf,
 									f_acTxSecondaryBuf + TXMAXMSGLEN - 1,
 									f_acTxSecondaryBuf,
@@ -447,7 +447,10 @@ void comm_do()
 
 				if (f_pRespStream != NULL)
 				{
-					res = f_pRespStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
+					res = f_pRespStream((char*)f_acTxOutstreamBuf+1,
+										 &nCnt,
+										 &bMsgComplete,
+										 TXMAXMSGLEN - MAXEOTLEN);
 
 					if (res)
 					{
@@ -462,7 +465,10 @@ void comm_do()
 
 				if ( (!res) && (f_priorityStream != NULL) )
 				{
-					res = f_priorityStream((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
+					res = f_priorityStream((char*)f_acTxOutstreamBuf+1,
+											&nCnt,
+											&bMsgComplete,
+											TXMAXMSGLEN - MAXEOTLEN);
 
 					if (res)
 					{
@@ -483,7 +489,7 @@ void comm_do()
 							i = 0;
 						}
 
-						res = f_streams[i]((char*)f_acTxOutstreamBuf, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
+						res = f_streams[i]((char*)f_acTxOutstreamBuf+1, &nCnt, &bMsgComplete, TXMAXMSGLEN - MAXEOTLEN);
 
 						if (res == true)
 						{
@@ -503,8 +509,11 @@ void comm_do()
 
 				if (res == true)
 				{
+					f_acTxOutstreamBuf[0] = SOT_TX;
+
 					f_bufTxOutstream.tail = f_bufTxOutstream.start;
-					f_bufTxOutstream.head = f_bufTxOutstream.start + nCnt;
+					f_bufTxOutstream.head = f_bufTxOutstream.start + 1 + nCnt;
+					// (cnt doesn't account for SOT_TX-byte)
 
 					if (bMsgComplete)
 					{
@@ -720,8 +729,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 		if ( (rxdata == EOT_RX) && (f_eTxSecState == COMMTXSTATE_IDLE) )
 		{
+			f_bufTxResp.head = f_bufTxResp.start;
+			*f_bufTxResp.head++ = SOT_TX;
+
 			f_bufTxSec.head = (uint8_t*)createErrStr_returnend(
-					(char*)f_bufTxSec.start,
+					(char*)f_bufTxSec.head,
 					(char*)f_bufTxSec.end - 1,
 					SOT_RXRESP, ERRCODE_COMM_SECONDARYUART,
 					"Inactive UART! (First byte received after restart selects active UART.)\n");
@@ -806,8 +818,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 				}
 				else
 				{
+					f_bufTxResp.head = f_bufTxResp.start;
+					*f_bufTxResp.head++ = SOT_TX;
+
 					f_bufTxResp.head = (uint8_t*)createErrStr_returnend(
-							(char*)f_bufTxResp.start,
+							(char*)f_bufTxResp.head,
 							(char*)f_bufTxResp.end - 1,
 							SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
 							"A command must start with \"!\" or \"?\" !");
@@ -840,8 +855,11 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 
 					if (callback == NULL)
 					{
+						f_bufTxResp.head = f_bufTxResp.start;
+						*f_bufTxResp.head++ = SOT_TX;
+
 						f_bufTxResp.head = (uint8_t*)createErrStr_returnend(
-								(char*)f_bufTxResp.start,
+								(char*)f_bufTxResp.head,
 								(char*)f_bufTxResp.end - 1,
 								SOT_RXRESP, ERRCODE_COMM_UNKNOWNCMD,
 								"Unknown command!");
@@ -869,19 +887,20 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 						f_bufTxResp.tail = f_bufTxResp.end;
 
 						callback(eCmdSpec, (char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx),
-								(char*)f_bufTxResp.start, &nRespLen, &f_pRespStream, &s_pDirectCallback);
+								(char*)f_bufTxResp.start+1, &nRespLen, &f_pRespStream, &s_pDirectCallback);
 
 
 						if (nRespLen < 0xFFFF)
 						{
-							f_bufTxResp.start[nRespLen] = EOT_TX;
+							f_bufTxResp.start[0] = SOT_TX;
+							f_bufTxResp.start[nRespLen+1] = EOT_TX;
 
 							if (f_bAppendExtraNewline)
 							{
-								f_bufTxResp.start[nRespLen+1] = '\n';
+								f_bufTxResp.start[nRespLen+2] = '\n';
 							}
 
-							f_bufTxResp.head = f_bufTxResp.start + nRespLen + (f_bAppendExtraNewline ? 2 : 1);
+							f_bufTxResp.head = f_bufTxResp.start + 1 + nRespLen + (f_bAppendExtraNewline ? 2 : 1);
 							f_bufTxResp.tail = f_bufTxResp.start;
 						}
 						// else: f_pRespStream should be not NULL and the response will be managed over it.
@@ -926,18 +945,19 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 				f_bufTxResp.tail = f_bufTxResp.end;
 
 				((CommDirectFctPtr)s_pDirectCallback)((char*)f_bufRx.tail, BUFFER_GETCOUNT(f_bufRx),
-						(char*)f_bufTxResp.start, &nRespLen, &f_pRespStream, &s_pDirectCallback);
+						(char*)f_bufTxResp.start+1, &nRespLen, &f_pRespStream, &s_pDirectCallback);
 
 				if (nRespLen < 0xFFFF)
 				{
-					f_bufTxResp.start[nRespLen] = EOT_TX;
+					f_bufTxResp.start[0] = SOT_TX;
+					f_bufTxResp.start[nRespLen+1] = EOT_TX;
 
 					if (f_bAppendExtraNewline)
 					{
-						f_bufTxResp.start[nRespLen+1] = '\n';
+						f_bufTxResp.start[nRespLen+2] = '\n';
 					}
 
-					f_bufTxResp.head = f_bufTxResp.start + nRespLen + (f_bAppendExtraNewline ? 2 : 1);
+					f_bufTxResp.head = f_bufTxResp.start + 1 + nRespLen + (f_bAppendExtraNewline ? 2 : 1);
 					f_bufTxResp.tail = f_bufTxResp.start;
 				}
 
@@ -965,10 +985,13 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					// is not completely filled:
 					f_bufTxResp.tail = f_bufTxResp.end;
 
+					f_bufTxResp.head = f_bufTxResp.start;
+					*f_bufTxResp.head++ = SOT_TX;
+
 					if (s_eCommError == COMMERROR_WRONGSOT)
 					{
 						f_bufTxResp.head = (uint8_t*)createErrStr_returnend(
-								(char*)f_bufTxResp.start,
+								(char*)f_bufTxResp.head,
 								(char*)f_bufTxResp.end - 1,
 								SOT_RXRESP, ERRCODE_COMM_WRONGSOT,
 								"Invalid start-of-message byte!");
@@ -976,7 +999,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					else if (s_eCommError == COMMERROR_MSGTOOLONG)
 					{
 						f_bufTxResp.head = (uint8_t*)createErrStr_returnend(
-								(char*)f_bufTxResp.start,
+								(char*)f_bufTxResp.head,
 								(char*)f_bufTxResp.end - 1,
 								SOT_RXRESP, ERRCODE_COMM_MSGTOOLONG,
 								"Message too long!");
@@ -984,7 +1007,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					else if (s_eCommError == COMMERROR_OVERRUN)
 					{
 						f_bufTxResp.head = (uint8_t*)createErrStr_returnend(
-								(char*)f_bufTxResp.start,
+								(char*)f_bufTxResp.head,
 								(char*)f_bufTxResp.end - 1,
 								SOT_RXRESP, ERRCODE_COMM_OVERRUN,
 								"New message sent before last response fully transmitted!");
@@ -992,7 +1015,7 @@ static void processRxdata(EnUART_t eUART, uint8_t rxdata)
 					else
 					{
 						f_bufTxResp.head = (uint8_t*)createErrStr_returnend(
-								(char*)f_bufTxResp.start,
+								(char*)f_bufTxResp.head,
 								(char*)f_bufTxResp.end - 1,
 								SOT_RXRESP, ERRCODE_COMM_UNEXPECT,
 								"Unexpected communication error!");

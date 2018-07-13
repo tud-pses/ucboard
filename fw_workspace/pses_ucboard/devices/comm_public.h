@@ -14,6 +14,7 @@
 
 
 #define EOT_RX	'\n'
+#define SOT_TX 2
 #define EOT_TX 3
 //// Nur zum Debuggen zu Beginn:
 //#define EOT_TX '\n'
