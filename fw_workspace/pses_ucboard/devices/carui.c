@@ -65,7 +65,7 @@ static const ledio_t f_aLedIO[2] = {{LED_A_PORT, LED_A_PIN}, {LED_B_PORT, LED_B_
 #define LED_OFF(led) (f_aLedIO[led].port->BRR = f_aLedIO[led].pin)
 
 
-bool validateLedSeq(const led_t * const led)
+static bool validateLedSeq(const led_t * const led)
 {
 	switch (led->mode)
 	{
@@ -124,7 +124,7 @@ typedef struct pbstate_
 
 #define ANTICHATTER_TICS 2
 
-_INLINE bool updatePBState(pbstate_t* pbstate, bool bPressed)
+static _INLINE bool updatePBState(pbstate_t* pbstate, bool bPressed)
 {
 	uint8_t oldeventcnt = pbstate->uEventCnt;
 
