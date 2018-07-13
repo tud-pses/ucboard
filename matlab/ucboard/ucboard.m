@@ -152,12 +152,10 @@ classdef ucboard < handle
                 bInvalidMsg = true;
             elseif (msg(1) ~= '#')
                 bInvalidMsg = true;
-            elseif (msg(2) ~= '#')
-                bInvalidMsg = true;
             end
             
             if (~bInvalidMsg)
-                t = regexp(msg, '^##(\d+):(.*)', 'tokens');
+                t = regexp(msg, '^#(\d+):(.*)', 'tokens');
             
                 if isempty(t)
                     bInvalidMsg = true;
