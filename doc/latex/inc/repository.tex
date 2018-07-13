@@ -59,6 +59,13 @@ Für Weiterentwicklungen innerhalb der Gruppen sollte dem Versionsstring noch de
 		\mytoprule
 		Version & Datum & Kommentar \\
 		\mymidrule
+		0.12.0
+			& 13.07.2018
+			& \textbf{Version nicht vollständig abwärtskompatibel!} \newline
+				-- Alle Nachrichten vom ucboard beginnen mit STX (\verb|\02|) \newline
+				-- Alle DAQ-Daten-Nachrichten starten unabhängig vom Encoding mit \texttt{\#\textit{ch}:} \newline
+				-- Ansteuerung der LEDs (\verb|!LED|) \newline
+				-- Abfrage Taster A, B und C über DAQ-Kanäle \texttt{PB\textit{x}} \\		
 		0.11.4
 			& 16.02.2018
 			& -- Ping-Funktion für Ultraschallsensoren (\verb|!US PING|) \newline 
@@ -107,10 +114,8 @@ Für Weiterentwicklungen innerhalb der Gruppen sollte dem Versionsstring noch de
 		\mytoprule
 		Version & Kommentar \\
 		\mymidrule
-		0.12.0
+		0.13.0
 			& Verwenden der in IMU abgelegten Offsetwerte für Drehratensensor \\
-		0.12.0
-			& Befehle zur Ansteuerung der LEDs und zur Abfrage der Taster \\
 		x
 			& -- [intern] Auf"|teilen Kommunikationsstack in Befehlsbearbeitung und UART-Treiber \\
 		x
