@@ -12,6 +12,7 @@
 
 #include "daq.h"
 #include "carbasicfcts.h"
+#include "carui.h"
 #include "hal503.h"
 #include "imu.h"
 #include "us.h"
@@ -33,6 +34,10 @@ extern bool g_main_bInit;
 
 void HAL_SYSTICK_Callback(void)
 {
+	static uint8_t s_div10 = 1;
+	static uint16_t s_div1000 = 2;
+	static uint16_t s_div500 = 3;
+
 //	static uint32_t s_maxtics = 0;
 
 	if (!g_main_bInit)
@@ -44,19 +49,6 @@ void HAL_SYSTICK_Callback(void)
 
 //	uint32_t tic = stopwatch_getTic();
 
-	if (BUTTON_A_ISPRESSED())
-	{
-	}
-
-	if (BUTTON_B_ISPRESSED())
-	{
-	}
-
-	if (BUTTON_C_ISPRESSED())
-	{
-	}
-
-
 	car_do_systick();
 	hal503_do_systick();
 	imu_do_systick();
@@ -64,9 +56,10 @@ void HAL_SYSTICK_Callback(void)
 
 	daq_do_systick();
 
-	if ( (f_uTic % 10) == 0)
+	if ( --s_div10 == 0)
 	{
-
+		s_div10 = 10;
+		carui_do_systick_10ms();
 	}
 
 
@@ -78,14 +71,16 @@ void HAL_SYSTICK_Callback(void)
 //	}
 
 
-	if ( (f_uTic % 1000) == 0)
+	if (--s_div1000 == 0)
 	{
+		s_div1000 = 1000;
 //		display_println_uint("systick [us]: ", tic);
 //		display_println_uint("systick max [us]: ", s_maxtics);
 	}
 
-	if ( (f_uTic % 500) == 0 )
+	if (--s_div500 == 0)
 	{
+		s_div500 = 500;
 		LED_SYS_TOGGLE();
 	}
 

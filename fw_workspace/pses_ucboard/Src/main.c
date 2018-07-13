@@ -45,6 +45,7 @@
 #include "eeprom.h"
 
 #include "carbasicfcts.h"
+#include "carui.h"
 #include "hal503.h"
 #include "imu.h"
 #include "us.h"
@@ -185,8 +186,9 @@ int main(void)
 
 
   car_init();
-  hal503_init();
+  carui_init();
 
+  hal503_init();
 
 
   HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);

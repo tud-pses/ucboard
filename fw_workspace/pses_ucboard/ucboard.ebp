@@ -124,6 +124,10 @@
 		<Unit filename="devices\carid.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="devices\carui.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="devices\carui.h" />
 		<Unit filename="devices\comm.c">
 			<Option compilerVar="CC" />
 		</Unit>

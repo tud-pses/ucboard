@@ -14,6 +14,7 @@ extern bool cmd_drv(COMMCMDFCT_ARGS);
 extern bool cmd_eeprom(COMMCMDFCT_ARGS);
 extern bool cmd_carid(COMMCMDFCT_ARGS);
 extern bool cmd_imu(COMMCMDFCT_ARGS);
+extern bool cmd_led(COMMCMDFCT_ARGS);
 extern bool cmd_mag(COMMCMDFCT_ARGS);
 extern bool cmd_reset(COMMCMDFCT_ARGS);
 extern bool cmd_sessionid(COMMCMDFCT_ARGS);
@@ -38,6 +39,7 @@ CommCmdTableEntry_t g_commCmdFctTable[] =
 		{"EEPROM",  &cmd_eeprom},
 		{"ID",  &cmd_carid},
 		{"IMU",  &cmd_imu},
+		{"LED", &cmd_led},
 		{"MAG",  &cmd_mag},
 		{"RESET",  &cmd_reset},
 		{"SID",  &cmd_sessionid},
