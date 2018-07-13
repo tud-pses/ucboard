@@ -2167,15 +2167,13 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 
 	char tmp[10];
 
+	*buf++ = '#';
+	buf = strcpy_returnend(buf, bufend - 1, utoa(s_g, tmp, 10));
+	*buf++ = ':';	// overwrite '\0' with ':'
+
 	if (grp->eEncoding == DAQENCODING_ASCII)
 	{
-		*buf++ = '#';
-		*buf++ = '#';
-
-		buf = strcpy_returnend(buf, bufend - 1, utoa(s_g, tmp, 10));
-		*buf++ = ':';	// overwrite '\0' with ':'
 		buf = getGrpDataStringAscii_returnend(buf, bufend - 1, grp, grp->pCurValsToSend);
-		*buf++ = '\n';
 		*buf = '\0';
 	}
 	else
@@ -2184,7 +2182,6 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 		uint8_t* btmp = btmpstart;
 		uint8_t * const btmpend = btmpstart + 199;
 
-		*btmp++ = s_g;
 		btmp = getGrpDataBinary_returnend(btmp, btmpend, grp, grp->pCurValsToSend);
 
 		if (grp->bCRC)
@@ -2195,12 +2192,10 @@ static bool streamout(char* buf, uint16_t* pnCnt, bool* pbMsgComplete, uint16_t 
 
 		if (grp->eEncoding == DAQENCODING_HEX)
 		{
-			*buf++ = '#';
 			buf = encodeHEX_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
 		}
 		else
 		{
-			*buf++ = '#';
 			buf = encodeB64woPadding_returnend(buf, bufend, btmpstart, btmp - btmpstart + 1);
 		}
 	}
