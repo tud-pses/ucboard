@@ -24,11 +24,13 @@ Messdaten und Textnachrichten können vom ucboard ohne Auf"|forderung versendet 
 
 Prinzipiell wird nicht zwischen Groß- und Kleinschreibung unterschieden.
 
-Ein Nachricht beginnt mit einem Startzeichen und endet mit einem Endezeichen. Das Startzeichen kann variieren. Bei Nachrichten zum ucboard ist dieses \texttt{!} oder \texttt{?}, bei Nachrichten vom ucboard \texttt{:}, \texttt{'} und \texttt{\#}. Nach dem Startzeichen kann, muss aber kein Leerzeichen folgen. Alle Startzeichen dürfen auch innerhalb der Nachrichten verwendet werden. Dort haben sie keine besondere Bedeutung. (Eine "`Aufsynchronisierung"' sollte also anhand des Endezeichens erfolgen.)
+Eine Nachricht beginnt mit einem Startzeichen und endet mit einem Endezeichen. Das Startzeichen kann variieren. Bei Nachrichten zum ucboard ist dieses \texttt{!} oder \texttt{?}. Nachrichten vom ucboard beginnen mit zwei Startzeichen. Das erste Zeichen ist immer \verb|\02| (STX), danach folgt \texttt{:}, \texttt{'} oder \texttt{\#}. Nach den Startzeichen kann, muss aber kein Leerzeichen folgen. Alle alphanumerischen Startzeichen (also nicht \verb|\02|) dürfen auch innerhalb der Nachrichten verwendet werden. Dort haben sie keine besondere Bedeutung.
 
-Das Endezeichen ist \texttt{\textbackslash n} (newline) bei Nachrichten zum ucboard und \texttt{\textbackslash 03} (ETX) bei Nachrichten vom ucboard. Die Motivation dahinter ist, dass damit bei Nachrichten zum ucboard eine einfaches Terminalprogramm verwendet werden kann, bei Nachrichten vom ucboard jedoch auch mehrzeiliger Text sinnvoll dargestellt werden kann.
+Das Endezeichen ist \verb|\n| (newline) bei Nachrichten zum ucboard und \verb|\03| (ETX) bei Nachrichten vom ucboard.
 
-Einzelne Zeilenumbrüche (leere Nachrichten) sind zu ignorieren. (Diese werden optional nach ETX vom ucboard verwendet, um die Darstellung im Terminprogramm zu verbessern.)
+Die Motivation hinter der unterschiedlichen Behandlung von Nachrichten zum und Nachrichten vom ucboard ist die, dass damit bei Nachrichten zum ucboard zu Debug-Zwecken ein einfaches Terminalprogramm verwendet werden kann, bei Nachrichten vom ucboard jedoch auch mehrzeiliger Text sinnvoll dargestellt werden kann und ein einfaches Identifizieren des Nachrichtenbeginns möglich ist.
+
+Einzelne Zeilenumbrüche außerhalb von Nachrichten sind zu ignorieren. (Diese werden optional nach ETX vom ucboard verwendet, um die Darstellung im Terminalprogramm zu verbessern.)
 
 
 \subsubsection{Zu ucboard}
@@ -44,12 +46,13 @@ Einzelne Zeilenumbrüche (leere Nachrichten) sind zu ignorieren. (Diese werden o
 
 \subsubsection{Von ucboard}
 \begin{itemize}
-	\item Direkte Antworten beginnen mit \texttt{:}
+	\item Nachrichten beginnen immer mit \verb|\02| (STX).
+	\item Direkte Antworten beginnen (nach STX) mit \texttt{:}
 	\item Auch jeder Schreibbefehl sollte eine kurze Antwort zur Quittierung senden, \zB \verb+:ok\n+. Es wäre empfehlenswert, den gesetzten Wert zu wiederholen
 	\item Fehler bei der Abarbeitung von Befehlen beginnen mit \texttt{:ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{:ERR(code):Beschreibung} 
-	\item Textausgaben (Display-Funktion) beginnen mit \texttt{'}
+	\item Textausgaben (Display-Funktion) beginnen (nach STX) mit \texttt{'}
 	\item Fehlermeldungen sind Textausgaben. Diese beginnen mit \texttt{'ERR(code)}, wobei \texttt{code} eine positive Ganzzahl als Fehlercode ist. Optional kann nach einem weiteren Doppelpunkt eine Beschreibung des Fehlers folgen: \texttt{'ERR(code):Beschreibung} 
-	\item Ohne Auf"|forderung versendete Messdaten beginnen mit \texttt{\#} (base64- oder hex-codiert) \bzw \texttt{\#\#} (lesbarer Text).
+	\item Ohne Auf"|forderung versendete Messdaten beginnen (nach STX) mit \texttt{\#} (base64- oder hex-codiert) \bzw \texttt{\#\#} (lesbarer Text).
 	\item Wenn eine Nutzerinteraktion notwendig ist, dann sollte das letzte Zeichen vor dem Nachrichtendezeichen ein \texttt{?} oder \texttt{:} sein.
 	\item Alle Nachrichten vom ucboard haben ETX (0x03) als Endzeichen. (Dadurch ist es möglich, eine mehrzeilige Ausgabe auf dem Terminalprogramm zu erzeugen.)
 		\begin{itemize}
