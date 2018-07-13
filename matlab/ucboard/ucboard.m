@@ -123,11 +123,13 @@ classdef ucboard < handle
 
             while (true)
                 rx = fgetl(obj.ser);
+                
+                rx = strtrim(rx);
 
-                if (length(rx) <= 1)
+                if isempty(rx)
                     break;
-                else
-                    msg = strtrim(rx);
+                elseif (rx(1) == 2)
+                    msg = rx(2:end);
                     break;
                 end
             end
