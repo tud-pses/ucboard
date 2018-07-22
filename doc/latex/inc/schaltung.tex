@@ -49,3 +49,13 @@ dar.
 	\item Hall-Sensor muss nicht über OpAmp geleitet werden. Dafür wäre ein \valunit{5}{V}-toleranter Eingang empfehlenswert.
 \end{itemize}
 
+
+
+\section{Fehler und Hinweise zur Bestückung}
+
+\begin{itemize}
+	\item Bei dem Bestückungsdruck auf der Unterseite der aktuellen Platine sind R20 und R66 vertauscht.
+	\item Die Pins 3 und 4 von P9 (Stift"|leiste Hall-Sensor) sind auf der Unterseite der Platine mit eine \valunit{10}{k\Omega}-Widerstand (R68) zu verbinden.
+	\item Die Kondenstatoren C13 und C19 sind nicht zu bestücken. Diese können zu einem Einkoppeln von Störungen des Fahrtenreglers auf die ucboard-Masse führen. (Bei den ursprünglichen Fahrtenreglern wurden keine Probleme festgestellt, aber bei dem Fahrtenregler, der für eine höhere Spannung gekauft wurde, haben sich extreme Probleme gezeigt.)
+\end{itemize}
+
