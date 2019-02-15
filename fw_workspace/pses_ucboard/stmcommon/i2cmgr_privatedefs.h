@@ -91,7 +91,8 @@ typedef enum EnI2CEvent
 
 
 #define NOCOMM 0xFF
-
+#define NOMSGDEVICE 0xFF
+#define NOMSG 0xFF
 
 //
 typedef struct I2CMGR_I2C_Pins

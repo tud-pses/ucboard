@@ -159,7 +159,7 @@ void i2cmgr_init()
         f_aI2C[u].bInit = false;
         f_aI2C[u].state = STATE_IDLE;
         f_aI2C[u].eCurMsgRes = I2CMGRRES_OK;
-        f_aI2C[u].uCurMsgDevice = 0;
+        f_aI2C[u].uCurMsgDevice = NOMSGDEVICE;
         f_aI2C[u].pCurMsg = NULL;
 
         configPins(u, true);
@@ -169,7 +169,7 @@ void i2cmgr_init()
     {
         f_aDevices[u].bInit = false;
         f_aDevices[u].eMsgState = I2CMSGSTATE_IDLE;
-        f_aDevices[u].uCurMsg = 0xFF;
+        f_aDevices[u].uCurMsg = NOMSG;
         f_aDevices[u].nMsgs = 0;
     }
 
@@ -422,7 +422,7 @@ EnI2CMgrRes_t i2cmgr_addDevice(const EnI2C_PORT_t eI2CPort,
     f_aDevices[d].uAddress = uAddress;
     f_aDevices[d].eMsgState = I2CMSGSTATE_IDLE;
     f_aDevices[d].nMsgs = 0;
-    f_aDevices[d].uCurMsg = 0;
+    f_aDevices[d].uCurMsg = NOMSG;
     f_aDevices[d].pMsgs = NULL;
 
     *puDeviceID = d;
@@ -648,7 +648,7 @@ static EnI2CMgrRes_t enqueueAsynchMsgs(uint8_t uDeviceID,
                                                 I2CMGR_Msg_t* pMsgs)
 {
     f_aDevices[uDeviceID].pMsgs = pMsgs;
-    f_aDevices[uDeviceID].uCurMsg = 0xFF;
+    f_aDevices[uDeviceID].uCurMsg = NOMSG;
     f_aDevices[uDeviceID].nMsgs = nMsgs;
     f_aDevices[uDeviceID].eMsgRes = I2CMGRRES_OK;
     f_aDevices[uDeviceID].eMsgState = I2CMSGSTATE_WAITING;
@@ -735,7 +735,7 @@ static void finishCurComm(EnI2C_PORT_t eI2C)
         // Aktuell liegen keine weiteren Nachrichten mehr vor
         f_aI2C[eI2C].state = STATE_IDLE;
         f_aI2C[eI2C].pCurMsg = NULL;
-        f_aI2C[eI2C].uCurMsgDevice = 0;
+        f_aI2C[eI2C].uCurMsgDevice = NOMSGDEVICE;
         f_aI2C[eI2C].stateMachine = NULL;
         f_aI2C[eI2C].eCurMsgRes = I2CMGRRES_OK;
     }
@@ -747,12 +747,17 @@ static void finishCurComm(EnI2C_PORT_t eI2C)
 static bool getNextMsg(EnI2C_PORT_t eI2C, uint8_t* puDeviceID, uint8_t* puMsg,
                                                                 bool bSkipCurDevice)
 {
+    if (!f_aI2C[eI2C].bInit)
+    {
+        return false;
+    }
+
     uint8_t uCurDevice = f_aI2C[eI2C].uCurMsgDevice;
 
-    if (!bSkipCurDevice)
+    if (!bSkipCurDevice && (uCurDevice != NOMSGDEVICE))
     {
         // Hat aktuelles Device noch eine Message abzuarbeiten?
-        if ( (f_aDevices[uCurDevice].uCurMsg == 0xFF)
+        if ( (f_aDevices[uCurDevice].uCurMsg == NOMSG)
                                     && (f_aDevices[uCurDevice].nMsgs > 0) )
         {
             *puDeviceID = uCurDevice;
@@ -774,21 +779,28 @@ static bool getNextMsg(EnI2C_PORT_t eI2C, uint8_t* puDeviceID, uint8_t* puMsg,
     // abzuarbeiten ist.
     // (Dabei von dem aktuellen Device ausgehen, damit verhindert wird, das
     // die Messages von Devices mit hoher ID nie ausgeführt werden.)
-    uint8_t d = uCurDevice + 1;
+
+    uint8_t d;
+
+    if (uCurDevice == NOMSGDEVICE)
+    {
+        uCurDevice = 0;
+        d = 0;
+    }
+    else
+    {
+        d = uCurDevice + 1;
+
+        if (d >= MAXDEVICES)
+        {
+            d = 0;
+        }
+    }
+
     bool bMsgFound = false;
 
     while (true)
     {
-        if (d == MAXDEVICES)
-        {
-            d = 0;
-        }
-
-        if (d == uCurDevice)
-        {
-            break;
-        }
-
         if ( f_aDevices[d].bInit && (f_aDevices[d].eI2CPort == eI2C) )
         {
             if (f_aDevices[d].eMsgState == I2CMSGSTATE_WAITING)
@@ -801,10 +813,21 @@ static bool getNextMsg(EnI2C_PORT_t eI2C, uint8_t* puDeviceID, uint8_t* puMsg,
         }
 
         d++;
+
+        if (d >= MAXDEVICES)
+        {
+            d = 0;
+        }
+
+        if (d == uCurDevice)
+        {
+            break;
+        }
     }
 
     return bMsgFound;
 }
+
 
 static uint32_t f_i2ctxerrevents = 0;
 static uint32_t f_i2ctx_buserr = 0;
@@ -1189,7 +1212,7 @@ void I2C2_ER_IRQHandler()
 #endif
 
 
-#ifdef I2CMGR_MANAGEI2C_2
+#ifdef I2CMGR_MANAGEI2C_3
 void I2C3_EV_IRQHandler()
 {
     f_aI2C[I2CPORT_3].stateMachine(I2CPORT_3, (uint16_t)I2C3->ISR);
