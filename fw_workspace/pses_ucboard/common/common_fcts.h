@@ -49,76 +49,76 @@ static inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen);
 
 static inline uint32_t copystring(char* szTarget, char* szSource, uint32_t uMaxLen)
 {
-	uint32_t uLen = 1;
+    uint32_t uLen = 1;
 
-	*szTarget = *szSource;
-	uMaxLen--;
+    *szTarget = *szSource;
+    uMaxLen--;
 
-	while ( (*szSource != '\0') && (uMaxLen-- != 0) )
-	{
-		*++szTarget = *++szSource;
-		uLen++;
-	}
+    while ( (*szSource != '\0') && (uMaxLen-- != 0) )
+    {
+        *++szTarget = *++szSource;
+        uLen++;
+    }
 
-	if (*szSource != '\0')
-		*szTarget = '\0';
+    if (*szSource != '\0')
+        *szTarget = '\0';
 
-	return uLen;
+    return uLen;
 }
 
 
 static inline void memcpyX(uint8_t* pTarget, uint8_t* pSource, uint16_t uLen)
 {
-	while(uLen--)
-		*pTarget++ = *pSource++;
+    while(uLen--)
+        *pTarget++ = *pSource++;
 
-	return;
+    return;
 }
 
 static inline void memcpy8(uint8_t* pTarget, uint8_t* pSource)
 {
-	*pTarget = *pSource;
-	return;
+    *pTarget = *pSource;
+    return;
 }
 
 static inline void memcpy16(uint8_t* pTarget, uint8_t* pSource)
 {
-	*pTarget++ = *pSource++;
-	*pTarget = *pSource;
-	return;
+    *pTarget++ = *pSource++;
+    *pTarget = *pSource;
+    return;
 }
 
 static inline void memcpy32(uint8_t* pTarget, uint8_t* pSource)
 {
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget = *pSource;
-	return;
+    *pTarget++ = *pSource++;
+    *pTarget++ = *pSource++;
+    *pTarget++ = *pSource++;
+    *pTarget = *pSource;
+    return;
 }
 
 static inline void memcpy64(uint8_t* pTarget, uint8_t* pSource)
 {
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget++ = *pSource++;
-	*pTarget = *pSource;
-	return;
+    *pTarget++ = *pSource++;
+    *pTarget++ = *pSource++;
+    *pTarget++ = *pSource++;
+    *pTarget++ = *pSource++;
+    *pTarget++ = *pSource++;
+    *pTarget++ = *pSource++;
+    *pTarget++ = *pSource++;
+    *pTarget = *pSource;
+    return;
 }
 
 static inline bool memcmpX(uint8_t* pA, uint8_t* pB, uint16_t uLen)
 {
-	while (uLen--)
-	{
-		if (*pA++ != *pB++)
-			return false;
-	}
+    while (uLen--)
+    {
+        if (*pA++ != *pB++)
+            return false;
+    }
 
-	return true;
+    return true;
 }
 
 

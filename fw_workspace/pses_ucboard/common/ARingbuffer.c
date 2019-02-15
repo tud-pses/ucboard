@@ -14,9 +14,9 @@
 
 
 static inline uint8_t* putX(uint8_t* pPut, uint8_t* pBegin, uint8_t* pEnd,
-											uint8_t* pData, uint16_t uCount);
+                                            uint8_t* pData, uint16_t uCount);
 static inline uint8_t* getX(uint8_t* pGet, uint8_t* pBegin, uint8_t* pEnd,
-											uint8_t* pData, uint16_t uCount);
+                                            uint8_t* pData, uint16_t uCount);
 
 static inline uint16_t getAtomicLen(ARingbuffer_t* this);
 
@@ -27,428 +27,428 @@ static inline uint16_t getFree(ARingbuffer_t* this, uint8_t* pPut);
 
 
 void ARingbuffer_init(ARingbuffer_t* this,
-						uint8_t* pBufferLoc, uint32_t nBufferSize,
-						uint8_t uWriteDataCountBytes,
-						bool bSuppressConsectutiveFailedMarks)
+                        uint8_t* pBufferLoc, uint32_t nBufferSize,
+                        uint8_t uWriteDataCountBytes,
+                        bool bSuppressConsectutiveFailedMarks)
 {
-	this->pBegin = pBufferLoc;
-	this->pEnd = pBufferLoc + nBufferSize;
-	this->pPut = pBufferLoc;
-	this->pGet = pBufferLoc;
+    this->pBegin = pBufferLoc;
+    this->pEnd = pBufferLoc + nBufferSize;
+    this->pPut = pBufferLoc;
+    this->pGet = pBufferLoc;
 
-	this->atomicput.pPut = NULL;
-	this->atomicput.pBegin = NULL;
-	this->atomicput.uFailedMarkLen = 0;
-	this->atomicput.bFailed = false;
-	this->atomicput.bPrevPutFailed = false;
+    this->atomicput.pPut = NULL;
+    this->atomicput.pBegin = NULL;
+    this->atomicput.uFailedMarkLen = 0;
+    this->atomicput.bFailed = false;
+    this->atomicput.bPrevPutFailed = false;
 
-	this->uFailed = 0;
+    this->uFailed = 0;
 
-	this->atomicput.uWriteDataCountBytes = uWriteDataCountBytes;
-	this->atomicput.bSuppressConsectutiveFailedMarks =
-										bSuppressConsectutiveFailedMarks;
+    this->atomicput.uWriteDataCountBytes = uWriteDataCountBytes;
+    this->atomicput.bSuppressConsectutiveFailedMarks =
+                                        bSuppressConsectutiveFailedMarks;
 
-	return;
+    return;
 }
 
 
 void ARingbuffer_clear(ARingbuffer_t* this)
 {
-	this->pPut = this->pBegin;
-	this->pGet = this->pBegin;
+    this->pPut = this->pBegin;
+    this->pGet = this->pBegin;
 
-	this->atomicput.pPut = NULL;
-	this->atomicput.pBegin = NULL;
-	this->atomicput.uFailedMarkLen = 0;
-	this->atomicput.bFailed = false;
-	this->atomicput.bPrevPutFailed = false;
+    this->atomicput.pPut = NULL;
+    this->atomicput.pBegin = NULL;
+    this->atomicput.uFailedMarkLen = 0;
+    this->atomicput.bFailed = false;
+    this->atomicput.bPrevPutFailed = false;
 
-	this->uFailed = 0;
+    this->uFailed = 0;
 
-	return;
+    return;
 }
 
 
 bool ARingbuffer_atomicput_start(ARingbuffer_t* this,
-								uint8_t uFailedMarkLen, uint8_t* pFailedMark,
-								bool bWriteDataCountIfFailed)
+                                uint8_t uFailedMarkLen, uint8_t* pFailedMark,
+                                bool bWriteDataCountIfFailed)
 {
-	// Prüfen, ob noch eine "Failed"-Meldung in den Puffer geschrieben werden
-	// muss
-	if (this->atomicput.bFailed)
-	{
-		if ( !writeFailedMark(this) )
-		{
-			//LED_RED_ON();
-			return false;
-		}
-		else
-		{
-			this->atomicput.bFailed = false;
-			this->atomicput.bPrevPutFailed = true;
+    // Prüfen, ob noch eine "Failed"-Meldung in den Puffer geschrieben werden
+    // muss
+    if (this->atomicput.bFailed)
+    {
+        if ( !writeFailedMark(this) )
+        {
+            //LED_RED_ON();
+            return false;
+        }
+        else
+        {
+            this->atomicput.bFailed = false;
+            this->atomicput.bPrevPutFailed = true;
 
-			this->atomicput.pPut = NULL;
-			this->atomicput.pBegin = NULL;
-		}
+            this->atomicput.pPut = NULL;
+            this->atomicput.pBegin = NULL;
+        }
 
-	}
+    }
 
-	// Falls gerade noch ein "atomic-put" aktiv, kann kein neuer
-	// begonnen werden
-	if (this->atomicput.pPut)
-	{
-		return false;
-	}
-
-
-	// Es kann mit neuem Put begonnen werden
-
-	if (uFailedMarkLen == 1)
-	{
-		this->atomicput.acFailedMark[0] = *pFailedMark;
-	}
-	else if (uFailedMarkLen > 0)
-	{
-		memcpyX(this->atomicput.acFailedMark, pFailedMark, uFailedMarkLen);
-	}
-
-	this->atomicput.uFailedMarkLen = uFailedMarkLen;
-	this->atomicput.bWriteDataCountIfFailed = bWriteDataCountIfFailed;
+    // Falls gerade noch ein "atomic-put" aktiv, kann kein neuer
+    // begonnen werden
+    if (this->atomicput.pPut)
+    {
+        return false;
+    }
 
 
-	if ( ARingbuffer_getFreeSpace(this) <
-									this->atomicput.uWriteDataCountBytes)
-	{
-		this->atomicput.pBegin = this->pPut;
-		this->atomicput.pPut = this->pPut;
+    // Es kann mit neuem Put begonnen werden
 
-		this->atomicput.bFailed = true;
+    if (uFailedMarkLen == 1)
+    {
+        this->atomicput.acFailedMark[0] = *pFailedMark;
+    }
+    else if (uFailedMarkLen > 0)
+    {
+        memcpyX(this->atomicput.acFailedMark, pFailedMark, uFailedMarkLen);
+    }
 
-		return false;
-	}
+    this->atomicput.uFailedMarkLen = uFailedMarkLen;
+    this->atomicput.bWriteDataCountIfFailed = bWriteDataCountIfFailed;
 
-	this->atomicput.pBegin = this->pPut +
-									this->atomicput.uWriteDataCountBytes;
 
-	if (this->atomicput.pBegin >= this->pEnd)
-	{
-		this->atomicput.pBegin = this->pBegin +
-										(this->atomicput.pBegin - this->pEnd);
-	}
+    if ( ARingbuffer_getFreeSpace(this) <
+                                    this->atomicput.uWriteDataCountBytes)
+    {
+        this->atomicput.pBegin = this->pPut;
+        this->atomicput.pPut = this->pPut;
 
-	this->atomicput.pPut = this->atomicput.pBegin;
+        this->atomicput.bFailed = true;
 
-	return true;
+        return false;
+    }
+
+    this->atomicput.pBegin = this->pPut +
+                                    this->atomicput.uWriteDataCountBytes;
+
+    if (this->atomicput.pBegin >= this->pEnd)
+    {
+        this->atomicput.pBegin = this->pBegin +
+                                        (this->atomicput.pBegin - this->pEnd);
+    }
+
+    this->atomicput.pPut = this->atomicput.pBegin;
+
+    return true;
 }
 
 
 bool ARingbuffer_atomicputX(ARingbuffer_t* this, uint8_t* pData, uint8_t uDataLen)
 {
-	// Atomicput muss gestartet sein, damit diese Funktion verwendet werden
-	// kann.
-	if (!this->atomicput.pPut)
-	{
-		return false;
-	}
+    // Atomicput muss gestartet sein, damit diese Funktion verwendet werden
+    // kann.
+    if (!this->atomicput.pPut)
+    {
+        return false;
+    }
 
-	if (this->atomicput.bFailed)
-	{
-		return false;
-	}
+    if (this->atomicput.bFailed)
+    {
+        return false;
+    }
 
-	//GMcom_display_printlnUIntval("Frei: ", ARingbuffer_getFreeSpace(this));
+    //GMcom_display_printlnUIntval("Frei: ", ARingbuffer_getFreeSpace(this));
 
-	if (ARingbuffer_getFreeSpace(this) < uDataLen)
-	{
-		//GMcom_display_println("FAILED!");
-		this->atomicput.bFailed = true;
-		return false;
-	}
+    if (ARingbuffer_getFreeSpace(this) < uDataLen)
+    {
+        //GMcom_display_println("FAILED!");
+        this->atomicput.bFailed = true;
+        return false;
+    }
 
-	this->atomicput.pPut =
-				putX(this->atomicput.pPut, this->pBegin, this->pEnd,
-															pData, uDataLen);
-	return true;
+    this->atomicput.pPut =
+                putX(this->atomicput.pPut, this->pBegin, this->pEnd,
+                                                            pData, uDataLen);
+    return true;
 }
 
 bool ARingbuffer_atomicput_putS(ARingbuffer_t* this, char* S, bool bWriteNull)
 {
-	uint32_t uLen = 0;
-	char* pC;
+    uint32_t uLen = 0;
+    char* pC;
 
-	pC = S;
+    pC = S;
 
-	while (*pC++ != '\0')
-	{
-		uLen++;
-	}
+    while (*pC++ != '\0')
+    {
+        uLen++;
+    }
 
-	if (bWriteNull)
-	{
-		uLen++;
-	}
+    if (bWriteNull)
+    {
+        uLen++;
+    }
 
-	return ARingbuffer_atomicputX(this, (uint8_t*)S, uLen);
+    return ARingbuffer_atomicputX(this, (uint8_t*)S, uLen);
 }
 
 static inline uint8_t* putX(uint8_t* pPut, uint8_t* pBegin, uint8_t* pEnd,
-											uint8_t* pData, uint16_t uCount)
+                                            uint8_t* pData, uint16_t uCount)
 {
-	uint16_t uPartCount;
+    uint16_t uPartCount;
 
-	if ( (pPut + uCount) < pEnd )
-	{
-		memcpyX(pPut, pData, uCount);
-		pPut += uCount;
-	}
-	else
-	{
-		uPartCount = pEnd - pPut;
-		memcpyX(pPut, pData, uPartCount);
+    if ( (pPut + uCount) < pEnd )
+    {
+        memcpyX(pPut, pData, uCount);
+        pPut += uCount;
+    }
+    else
+    {
+        uPartCount = pEnd - pPut;
+        memcpyX(pPut, pData, uPartCount);
 
-		if (uCount != uPartCount)
-		{
-			memcpyX(pBegin, pData+uPartCount, uCount-uPartCount);
-		}
+        if (uCount != uPartCount)
+        {
+            memcpyX(pBegin, pData+uPartCount, uCount-uPartCount);
+        }
 
-		pPut = pBegin + uCount-uPartCount;
-	}
+        pPut = pBegin + uCount-uPartCount;
+    }
 
-	return pPut;
+    return pPut;
 }
 
 
 static inline uint8_t* getX(uint8_t* pGet, uint8_t* pBegin, uint8_t* pEnd,
-											uint8_t* pData, uint16_t uCount)
+                                            uint8_t* pData, uint16_t uCount)
 {
-	uint16_t uPartCount;
+    uint16_t uPartCount;
 
-	if ( (pGet + uCount) < pEnd )
-	{
-		memcpyX(pData, pGet, uCount);
-		pGet += uCount;
-	}
-	else
-	{
-		uPartCount = pEnd - pGet;
-		memcpyX(pData, pGet, uPartCount);
+    if ( (pGet + uCount) < pEnd )
+    {
+        memcpyX(pData, pGet, uCount);
+        pGet += uCount;
+    }
+    else
+    {
+        uPartCount = pEnd - pGet;
+        memcpyX(pData, pGet, uPartCount);
 
-		if (uCount != uPartCount)
-		{
-			memcpyX(pData+uPartCount, pBegin, uCount-uPartCount);
-		}
+        if (uCount != uPartCount)
+        {
+            memcpyX(pData+uPartCount, pBegin, uCount-uPartCount);
+        }
 
-		pGet = pBegin + uCount-uPartCount;
-	}
+        pGet = pBegin + uCount-uPartCount;
+    }
 
-	return pGet;
+    return pGet;
 }
 
 
 bool ARingbuffer_atomicput_end(ARingbuffer_t* this)
 {
-	uint16_t uLen;
-	bool bRes;
+    uint16_t uLen;
+    bool bRes;
 
-	if (!this->atomicput.pPut)
-	{
-		return false;
-	}
+    if (!this->atomicput.pPut)
+    {
+        return false;
+    }
 
-	if (this->atomicput.bFailed)
-	{
-		this->uFailed++;
+    if (this->atomicput.bFailed)
+    {
+        this->uFailed++;
 
-		if ( this->atomicput.uFailedMarkLen != 0 )
-		{
-			if (writeFailedMark(this))
-			{
-				this->atomicput.bFailed = false;
-				this->atomicput.bPrevPutFailed = true;
+        if ( this->atomicput.uFailedMarkLen != 0 )
+        {
+            if (writeFailedMark(this))
+            {
+                this->atomicput.bFailed = false;
+                this->atomicput.bPrevPutFailed = true;
 
-				this->atomicput.pBegin = NULL;
-				this->atomicput.pPut = NULL;
-			}
-		}
-		else
-		{
-			this->atomicput.bFailed = false;
-			this->atomicput.bPrevPutFailed = true;
+                this->atomicput.pBegin = NULL;
+                this->atomicput.pPut = NULL;
+            }
+        }
+        else
+        {
+            this->atomicput.bFailed = false;
+            this->atomicput.bPrevPutFailed = true;
 
-			this->atomicput.pPut = NULL;
-			this->atomicput.pBegin = NULL;
-		}
+            this->atomicput.pPut = NULL;
+            this->atomicput.pBegin = NULL;
+        }
 
-		bRes = false;
-	}
-	else
-	{
-		if (this->atomicput.uWriteDataCountBytes)
-		{
-			uLen = getAtomicLen(this);
+        bRes = false;
+    }
+    else
+    {
+        if (this->atomicput.uWriteDataCountBytes)
+        {
+            uLen = getAtomicLen(this);
 
-			putX(this->pPut, this->pBegin, this->pEnd,
-						(uint8_t*)&uLen, this->atomicput.uWriteDataCountBytes);
-		}
+            putX(this->pPut, this->pBegin, this->pEnd,
+                        (uint8_t*)&uLen, this->atomicput.uWriteDataCountBytes);
+        }
 
-		this->pPut = this->atomicput.pPut;
+        this->pPut = this->atomicput.pPut;
 
-		this->atomicput.pPut = NULL;
-		this->atomicput.pBegin = NULL;
+        this->atomicput.pPut = NULL;
+        this->atomicput.pBegin = NULL;
 
-		this->atomicput.bPrevPutFailed = false;
-		bRes = true;
-	}
+        this->atomicput.bPrevPutFailed = false;
+        bRes = true;
+    }
 
 
-	return bRes;
+    return bRes;
 }
 
 
 static inline bool writeFailedMark(ARingbuffer_t* this)
 {
-	bool bRes;
-	uint32_t nReqSpace;
+    bool bRes;
+    uint32_t nReqSpace;
 
-	if (this->atomicput.bSuppressConsectutiveFailedMarks &&
-										this->atomicput.bPrevPutFailed)
-	{
-		bRes = true;
-	}
-	else
-	{
-		nReqSpace = this->atomicput.uFailedMarkLen;
+    if (this->atomicput.bSuppressConsectutiveFailedMarks &&
+                                        this->atomicput.bPrevPutFailed)
+    {
+        bRes = true;
+    }
+    else
+    {
+        nReqSpace = this->atomicput.uFailedMarkLen;
 
-		if (this->atomicput.bWriteDataCountIfFailed)
-		{
-			nReqSpace += this->atomicput.uWriteDataCountBytes;
-		}
-
-
-		if ( getFree(this, this->pPut) < nReqSpace )
-		{
-			bRes = false;
-		}
-		else
-		{
-
-			if ( (this->atomicput.bWriteDataCountIfFailed) &&
-								(this->atomicput.uWriteDataCountBytes) )
-			{
-				this->pPut = putX(this->pPut, this->pBegin, this->pEnd,
-										&this->atomicput.uFailedMarkLen,
-										this->atomicput.uWriteDataCountBytes);
-			}
+        if (this->atomicput.bWriteDataCountIfFailed)
+        {
+            nReqSpace += this->atomicput.uWriteDataCountBytes;
+        }
 
 
-			this->pPut = putX(this->pPut, this->pBegin, this->pEnd,
-												this->atomicput.acFailedMark,
-												this->atomicput.uFailedMarkLen);
-			bRes = true;
-		}
-	}
+        if ( getFree(this, this->pPut) < nReqSpace )
+        {
+            bRes = false;
+        }
+        else
+        {
 
-	return bRes;
+            if ( (this->atomicput.bWriteDataCountIfFailed) &&
+                                (this->atomicput.uWriteDataCountBytes) )
+            {
+                this->pPut = putX(this->pPut, this->pBegin, this->pEnd,
+                                        &this->atomicput.uFailedMarkLen,
+                                        this->atomicput.uWriteDataCountBytes);
+            }
+
+
+            this->pPut = putX(this->pPut, this->pBegin, this->pEnd,
+                                                this->atomicput.acFailedMark,
+                                                this->atomicput.uFailedMarkLen);
+            bRes = true;
+        }
+    }
+
+    return bRes;
 }
 
 
 bool ARingbuffer_glanceX(ARingbuffer_t* this, uint8_t* pData,
-											uint32_t uOffset, uint32_t uCount)
+                                            uint32_t uOffset, uint32_t uCount)
 {
-	uint8_t* pGet;
+    uint8_t* pGet;
 
-	if ( ARingbuffer_getCount(this) < (uOffset + uCount) )
-	{
-		return false;
-	}
+    if ( ARingbuffer_getCount(this) < (uOffset + uCount) )
+    {
+        return false;
+    }
 
-	pGet = this->pGet + uOffset;
+    pGet = this->pGet + uOffset;
 
-	if (pGet >= this->pEnd)
-	{
-		pGet = this->pBegin + (pGet - this->pEnd);
-	}
+    if (pGet >= this->pEnd)
+    {
+        pGet = this->pBegin + (pGet - this->pEnd);
+    }
 
-	getX(pGet, this->pBegin, this->pEnd, pData, uCount);
+    getX(pGet, this->pBegin, this->pEnd, pData, uCount);
 
-	return true;
+    return true;
 }
 
 
 bool ARingbuffer_dropX(ARingbuffer_t* this, uint32_t uCount)
 {
-	uint8_t* pGet;
+    uint8_t* pGet;
 
-	if ( ARingbuffer_getCount(this) < uCount )
-	{
-		return false;
-	}
+    if ( ARingbuffer_getCount(this) < uCount )
+    {
+        return false;
+    }
 
-	pGet = this->pGet + uCount;
+    pGet = this->pGet + uCount;
 
-	if (pGet >= this->pEnd)
-	{
-		pGet = this->pBegin + (pGet - this->pEnd);
-	}
+    if (pGet >= this->pEnd)
+    {
+        pGet = this->pBegin + (pGet - this->pEnd);
+    }
 
-	this->pGet = pGet;
+    this->pGet = pGet;
 
-	return true;
+    return true;
 }
 
 
 bool ARingbuffer_getX(ARingbuffer_t* this, uint8_t* pTarget, uint16_t uCount)
 {
-	if (ARingbuffer_getCount(this) < uCount)
-	{
-		return false;
-	}
+    if (ARingbuffer_getCount(this) < uCount)
+    {
+        return false;
+    }
 
-	this->pGet = getX(this->pGet, this->pBegin, this->pEnd, pTarget, uCount);
+    this->pGet = getX(this->pGet, this->pBegin, this->pEnd, pTarget, uCount);
 
-	return true;
+    return true;
 }
 
 
 static inline uint16_t getAtomicLen(ARingbuffer_t* this)
 {
-	uint8_t* pAPut;
-	uint8_t* pABegin;
+    uint8_t* pAPut;
+    uint8_t* pABegin;
 
-	pAPut = this->atomicput.pPut;
-	pABegin = this->atomicput.pBegin;
+    pAPut = this->atomicput.pPut;
+    pABegin = this->atomicput.pBegin;
 
-	if (!pAPut)
-	{
-		return 0;
-	}
-	else if (pAPut >= pABegin)
-	{
-		return pAPut - pABegin;
-	}
-	else
-	{
-		return (this->pEnd - pABegin) +
-					(pAPut - this->pBegin);
-	}
+    if (!pAPut)
+    {
+        return 0;
+    }
+    else if (pAPut >= pABegin)
+    {
+        return pAPut - pABegin;
+    }
+    else
+    {
+        return (this->pEnd - pABegin) +
+                    (pAPut - this->pBegin);
+    }
 }
 
 
 uint16_t ARingbuffer_getFreeSpace(ARingbuffer_t* this)
 {
-	if (this->atomicput.pPut)
-	{
-		return getFree(this, this->atomicput.pPut);
-	}
-	else
-	{
-		return getFree(this, this->pPut);
-	}
+    if (this->atomicput.pPut)
+    {
+        return getFree(this, this->atomicput.pPut);
+    }
+    else
+    {
+        return getFree(this, this->pPut);
+    }
 }
 
 
 static inline uint16_t getFree(ARingbuffer_t* this, uint8_t* pPut)
 {
-	return RINGBUFFER_FREE(pPut, this->pGet, this->pBegin, this->pEnd);
+    return RINGBUFFER_FREE(pPut, this->pGet, this->pBegin, this->pEnd);
 }
 

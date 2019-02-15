@@ -65,12 +65,12 @@ void __I2C_Init(I2C_TypeDef* I2Cx, const I2C_InitTypeDef* conf);
 
 #define __USART_GET_IT_STATUS(__HANDLE__, __FLAG__) (((__HANDLE__)->ISR & (__FLAG__)) != 0)
 
-#define __USART_ENABLE_IT_TXE(__USART__) 	((__USART__)->CR1 |= (1 << 7))
-#define __USART_DISABLE_IT_TXE(__USART__) 	((__USART__)->CR1 &= ~(1 << 7))
-#define __USART_ENABLE_IT_RXNE(__USART__) 	((__USART__)->CR1 |= (1 << 5))
-#define __USART_DISABLE_IT_RXNE(__USART__) 	((__USART__)->CR1 &= ~(1 << 5))
-#define __USART_ENABLE_IT_ER(__USART__) 	((__USART__)->CR3 |= (1 << 0))
-#define __USART_DISABLE_IT_ER(__USART__) 	((__USART__)->CR3 ~= (1 << 0))
+#define __USART_ENABLE_IT_TXE(__USART__)     ((__USART__)->CR1 |= (1 << 7))
+#define __USART_DISABLE_IT_TXE(__USART__)     ((__USART__)->CR1 &= ~(1 << 7))
+#define __USART_ENABLE_IT_RXNE(__USART__)     ((__USART__)->CR1 |= (1 << 5))
+#define __USART_DISABLE_IT_RXNE(__USART__)     ((__USART__)->CR1 &= ~(1 << 5))
+#define __USART_ENABLE_IT_ER(__USART__)     ((__USART__)->CR3 |= (1 << 0))
+#define __USART_DISABLE_IT_ER(__USART__)     ((__USART__)->CR3 ~= (1 << 0))
 
 
 #endif /* STM32_LLM_H_ */

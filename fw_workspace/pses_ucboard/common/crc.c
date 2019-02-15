@@ -15,8 +15,8 @@
 
 uint16_t crc16(uint8_t* data_p, uint16_t length)
 {
-	uint8_t x;
-	uint16_t crc = 0xFFFF;
+    uint8_t x;
+    uint16_t crc = 0xFFFF;
 
     while (length--)
     {

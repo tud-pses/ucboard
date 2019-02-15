@@ -202,7 +202,7 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
-	  comm_do();
+      comm_do();
   /* USER CODE BEGIN 3 */
 
   }
@@ -972,7 +972,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler */
 
-	LED_loopForever_showErrCode(LEDERRCODE_STDEXCEPTION);
+    LED_loopForever_showErrCode(LEDERRCODE_STDEXCEPTION);
 
   /* User can add his own implementation to report the HAL error return state */
   while(1)
@@ -983,60 +983,60 @@ void Error_Handler(void)
 
 
 bool cmd_reset(EnCmdSpec_t eSpec, char* acData, uint16_t nLen,
-					char* acRespData, uint16_t* pnRespLen,
-					void* pRespStream,
-					void* pDirectCallback)
+                    char* acRespData, uint16_t* pnRespLen,
+                    void* pRespStream,
+                    void* pDirectCallback)
 {
-	SplittedStr_t sstr;
+    SplittedStr_t sstr;
 
-	*(CommStreamFctPtr*)pRespStream = NULL;
-	*(CommDirectFctPtr*)pDirectCallback = NULL;
+    *(CommStreamFctPtr*)pRespStream = NULL;
+    *(CommDirectFctPtr*)pDirectCallback = NULL;
 
-	strsplit(&sstr, acData, ' ', '"', 10);
+    strsplit(&sstr, acData, ' ', '"', 10);
 
-	if (eSpec == CMDSPEC_SET)
-	{
-		bool bWrongUsage = false;
+    if (eSpec == CMDSPEC_SET)
+    {
+        bool bWrongUsage = false;
 
-		if (sstr.cnt != 1)
-		{
-			bWrongUsage = true;
-		}
-		else
-		{
-			if (strcmpi(sstr.strs[0], "NOW") != STRCMPRES_EQUAL)
-			{
-				bWrongUsage = true;
-			}
-			else
-			{
-				NVIC_SystemReset();
-			}
-		}
+        if (sstr.cnt != 1)
+        {
+            bWrongUsage = true;
+        }
+        else
+        {
+            if (strcmpi(sstr.strs[0], "NOW") != STRCMPRES_EQUAL)
+            {
+                bWrongUsage = true;
+            }
+            else
+            {
+                NVIC_SystemReset();
+            }
+        }
 
-		if (bWrongUsage)
-		{
-			char* strend = createErrStr_returnend(
-					acRespData,
-					acRespData + RXMAXMSGLEN - 1,
-					SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
-					"Usage: !RESET NOW");
+        if (bWrongUsage)
+        {
+            char* strend = createErrStr_returnend(
+                    acRespData,
+                    acRespData + RXMAXMSGLEN - 1,
+                    SOT_RXRESP, ERRCODE_COMM_WRONGUSAGE,
+                    "Usage: !RESET NOW");
 
-			*pnRespLen = strend - acRespData;
-		}
-	}
-	else
-	{
-		char* strend = createErrStr_returnend(
-				acRespData,
-				acRespData + RXMAXMSGLEN - 1,
-				SOT_RXRESP, ERRCODE_COMM_WRITEONLY,
-				"RESET is a write-only parameter!");
+            *pnRespLen = strend - acRespData;
+        }
+    }
+    else
+    {
+        char* strend = createErrStr_returnend(
+                acRespData,
+                acRespData + RXMAXMSGLEN - 1,
+                SOT_RXRESP, ERRCODE_COMM_WRITEONLY,
+                "RESET is a write-only parameter!");
 
-		*pnRespLen = strend - acRespData;
-	}
+        *pnRespLen = strend - acRespData;
+    }
 
-	return true;
+    return true;
 }
 
 

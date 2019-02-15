@@ -6,11 +6,11 @@
 
 
 typedef struct RB_struct {
-	uint32_t  m_bufSize;
-	uint8_t* m_pcBuffer;
+    uint32_t  m_bufSize;
+    uint8_t* m_pcBuffer;
 
-	uint32_t  m_iFirst;
-	uint32_t  m_nData;
+    uint32_t  m_iFirst;
+    uint32_t  m_nData;
 } RB_struct_t;
 
 

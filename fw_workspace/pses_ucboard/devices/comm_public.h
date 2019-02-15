@@ -13,28 +13,28 @@
 #include "errcodes.h"
 
 
-#define EOT_RX	'\n'
+#define EOT_RX    '\n'
 #define SOT_TX 2
 #define EOT_TX 3
 //// Nur zum Debuggen zu Beginn:
 //#define EOT_TX '\n'
 
-#define SOT_SETCMD	'!'
-#define SOT_GETCMD	'?'
+#define SOT_SETCMD    '!'
+#define SOT_GETCMD    '?'
 
-#define SOT_RXRESP	':'
-#define SOT_RXDAQ	'#'
-#define SOT_RXOUT	'\''
+#define SOT_RXRESP    ':'
+#define SOT_RXDAQ    '#'
+#define SOT_RXOUT    '\''
 
 
-#define RXMAXMSGLEN	1000
-#define TXMAXMSGLEN	1000
-#define MAXEOTLEN	2
+#define RXMAXMSGLEN    1000
+#define TXMAXMSGLEN    1000
+#define MAXEOTLEN    2
 
 typedef enum EnCmdSpec_
 {
-	CMDSPEC_GET,
-	CMDSPEC_SET,
+    CMDSPEC_GET,
+    CMDSPEC_SET,
 } EnCmdSpec_t;
 
 
@@ -42,11 +42,11 @@ typedef enum EnCmdSpec_
 
 typedef struct CommCmdArgs_
 {
-	uint8_t nArgs;
-	char* args[COMMMAXARGS + 1];
-	uint8_t nParams;
-	char* paramnames[COMMMAXARGS + 1];
-	char* paramvals[COMMMAXARGS + 1];
+    uint8_t nArgs;
+    char* args[COMMMAXARGS + 1];
+    uint8_t nParams;
+    char* paramnames[COMMMAXARGS + 1];
+    char* paramvals[COMMMAXARGS + 1];
 } CommCmdArgs_t;
 
 

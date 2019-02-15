@@ -32,23 +32,23 @@ extern bool cmd_dbg(COMMCMDFCT_ARGS);
 
 CommCmdTableEntry_t g_commCmdFctTable[] =
 {
-		{"COMMSTATS",  &cmd_commstats},
-		{"DAQ",  &cmd_daq},
-		{"DBG",  &cmd_dbg},
-		{"DRV",  &cmd_drv},
-		{"EEPROM",  &cmd_eeprom},
-		{"ID",  &cmd_carid},
-		{"IMU",  &cmd_imu},
-		{"LED", &cmd_led},
-		{"MAG",  &cmd_mag},
-		{"RESET",  &cmd_reset},
-		{"SID",  &cmd_sessionid},
-		{"STEER",  &cmd_steer},
-		{"TICS",  &cmd_tics},
-		{"US",  &cmd_us},
-		{"VER",  &cmd_version},
-		{"VOUT",  &cmd_vout12v},
-		{0,  0}	// last entry must be {0, 0} (exit condition when iterating over table)
+        {"COMMSTATS",  &cmd_commstats},
+        {"DAQ",  &cmd_daq},
+        {"DBG",  &cmd_dbg},
+        {"DRV",  &cmd_drv},
+        {"EEPROM",  &cmd_eeprom},
+        {"ID",  &cmd_carid},
+        {"IMU",  &cmd_imu},
+        {"LED", &cmd_led},
+        {"MAG",  &cmd_mag},
+        {"RESET",  &cmd_reset},
+        {"SID",  &cmd_sessionid},
+        {"STEER",  &cmd_steer},
+        {"TICS",  &cmd_tics},
+        {"US",  &cmd_us},
+        {"VER",  &cmd_version},
+        {"VOUT",  &cmd_vout12v},
+        {0,  0}    // last entry must be {0, 0} (exit condition when iterating over table)
 };
 
 

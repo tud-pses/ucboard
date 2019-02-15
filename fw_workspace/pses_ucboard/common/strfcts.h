@@ -18,17 +18,17 @@
 
 typedef struct SplittedStr_
 {
-	uint8_t cnt;
-	char* strs[MAXSPLITS];
-	bool completelySplitted;
+    uint8_t cnt;
+    char* strs[MAXSPLITS];
+    bool completelySplitted;
 } SplittedStr_t;
 
 
 typedef enum EnStrCmpRes_
 {
-	STRCMPRES_LEFTBIGGER = -1,
-	STRCMPRES_EQUAL = 0,
-	STRCMPRES_RIGHTBIGGER = 1,
+    STRCMPRES_LEFTBIGGER = -1,
+    STRCMPRES_EQUAL = 0,
+    STRCMPRES_RIGHTBIGGER = 1,
 } EnStrCmpRes_t;
 
 
@@ -40,13 +40,13 @@ EnStrCmpRes_t strcmps(const char* l, const char* r);
 EnStrCmpRes_t strcmpi(const char* l, const char* r);
 
 void strsplit(SplittedStr_t* sstr,
-					char* str,
-					char splitchar,
-					char quotechar,
-					uint8_t maxsplits);
+                    char* str,
+                    char splitchar,
+                    char quotechar,
+                    uint8_t maxsplits);
 
 char* strcpy_returnend(char* target, char* const targetend,
-										const char* source);
+                                        const char* source);
 
 char* strcat_returnend(char* target, char* const targetend, ...);
 

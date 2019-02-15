@@ -14,8 +14,8 @@
 
 //#include <stdio.h>
 #ifndef NULL
-	#define NULL (void*)0
-	typedef unsigned size_t;
+    #define NULL (void*)0
+    typedef unsigned size_t;
 #endif
 
 

@@ -16,104 +16,104 @@
 
 typedef enum EnMPU9250AccRange_
 {
-	MPU9250ACCRANGE_2G,
-	MPU9250ACCRANGE_4G,
-	MPU9250ACCRANGE_8G,
-	MPU9250ACCRANGE_16G,
+    MPU9250ACCRANGE_2G,
+    MPU9250ACCRANGE_4G,
+    MPU9250ACCRANGE_8G,
+    MPU9250ACCRANGE_16G,
 } EnMPU9250AccRange_t;
 
 typedef enum EnMPU9250GyroRange_
 {
-	MPU9250GYRORANGE_250DEGSPERSEC,
-	MPU9250GYRORANGE_500DEGSPERSEC,
-	MPU9250GYRORANGE_1000DEGSPERSEC,
-	MPU9250GYRORANGE_2000DEGSPERSEC,
+    MPU9250GYRORANGE_250DEGSPERSEC,
+    MPU9250GYRORANGE_500DEGSPERSEC,
+    MPU9250GYRORANGE_1000DEGSPERSEC,
+    MPU9250GYRORANGE_2000DEGSPERSEC,
 } EnMPU9250GyroRange_t;
 
 
 typedef enum EnMPU9250AccFilter_
 {
-	MPU9250ACCFILTER_BW1046,
-	MPU9250ACCFILTER_BW218,
-	MPU9250ACCFILTER_BW218_,
-	MPU9250ACCFILTER_BW99,
-	MPU9250ACCFILTER_BW45,
-	MPU9250ACCFILTER_BW21,
-	MPU9250ACCFILTER_BW10,
-	MPU9250ACCFILTER_BW5,
-	MPU9250ACCFILTER_BW420,
+    MPU9250ACCFILTER_BW1046,
+    MPU9250ACCFILTER_BW218,
+    MPU9250ACCFILTER_BW218_,
+    MPU9250ACCFILTER_BW99,
+    MPU9250ACCFILTER_BW45,
+    MPU9250ACCFILTER_BW21,
+    MPU9250ACCFILTER_BW10,
+    MPU9250ACCFILTER_BW5,
+    MPU9250ACCFILTER_BW420,
 } EnMPU9250AccFilter_t;
 
 
 typedef enum EnMPU9250GyroFilter_
 {
-	MPU9250GYROFILTER_BW8800_FS32K,
-	MPU9250GYROFILTER_BW3600_FS32K,
-	MPU9250GYROFILTER_BW250,
-	MPU9250GYROFILTER_BW184,
-	MPU9250GYROFILTER_BW92,
-	MPU9250GYROFILTER_BW41,
-	MPU9250GYROFILTER_BW20,
-	MPU9250GYROFILTER_BW10,
-	MPU9250GYROFILTER_BW5,
-	MPU9250GYROFILTER_BW3600
+    MPU9250GYROFILTER_BW8800_FS32K,
+    MPU9250GYROFILTER_BW3600_FS32K,
+    MPU9250GYROFILTER_BW250,
+    MPU9250GYROFILTER_BW184,
+    MPU9250GYROFILTER_BW92,
+    MPU9250GYROFILTER_BW41,
+    MPU9250GYROFILTER_BW20,
+    MPU9250GYROFILTER_BW10,
+    MPU9250GYROFILTER_BW5,
+    MPU9250GYROFILTER_BW3600
 } EnMPU9250GyroFilter_t;
 
 
 typedef struct IMUConf_
 {
-	EnMPU9250AccRange_t accrange;
-	EnMPU9250AccFilter_t accfilt;
-	EnMPU9250GyroRange_t gyrorange;
-	EnMPU9250GyroFilter_t gyrofilt;
+    EnMPU9250AccRange_t accrange;
+    EnMPU9250AccFilter_t accfilt;
+    EnMPU9250GyroRange_t gyrorange;
+    EnMPU9250GyroFilter_t gyrofilt;
 } IMUConf_t;
 
 
 typedef struct MagConf_
 {
-	bool bUseASA;
+    bool bUseASA;
 } MagConf_t;
 
 
 
 typedef struct MAGData_
 {
-	int32_t magX;
-	int32_t magY;
-	int32_t magZ;
+    int32_t magX;
+    int32_t magY;
+    int32_t magZ;
 } MAGData_t;
 
 
 typedef struct IMUDevice_
 {
-	uint8_t f_uDeviceID;
-	IMUConf_t conf;
-	bool init;
-	MagConf_t magconf;
-	MAGData_t magdata;
-	bool bNewMagData;
+    uint8_t f_uDeviceID;
+    IMUConf_t conf;
+    bool init;
+    MagConf_t magconf;
+    MAGData_t magdata;
+    bool bNewMagData;
 } IMUDevice_t;
 
 
 
 typedef struct IMUData_
 {
-	int16_t accX;
-	int16_t accY;
-	int16_t accZ;
-	int16_t gyroX;
-	int16_t gyroY;
-	int16_t gyroZ;
-	int16_t temperature;
+    int16_t accX;
+    int16_t accY;
+    int16_t accZ;
+    int16_t gyroX;
+    int16_t gyroY;
+    int16_t gyroZ;
+    int16_t temperature;
 } IMUData_t;
 
 
-#define MAG_MAGOVERFLOWVALUE	0x7FFFFFF
+#define MAG_MAGOVERFLOWVALUE    0x7FFFFFF
 
 
 bool imuMPU9250_init(IMUDevice_t* this,
-							EnSPI_PORT_t ePort, char cCSPort, uint8_t uCSPin,
-							const IMUConf_t* const conf);
+                            EnSPI_PORT_t ePort, char cCSPort, uint8_t uCSPin,
+                            const IMUConf_t* const conf);
 
 bool imuMPU9250_setConf(IMUDevice_t* this, const IMUConf_t* const conf);
 

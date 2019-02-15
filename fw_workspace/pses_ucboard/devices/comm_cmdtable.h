@@ -12,22 +12,22 @@
 #include "comm_public.h"
 
 
-#define COMMCMDFCT_ARGS 			EnCmdSpec_t eSpec, \
-										char* acData, uint16_t nLen,\
-										char* acRespData, uint16_t* pnRespLen,\
-										void* pRespStream,\
-										void* pDirectCallback
+#define COMMCMDFCT_ARGS             EnCmdSpec_t eSpec, \
+                                        char* acData, uint16_t nLen,\
+                                        char* acRespData, uint16_t* pnRespLen,\
+                                        void* pRespStream,\
+                                        void* pDirectCallback
 
-#define COMMDIRECTFCT_ARGS 			char* acData, uint16_t nLen, \
-										char* acRespData, uint16_t* pnRespLen,\
-										void* pRespStream,\
-										void* pDirectCallback
+#define COMMDIRECTFCT_ARGS             char* acData, uint16_t nLen, \
+                                        char* acRespData, uint16_t* pnRespLen,\
+                                        void* pRespStream,\
+                                        void* pDirectCallback
 
 
 typedef struct CommCmdTableEntry_
 {
-	const char* cmd;
-	CommCmdFctPtr callback;
+    const char* cmd;
+    CommCmdFctPtr callback;
 } CommCmdTableEntry_t;
 
 
